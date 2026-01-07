@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# work4u - Job & Gig Marketplace
 
-## Getting Started
+A modern Next.js app for posting and finding jobs/gigs. Uses REST APIs via axios with mock data until the backend is ready.
 
-First, run the development server:
+## 🚀 Quick Start
 
 ```bash
+npm install
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+Visit http://localhost:3000.
+
+## ⚙️ Environment
+
+- `NEXT_PUBLIC_API_URL` — backend REST base URL (default http://localhost:4000)
+- `NEXT_PUBLIC_API_USE_MOCKS` — set to `false` to call a real backend; defaults to mocks
+- `NEXTAUTH_URL`, `NEXTAUTH_SECRET` — optional if/when auth is added
+
+## 🛠️ Tech Stack
+- Next.js 16 (App Router), React 19, TypeScript
+- Tailwind CSS
+- axios for REST calls (mocks by default)
+- Radix UI primitives, CVA, clsx, tailwind-merge
+- React Hook Form + Zod (for forms/validation)
+
+## 📂 Structure
+```
+src/
+	app/          # pages
+	components/   # UI & feature components
+	api/          # axios client + mocks
+	lib/          # utilities & i18n
+	locales/      # en/fr/es translations
+	data/         # static data
+	types/        # shared types
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🌐 i18n
+Translations live in `src/locales/{en,fr,es}.json` with a helper `getTranslator(locale)` in `src/lib/i18n.ts`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🔌 API Layer
+- `src/api/index.ts` — axios instance + functions (`fetchJobs`, `fetchJob`, `createJob`, `applyToJob`)
+- `src/api/mocks.ts` — in-memory mocks used when `NEXT_PUBLIC_API_USE_MOCKS` is not `false`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🧭 Key Pages
+- `/` Home (hero, categories, featured jobs)
+- `/jobs` Listings with filters/sorting
+- `/post-job` Multi-step job posting form (uses mocks/logging for now)
+- `/how-it-works` Platform overview
 
-## Learn More
+## 🗺️ Next Steps
+1) Point `NEXT_PUBLIC_API_URL` to your backend and set `NEXT_PUBLIC_API_USE_MOCKS=false`
+2) Wire forms to real endpoints
+3) Add auth (NextAuth.js or preferred)
+4) Implement messaging, reviews, payments
 
-To learn more about Next.js, take a look at the following resources:
+## 📝 Scripts
+- `npm run dev` — start dev server
+- `npm run build` — production build
+- `npm run start` — start production build
+- `npm run lint` — lint
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🧪 Mock Data
+See `src/api/mocks.ts` for editable in-memory seed data.
