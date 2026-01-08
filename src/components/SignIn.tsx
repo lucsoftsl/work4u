@@ -7,13 +7,15 @@ import { signIn, signInWithGoogle } from '@/lib/auth-service';
 import type { SignInData } from '@/types/auth';
 import { useTranslation } from '@/lib/i18n';
 import { useAuth } from '@/context/AuthContext';
+import { auth } from '@/lib/firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
 
 interface SignInError {
   field?: string;
   message: string;
 }
 
-const passwordMeetsPolicy = (pwd: string) => /(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{4,}/.test(pwd);
+const passwordMeetsPolicy = (pwd: string) => /(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}/.test(pwd);
 
 export default function SignInComponent() {
   const router = useRouter();
@@ -21,6 +23,8 @@ export default function SignInComponent() {
   const { isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<SignInError | null>(null);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<SignInData>({
     email: '',
@@ -118,6 +122,30 @@ export default function SignInComponent() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    setResetMessage(null);
+    setError(null);
+    if (!formData.email) {
+      setError({ field: 'email', message: t('auth.signIn.error.emailRequired') });
+      return;
+    }
+    setResetLoading(true);
+    try {
+      const actionCodeSettings = {
+        url: typeof window !== 'undefined' ? `${window.location.origin}/signin` : undefined,
+        handleCodeInApp: false,
+      } as any;
+      await sendPasswordResetEmail(auth, formData.email, actionCodeSettings);
+      setResetMessage(t('auth.resetPassword.sent'));
+    } catch (err) {
+      console.warn('Password reset email error:', err);
+      // Do not reveal whether the user exists; show generic success-like message
+      setResetMessage(t('auth.resetPassword.sent'));
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -226,10 +254,18 @@ export default function SignInComponent() {
             </button>
 
             {/* Forgot Password */}
-            <div className="text-center">
-              <a href="#" className="text-sm text-blue-600 hover:text-blue-500">
-                {t('auth.signIn.forgotPassword')}
-              </a>
+            <div className="text-center space-y-2">
+              <button
+                type="button"
+                onClick={handlePasswordReset}
+                disabled={resetLoading}
+                className="text-sm text-blue-600 hover:text-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {resetLoading ? t('auth.resetPassword.sending') : t('auth.signIn.forgotPassword')}
+              </button>
+              {resetMessage && (
+                <p className="text-xs text-gray-600">{resetMessage}</p>
+              )}
             </div>
           </form>
 

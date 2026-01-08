@@ -15,7 +15,7 @@ interface SignUpError {
   message: string;
 }
 
-const passwordMeetsPolicy = (pwd: string) => /(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{4,}/.test(pwd);
+const passwordMeetsPolicy = (pwd: string) => /(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}/.test(pwd);
 
 export default function SignUpComponent() {
   const router = useRouter();
