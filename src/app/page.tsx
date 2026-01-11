@@ -9,71 +9,41 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-
-const featuredJobs = [
-  {
-    id: "1",
-    title: "Website Design for E-commerce Store",
-    category: "Design",
-    description: "Need a modern, responsive website design for our online store",
-    budget: 800,
-    budgetType: "FIXED" as const,
-    location: "Remote",
-    remote: true,
-    applicants: 12,
-    poster: {
-      name: "Sarah Johnson",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah",
-      rating: 4.8,
-      reviews: 24,
-    },
-  },
-  {
-    id: "2",
-    title: "Mobile App Development - iOS",
-    category: "Development",
-    description: "Build a native iOS app for our fitness tracking platform",
-    budget: 5000,
-    budgetType: "FIXED" as const,
-    location: "Remote",
-    remote: true,
-    applicants: 8,
-    poster: {
-      name: "Tech Startup Inc",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Tech",
-      rating: 4.9,
-      reviews: 18,
-    },
-  },
-  {
-    id: "3",
-    title: "Content Writing - Blog Posts",
-    category: "Writing",
-    description: "Write 10 SEO-optimized blog posts about digital marketing",
-    budget: 25,
-    budgetType: "HOURLY" as const,
-    location: "Remote",
-    remote: true,
-    applicants: 24,
-    poster: {
-      name: "Marketing Agency",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Marketing",
-      rating: 4.7,
-      reviews: 31,
-    },
-  },
-];
+import { getCategoriesWithTranslations } from "@/lib/category-utils";
+import { api } from "@/lib/api";
+import { Job } from "@/api";
 
 export default function HomePage() {
   const router = useRouter();
   const { t } = useTranslation();
   const { isAuthenticated, loading } = useAuth();
+  const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
+
   // Avoid hydration mismatch by deferring client-only checks until mounted
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     const id = window.requestAnimationFrame(() => setMounted(true));
     return () => window.cancelAnimationFrame(id);
   }, []);
+
+  // Load featured jobs from API
+  useEffect(() => {
+    const loadFeaturedJobs = async () => {
+      try {
+        const jobs = await api.listJobs({ limit: 3 });
+        setFeaturedJobs(jobs.slice(0, 3));
+      } catch (error) {
+        console.error("Failed to load featured jobs:", error);
+        setFeaturedJobs([]);
+      } finally {
+        setJobsLoading(false);
+      }
+    };
+
+    loadFeaturedJobs();
+  }, []);
+
   const hasUser = mounted && !loading && isAuthenticated;
   return (
     <div className="min-h-screen bg-white">
@@ -131,20 +101,14 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-8">{t('home.browseCategory')}</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {[
-              "Development",
-              "Design",
-              "Writing",
-              "Marketing",
-              "Video/Audio",
-              "Virtual Assistance",
-            ].map((cat) => (
+            {getCategoriesWithTranslations(t).slice(0, 12).map((cat) => (
               <Link
-                key={cat}
-                href={`/jobs?category=${cat.toLowerCase()}`}
+                key={cat.id}
+                href={`/jobs?category=${cat.id}`}
                 className="p-4 text-center rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition"
               >
-                <p className="font-medium text-gray-900">{cat}</p>
+                <div className="text-2xl mb-2">{cat.icon}</div>
+                <p className="font-medium text-gray-900 text-sm">{cat.name}</p>
               </Link>
             ))}
           </div>
@@ -160,10 +124,22 @@ export default function HomePage() {
               {t('home.viewAll')} →
             </Link>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredJobs.map((job) => (
-              <JobCard key={job.id} job={job} />
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {jobsLoading ? (
+              <>
+                <div className="border border-gray-200 rounded-lg p-6 animate-pulse h-80 bg-gray-100" />
+                <div className="border border-gray-200 rounded-lg p-6 animate-pulse h-80 bg-gray-100" />
+                <div className="border border-gray-200 rounded-lg p-6 animate-pulse h-80 bg-gray-100" />
+              </>
+            ) : featuredJobs.length > 0 ? (
+              featuredJobs.map((job) => (
+                <JobCard key={job.id} job={job} />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <p className="text-gray-600">{t('jobs.noJobs')}</p>
+              </div>
+            )}
           </div>
         </div>
       </section>

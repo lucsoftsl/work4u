@@ -1,132 +1,75 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { JobCard } from "@/components/JobCard";
 import Footer from "@/components/Footer";
-import { Sliders } from "lucide-react";
+import { Sliders, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { getCategoriesWithTranslations } from "@/lib/category-utils";
+import { api } from "@/lib/api";
+import type { Job } from "@/api/mocks";
 
-const allJobs = [
-  {
-    id: "1",
-    title: "Website Design for E-commerce Store",
-    category: "Design",
-    description: "Need a modern, responsive website design for our online store",
-    budget: 800,
-    budgetType: "FIXED" as const,
-    location: "Remote",
-    remote: true,
-    applicants: 12,
-    poster: {
-      name: "Sarah Johnson",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah",
-      rating: 4.8,
-      reviews: 24,
-    },
-  },
-  {
-    id: "2",
-    title: "Mobile App Development - iOS",
-    category: "Development",
-    description: "Build a native iOS app for our fitness tracking platform",
-    budget: 5000,
-    budgetType: "FIXED" as const,
-    location: "Remote",
-    remote: true,
-    applicants: 8,
-    poster: {
-      name: "Tech Startup Inc",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Tech",
-      rating: 4.9,
-      reviews: 18,
-    },
-  },
-  {
-    id: "3",
-    title: "Content Writing - Blog Posts",
-    category: "Writing",
-    description: "Write 10 SEO-optimized blog posts about digital marketing",
-    budget: 25,
-    budgetType: "HOURLY" as const,
-    location: "Remote",
-    remote: true,
-    applicants: 24,
-    poster: {
-      name: "Marketing Agency",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Marketing",
-      rating: 4.7,
-      reviews: 31,
-    },
-  },
-  {
-    id: "4",
-    title: "Logo Design - Tech Company",
-    category: "Design",
-    description: "Create a unique and modern logo for our software startup",
-    budget: 500,
-    budgetType: "FIXED" as const,
-    location: "Remote",
-    remote: true,
-    applicants: 18,
-    poster: {
-      name: "Creative Director",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Creative",
-      rating: 4.6,
-      reviews: 15,
-    },
-  },
-  {
-    id: "5",
-    title: "React Developer Needed",
-    category: "Development",
-    description: "Build React components for our dashboard application",
-    budget: 50,
-    budgetType: "HOURLY" as const,
-    location: "Remote",
-    remote: true,
-    applicants: 31,
-    poster: {
-      name: "Startup Hub",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Hub",
-      rating: 4.9,
-      reviews: 42,
-    },
-  },
-  {
-    id: "6",
-    title: "Social Media Manager",
-    category: "Marketing",
-    description: "Manage social media accounts and create content calendars",
-    budget: 30,
-    budgetType: "HOURLY" as const,
-    location: "Remote",
-    remote: true,
-    applicants: 16,
-    poster: {
-      name: "Fashion Brand",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fashion",
-      rating: 4.7,
-      reviews: 22,
-    },
-  },
-];
+const JOBS_PER_PAGE = 8;
 
 export default function JobsPage() {
   const { t } = useTranslation();
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<"newest" | "budget" | "applicants">("newest");
   const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showAllCategories, setShowAllCategories] = useState(false);
 
-  const filteredJobs = selectedCategory
-    ? allJobs.filter((job) => job.category.toLowerCase() === selectedCategory.toLowerCase())
-    : allJobs;
+  useEffect(() => {
+    const loadJobs = async () => {
+      try {
+        const data = await api.listJobs();
+        setJobs(data);
+      } catch (error) {
+        console.error("Failed to load jobs:", error);
+        setJobs([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadJobs();
+  }, []);
+
+  const filteredJobs = selectedCategories.length > 0
+    ? jobs.filter((job) => selectedCategories.includes(job.category.toLowerCase()))
+    : jobs;
 
   const sortedJobs = [...filteredJobs].sort((a, b) => {
     if (sortBy === "budget") return b.budget - a.budget;
     if (sortBy === "applicants") return b.applicants - a.applicants;
     return 0;
   });
+
+  // Pagination logic
+  const totalPages = Math.ceil(sortedJobs.length / JOBS_PER_PAGE);
+  const startIndex = (currentPage - 1) * JOBS_PER_PAGE;
+  const paginatedJobs = sortedJobs.slice(startIndex, startIndex + JOBS_PER_PAGE);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategories, sortBy]);
+
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  const allCategories = getCategoriesWithTranslations(t);
+  const displayedCategories = showAllCategories
+    ? allCategories
+    : allCategories.slice(0, 5);
 
   return (
     <div className="min-h-screen bg-white">
@@ -156,20 +99,40 @@ export default function JobsPage() {
                 <div>
                   <h3 className="font-bold text-gray-900 mb-4">{t('jobs.category')}</h3>
                   <div className="space-y-2">
-                    {["Development", "Design", "Writing", "Marketing", "Other"].map((cat) => (
-                      <label key={cat} className="flex items-center gap-2 cursor-pointer">
+                    {displayedCategories.map((cat) => (
+                      <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
                         <input
-                          type="radio"
+                          type="checkbox"
                           name="category"
-                          value={cat}
-                          checked={selectedCategory === cat}
-                          onChange={(e) => setSelectedCategory(e.target.checked ? cat : null)}
-                          className="w-4 h-4"
+                          value={cat.id}
+                          checked={selectedCategories.includes(cat.id)}
+                          onChange={() => handleCategoryChange(cat.id)}
+                          className="w-4 h-4 rounded"
                         />
-                        <span className="text-gray-700">{cat}</span>
+                        <span className="text-gray-700 text-sm">{cat.name}</span>
                       </label>
                     ))}
                   </div>
+                  {allCategories.length > 5 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-3 text-xs"
+                      onClick={() => setShowAllCategories(!showAllCategories)}
+                    >
+                      {showAllCategories ? "Show Less" : "Show More"}
+                    </Button>
+                  )}
+                  {selectedCategories.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-2 text-xs"
+                      onClick={() => setSelectedCategories([])}
+                    >
+                      Clear Categories
+                    </Button>
+                  )}
                 </div>
 
                 {/* Budget Filter */}
@@ -185,7 +148,11 @@ export default function JobsPage() {
                   </div>
                 </div>
 
-                <Button className="w-full" variant="outline">
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => setSelectedCategories([])}
+                >
                   {t('jobs.clearFilters')}
                 </Button>
               </div>
@@ -211,16 +178,82 @@ export default function JobsPage() {
             </div>
 
             {/* Jobs Grid */}
-            {sortedJobs.length > 0 ? (
-              <div className="grid gap-6">
-                {sortedJobs.map((job) => (
-                  <JobCard key={job.id} job={job} />
-                ))}
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-gray-600">{t('jobs.title')}...</p>
               </div>
+            ) : paginatedJobs.length > 0 ? (
+              <>
+                <div className="grid gap-6">
+                  {paginatedJobs.map((job) => (
+                    <JobCard key={job.id} job={job} />
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    {/* Mobile-friendly page info */}
+                    <div className="text-center text-sm text-gray-600">
+                      {t('jobs.opportunitiesAvailable')}: {sortedJobs.length} | {t('jobs.title')}: {currentPage} / {totalPages}
+                    </div>
+
+                    {/* Pagination controls */}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="flex items-center gap-1"
+                      >
+                        <ChevronLeft size={16} />
+                        <span className="hidden sm:inline">Previous</span>
+                      </Button>
+
+                      {/* Page numbers */}
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                          // Show only relevant pages on mobile
+                          const showPage = totalPages <= 5 ||
+                            page === 1 ||
+                            page === totalPages ||
+                            Math.abs(page - currentPage) <= 1;
+
+                          if (!showPage && page !== 2 && page !== totalPages - 1) return null;
+
+                          return (
+                            <Button
+                              key={page}
+                              variant={page === currentPage ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(page)}
+                              className="w-8 h-8 p-0 text-xs sm:text-sm"
+                            >
+                              {page}
+                            </Button>
+                          );
+                        })}
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        className="flex items-center gap-1"
+                      >
+                        <span className="hidden sm:inline">Next</span>
+                        <ChevronRight size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-12">
                 <p className="text-gray-600 mb-4">{t('jobs.noJobs')}</p>
-                <Button onClick={() => setSelectedCategory(null)}>{t('jobs.clearFilters')}</Button>
+                <Button onClick={() => setSelectedCategories([])}>{t('jobs.clearFilters')}</Button>
               </div>
             )}
           </div>

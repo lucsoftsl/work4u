@@ -15,9 +15,10 @@ interface JobCardProps {
     location: string;
     remote: boolean;
     applicants: number;
-    poster: {
+    createdBy: {
+      userId: string;
       name: string;
-      image: string;
+      image?: string | null;
       rating: number;
       reviews: number;
     };
@@ -56,19 +57,21 @@ export function JobCard({ job }: JobCardProps) {
         {/* Poster Info */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200">
           <div className="flex items-center gap-2">
-            <Image
-              src={job.poster.image}
-              alt={job.poster.name}
-              width={32}
-              height={32}
-              className="w-8 h-8 rounded-full"
-            />
+            {job.createdBy.image && (
+              <Image
+                src={job.createdBy.image}
+                alt={job.createdBy.name}
+                width={32}
+                height={32}
+                className="w-8 h-8 rounded-full"
+              />
+            )}
             <div>
-              <p className="text-sm font-medium text-gray-900">{job.poster.name}</p>
+              <p className="text-sm font-medium text-gray-900">{job.createdBy.name}</p>
               <div className="flex items-center gap-1">
                 <Star size={14} className="text-yellow-500 fill-yellow-500" />
                 <span className="text-xs text-gray-600">
-                  {job.poster.rating} ({job.poster.reviews})
+                  {job.createdBy.rating} ({job.createdBy.reviews})
                 </span>
               </div>
             </div>

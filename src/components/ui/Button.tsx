@@ -2,14 +2,15 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "outline" | "secondary";
-  size?: "default" | "sm" | "lg";
+  variant?: "default" | "outline" | "secondary" | "ghost";
+  size?: "default" | "sm" | "lg" | "icon";
+  asChild?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "default", size = "default", ...props }, ref) => {
     const baseStyles = "inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";
-    
+
     const variants = {
       default: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
       outline: "border border-gray-300 text-gray-900 hover:bg-gray-50 focus:ring-blue-500",
@@ -26,8 +27,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         className={cn(
           baseStyles,
-          variants[variant],
-          sizes[size],
+          variants[variant as keyof typeof variants],
+          sizes[size as keyof typeof sizes],
           className
         )}
         ref={ref}

@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import { CATEGORIES, BUDGET_TYPES, DURATIONS, EXPERIENCE_LEVELS } from "@/data/categories";
 import { ChevronLeft } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { getCategoriesWithTranslations } from "@/lib/category-utils";
 
 export default function PostJobPage() {
   const { t } = useTranslation();
@@ -116,7 +117,7 @@ export default function PostJobPage() {
                   required
                 >
                   <option value="">Select a category</option>
-                  {CATEGORIES.map((cat) => (
+                  {getCategoriesWithTranslations(t).map((cat) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name}
                     </option>
@@ -271,7 +272,7 @@ export default function PostJobPage() {
                 <div>
                   <p className="text-sm text-gray-600">{t('post.review.category')}</p>
                   <p className="font-bold text-gray-900">
-                    {CATEGORIES.find((c) => c.id === formData.category)?.name}
+                    {getCategoriesWithTranslations(t).find((c) => c.id === formData.category)?.name}
                   </p>
                 </div>
                 <div>

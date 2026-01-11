@@ -12,6 +12,7 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   isAuthenticated: boolean;
+  firebaseToken: string | null;
   signOut: () => Promise<void>;
 }
 
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setAuthUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [firebaseToken, setFirebaseToken] = useState<string | null>(null);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -27,6 +29,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
         if (firebaseUser) {
+          // Get Firebase token for WebSocket auth
+          const token = await firebaseUser.getIdToken();
+          setFirebaseToken(token);
+
           // User is logged in, get their full profile
           const authUser = await getCurrentUser();
           setAuthUser(authUser);
@@ -37,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           // User is logged out
           setAuthUser(null);
+          setFirebaseToken(null);
           dispatch(setUser(null));
           try {
             document.cookie = `work4u_auth=; Max-Age=0; Path=/; SameSite=Lax`;
@@ -45,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Failed to get user:', error);
         setAuthUser(null);
+        setFirebaseToken(null);
       } finally {
         setLoading(false);
       }
@@ -73,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         loading,
         isAuthenticated: !!user,
+        firebaseToken,
         signOut: handleSignOut,
       }}
     >
