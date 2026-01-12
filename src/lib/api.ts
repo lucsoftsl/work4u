@@ -76,7 +76,7 @@ export const api = {
     },
 
     async deleteJob(jobId: string, token: string): Promise<void> {
-        const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`, {
             method: "DELETE",
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -87,5 +87,30 @@ export const api = {
             const error = await response.json().catch(() => ({}));
             throw new Error(error.error || `Failed to delete job: ${response.statusText}`);
         }
+    },
+
+    async searchJobs(params?: {
+        keywords?: string;
+        location?: string;
+        remote?: boolean;
+        limit?: number;
+        offset?: number;
+    }): Promise<Job[]> {
+        const queryParams = new URLSearchParams();
+        if (params?.keywords) queryParams.append("keywords", params.keywords);
+        if (params?.location) queryParams.append("location", params.location);
+        if (params?.remote !== undefined) queryParams.append("remote", String(params.remote));
+        if (params?.limit) queryParams.append("limit", String(params.limit));
+        if (params?.offset) queryParams.append("offset", String(params.offset));
+
+        const url = `${API_BASE_URL}/api/jobs/search${queryParams.toString() ? `?${queryParams}` : ""}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || `Failed to search jobs: ${response.statusText}`);
+        }
+
+        return response.json();
     },
 };

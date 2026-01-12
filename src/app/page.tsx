@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { JobCard } from "@/components/JobCard";
 import { SearchBar } from "@/components/SearchBar";
 import Footer from "@/components/Footer";
+import { CategoryModal } from "@/components/CategoryModal";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { useEffect, useState } from "react";
@@ -20,6 +21,7 @@ export default function HomePage() {
   const { isAuthenticated, loading } = useAuth();
   const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
   const [jobsLoading, setJobsLoading] = useState(true);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
   // Avoid hydration mismatch by deferring client-only checks until mounted
   const [mounted, setMounted] = useState(false);
@@ -105,7 +107,12 @@ export default function HomePage() {
       {/* Categories Section */}
       <section className="py-12 border-b border-gray-200">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-8">{t('home.browseCategory')}</h2>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-bold text-gray-900">{t('home.browseCategory')}</h2>
+            <Button variant="outline" onClick={() => setIsCategoryModalOpen(true)}>
+              {t('common.seeAll') || 'See All'} →
+            </Button>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {getCategoriesWithTranslations(t).slice(0, 12).map((cat) => (
               <Link
@@ -170,6 +177,12 @@ export default function HomePage() {
 
       {/* Footer */}
       <Footer />
+
+      {/* Category Modal */}
+      <CategoryModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+      />
     </div>
   );
 }

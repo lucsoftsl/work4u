@@ -1,5 +1,7 @@
 {
   "app.title": "work4u - Encuentra trabajos y gigs",
+  "common.seeAll": "Ver todo",
+  "common.close": "Cerrar",
   "nav.findWork": "Buscar trabajo",
   "nav.postJob": "Publicar oferta",
   "nav.howItWorks": "Cómo funciona",

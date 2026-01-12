@@ -1,5 +1,7 @@
 {
   "app.title": "work4u - Find Jobs & Gigs",
+  "common.seeAll": "See All",
+  "common.close": "Close",
   "nav.findWork": "Find Work",
   "nav.postJob": "Post a Job",
   "nav.howItWorks": "How it Works",

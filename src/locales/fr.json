@@ -1,5 +1,7 @@
 {
   "app.title": "work4u - Trouvez des missions",
+  "common.seeAll": "Voir tout",
+  "common.close": "Fermer",
   "nav.findWork": "Trouver du travail",
   "nav.postJob": "Publier une offre",
   "nav.howItWorks": "Comment ça marche",

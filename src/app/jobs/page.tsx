@@ -8,12 +8,14 @@ import { Sliders, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { getCategoriesWithTranslations } from "@/lib/category-utils";
 import { api } from "@/lib/api";
+import { useSearchParams } from "next/navigation";
 import type { Job } from "@/api/mocks";
 
 const JOBS_PER_PAGE = 8;
 
 export default function JobsPage() {
   const { t } = useTranslation();
+  const searchParams = useSearchParams();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -25,8 +27,28 @@ export default function JobsPage() {
   useEffect(() => {
     const loadJobs = async () => {
       try {
-        const data = await api.listJobs();
-        setJobs(data);
+        const keywords = searchParams.get("keywords");
+        const location = searchParams.get("location");
+        const category = searchParams.get("category");
+
+        if (keywords || location) {
+          // Use search endpoint if search params exist
+          const data = await api.searchJobs({
+            keywords: keywords || undefined,
+            location: location || undefined,
+          });
+          setJobs(data);
+        } else if (category) {
+          // Use listJobs with category filter
+          const data = await api.listJobs({
+            category: category,
+          });
+          setJobs(data);
+        } else {
+          // Otherwise list all jobs
+          const data = await api.listJobs();
+          setJobs(data);
+        }
       } catch (error) {
         console.error("Failed to load jobs:", error);
         setJobs([]);
@@ -36,7 +58,7 @@ export default function JobsPage() {
     };
 
     loadJobs();
-  }, []);
+  }, [searchParams]);
 
   const filteredJobs = selectedCategories.length > 0
     ? jobs.filter((job) => selectedCategories.includes(job.category.toLowerCase()))
