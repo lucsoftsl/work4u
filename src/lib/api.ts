@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { Job } from "@/api/mocks";
+import type { Job } from "@/api/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
@@ -109,6 +109,23 @@ export const api = {
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
             throw new Error(error.error || `Failed to search jobs: ${response.statusText}`);
+        }
+
+        return response.json();
+    },
+
+    async getMyJobs(userId: string, token: string): Promise<Job[]> {
+        const response = await fetch(`${API_BASE_URL}/api/jobs/user/${userId}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || `Failed to fetch your jobs: ${response.statusText}`);
         }
 
         return response.json();

@@ -12,6 +12,7 @@ interface JobCardProps {
     description: string;
     budget: number;
     budgetType: "FIXED" | "HOURLY";
+    budgetCurrency: string;
     location: string;
     remote: boolean;
     applicants: number;
@@ -43,7 +44,7 @@ export function JobCard({ job }: JobCardProps) {
         {/* Budget */}
         <div className="mb-4">
           <p className="text-xl font-bold text-gray-900">
-            ${job.budget.toLocaleString()}
+            {job.budgetCurrency} {job.budget.toLocaleString()}
             {job.budgetType === "HOURLY" && "/hr"}
           </p>
         </div>

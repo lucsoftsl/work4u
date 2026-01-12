@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Clock,
@@ -15,6 +15,8 @@ import {
   Send,
   Users,
   AlertCircle,
+  Edit2,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { api } from "@/lib/api";
@@ -23,10 +25,11 @@ import { useChatWebSocket } from "@/hooks/useChatWebSocket";
 import { useAuth } from "@/context/AuthContext";
 import { useChat } from "@/context/ChatContext";
 import { useTranslation } from "@/lib/i18n";
-import type { Job } from "@/api/mocks";
+import type { Job } from "@/api/types";
 
 export default function JobDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const jobId = params?.id as string | undefined;
   const { t } = useTranslation();
 
@@ -37,6 +40,7 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true);
   const [input, setInput] = useState("");
   const [httpMessages, setHttpMessages] = useState<[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
   const isPoster = job && user?.id === job.createdByUserId;
 
   // WebSocket chat (pass undefined safely until job is loaded)
@@ -124,6 +128,24 @@ export default function JobDetailPage() {
       jobData: { id: jobId, title: job.title },
     });
     setInput("");
+  };
+
+  const handleDeleteJob = async () => {
+    if (!job || !firebaseToken || !jobId) return;
+
+    const confirmed = window.confirm(t("jobDetail.confirmDelete"));
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    try {
+      await api.deleteJob(jobId, firebaseToken);
+      router.push("/my-jobs");
+    } catch (error) {
+      console.error("Failed to delete job:", error);
+      alert(t("jobDetail.deleteError"));
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // Transform WebSocket messages to UI format
@@ -228,7 +250,7 @@ export default function JobDetailPage() {
                 <div>
                   <p className="text-sm text-gray-500">{t("jobDetail.budget")}</p>
                   <p className="text-lg font-semibold text-gray-900">
-                    ${job.budget.toLocaleString()}{" "}
+                    {job.budgetCurrency} {job.budget.toLocaleString()}{" "}
                     {job.budgetType === "HOURLY" ? t("jobDetail.hourly") : t("jobDetail.fixed")}
                   </p>
                 </div>
@@ -320,10 +342,41 @@ export default function JobDetailPage() {
                 </div>
               </div>
             </div>
-            <Button className="w-full">{t("jobDetail.applyToJob")}</Button>
-            <Button variant="outline" className="w-full">
-              {t("jobDetail.saveForLater")}
-            </Button>
+            {isPoster ? (
+              <div className="space-y-3">
+                <Button
+                  className="w-full"
+                  asChild
+                >
+                  <Link href={`/jobs/${jobId}/edit`} className="flex items-center justify-center gap-2">
+                    <Edit2 size={18} />
+                    {t("jobDetail.editJob")}
+                  </Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full text-red-600 border-red-300 hover:bg-red-50"
+                  onClick={handleDeleteJob}
+                  disabled={isDeleting}
+                >
+                  <Trash2 size={18} />
+                  {isDeleting ? t("jobDetail.deleting") : t("jobDetail.deleteJob")}
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Button
+                  className="w-full"
+                  disabled={isPoster}
+                  title={isPoster ? "You cannot apply to your own job" : ""}
+                >
+                  {t("jobDetail.applyToJob")}
+                </Button>
+                <Button variant="outline" className="w-full">
+                  {t("jobDetail.saveForLater")}
+                </Button>
+              </>
+            )}
           </div>
 
           <div className="bg-white shadow-sm rounded-2xl p-6 border border-gray-100 flex flex-col h-[28rem]">

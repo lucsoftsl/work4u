@@ -8,5 +8,3 @@ Planned routes:
 - POST `/api/jobs`
 - POST `/api/jobs/:id/apply`
 - GET `/api/applications`
-
-To switch from mocks to a real backend, set `NEXT_PUBLIC_API_URL` to your API base URL and `NEXT_PUBLIC_API_USE_MOCKS=false`.

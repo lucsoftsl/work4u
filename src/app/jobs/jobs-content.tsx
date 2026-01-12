@@ -1,19 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { JobCard } from "@/components/JobCard";
-import { Sliders, ChevronLeft, ChevronRight } from "lucide-react";
+import { Sliders, ChevronLeft, ChevronRight, Briefcase } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { getCategoriesWithTranslations } from "@/lib/category-utils";
 import { api } from "@/lib/api";
 import { useSearchParams } from "next/navigation";
-import type { Job } from "@/api/mocks";
+import { useAuth } from "@/context/AuthContext";
+import type { Job } from "@/api/types";
 
 const JOBS_PER_PAGE = 8;
 
 export default function JobsPageContent() {
     const { t } = useTranslation();
+    const { user } = useAuth();
     const searchParams = useSearchParams();
     const [jobs, setJobs] = useState<Job[]>([]);
     const [loading, setLoading] = useState(true);
@@ -97,8 +100,20 @@ export default function JobsPageContent() {
             {/* Header */}
             <div className="border-b border-gray-200">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('jobs.title')}</h1>
-                    <p className="text-gray-600">{sortedJobs.length} {t('jobs.opportunitiesAvailable')}</p>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('jobs.title')}</h1>
+                            <p className="text-gray-600">{sortedJobs.length} {t('jobs.opportunitiesAvailable')}</p>
+                        </div>
+                        {user && (
+                            <Link href="/my-jobs">
+                                <Button variant="outline" className="flex items-center gap-2">
+                                    <Briefcase size={18} />
+                                    <span className="hidden sm:inline">{t('myJobs.title')}</span>
+                                </Button>
+                            </Link>
+                        )}
+                    </div>
                 </div>
             </div>
 

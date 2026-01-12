@@ -1,17 +1,27 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import Footer from "@/components/Footer";
-import { CATEGORIES, BUDGET_TYPES, DURATIONS, EXPERIENCE_LEVELS } from "@/data/categories";
+import { BUDGET_TYPES, DURATIONS, EXPERIENCE_LEVELS } from "@/data/categories";
 import { ChevronLeft } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { getCategoriesWithTranslations } from "@/lib/category-utils";
+import CurrencyInput from 'react-currency-input-field';
+import { CurrencySelector } from "@/components/CurrencySelector";
+import { api } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 export default function PostJobPage() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [step, setStep] = useState(1);
+
+  const { firebaseToken } = useAuth();
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -19,6 +29,7 @@ export default function PostJobPage() {
     subCategory: "",
     budget: "",
     budgetType: "FIXED",
+    budgetCurrency: "USD",
     duration: "",
     skillsRequired: "",
     experienceLevel: "BEGINNER",
@@ -34,13 +45,25 @@ export default function PostJobPage() {
     }));
   };
 
-  const handleSubmit = (e: any) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     if (step < 4) {
       setStep(step + 1);
     } else {
-      // Submit job
-      console.log("Submitting:", formData);
+      if (!firebaseToken) {
+        // Redirect the user to sign in if not authenticated
+        router.push('/signin');
+        return;
+      }
+      try {
+        // Submit job
+        await api.createJob(formData, firebaseToken);
+        // Redirect to my jobs page
+        router.push('/my-jobs');
+      } catch (error) {
+        console.error('Error creating job:', error);
+        alert('Failed to create job. Please try again.');
+      }
     }
   };
 
@@ -164,15 +187,27 @@ export default function PostJobPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">{t('post.labels.budget')}</label>
-                  <input
-                    type="number"
-                    name="budget"
-                    value={formData.budget}
-                    onChange={handleChange}
-                    placeholder="0"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <CurrencyInput
+                      name="budget"
+                      value={formData.budget}
+                      onValueChange={(value) => {
+                        setFormData((prev) => ({ ...prev, budget: value || "" }));
+                      }}
+                      placeholder="0"
+                      decimalsLimit={2}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                    <div className="w-56">
+                      <CurrencySelector
+                        value={formData.budgetCurrency}
+                        onChange={(currency) => {
+                          setFormData((prev) => ({ ...prev, budgetCurrency: currency }));
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -278,7 +313,7 @@ export default function PostJobPage() {
                 <div>
                   <p className="text-sm text-gray-600">{t('post.review.budget')}</p>
                   <p className="font-bold text-gray-900">
-                    ${formData.budget} ({formData.budgetType})
+                    {formData.budgetCurrency} {formData.budget} ({formData.budgetType})
                   </p>
                 </div>
                 <div>

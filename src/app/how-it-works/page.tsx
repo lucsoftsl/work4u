@@ -4,11 +4,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import Footer from "@/components/Footer";
 import { ChevronRight } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 
 export default function HowItWorksPage() {
-  const router = useRouter();
   const { t } = useTranslation();
   const steps = [
     {
@@ -51,19 +49,6 @@ export default function HowItWorksPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <nav className="border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-blue-600">
-            work4u
-          </Link>
-          <div className="flex gap-4">
-            <Button variant="outline" onClick={() => router.push('/signin')}>{t('nav.signIn')}</Button>
-            <Button onClick={() => router.push('/signup')}>{t('nav.getStarted')}</Button>
-          </div>
-        </div>
-      </nav>
-
       {/* Hero */}
       <section className="bg-gradient-to-br from-blue-50 to-indigo-100 py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">

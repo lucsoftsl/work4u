@@ -373,6 +373,9 @@ export default function ProfilePage() {
                 <div className="pt-6 border-t border-gray-200">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('profile.quickActions')}</h3>
                   <div className="flex flex-wrap gap-3">
+                    <Link href="/my-jobs">
+                      <Button variant="outline">{t('myJobs.title')}</Button>
+                    </Link>
                     <Link href="/jobs">
                       <Button variant="outline">{t('jobs.title')}</Button>
                     </Link>

@@ -17,7 +17,6 @@ cp .env.example .env.local
 
 Edit `.env.local`:
 - Set `NEXT_PUBLIC_API_URL` to your backend REST base URL (or leave default)
-- Toggle `NEXT_PUBLIC_API_USE_MOCKS` (defaults to mocks until backend is ready)
 - Set a secure `NEXTAUTH_SECRET` if/when auth is added
 
 ### 3. Start Development Server
