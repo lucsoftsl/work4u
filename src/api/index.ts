@@ -21,8 +21,8 @@ export async function fetchJob(id: string) {
   return data;
 }
 
-export async function createJob(payload: CreateJobPayload) {
-  if (useMocks) return mockApi.createJob(payload);
+export async function createJob(payload: CreateJobPayload, createdByUserId?: string) {
+  if (useMocks) return mockApi.createJob(payload, createdByUserId || "mock-user");
   const { data } = await api.post<Job>("/jobs", payload);
   return data;
 }
