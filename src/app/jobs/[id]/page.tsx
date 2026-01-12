@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { api } from "@/lib/api";
+import { fetchMessagesWithUser } from "@/api";
 import { useChatWebSocket } from "@/hooks/useChatWebSocket";
 import { useAuth } from "@/context/AuthContext";
 import { useChat } from "@/context/ChatContext";
@@ -35,7 +36,8 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<Job | undefined>();
   const [loading, setLoading] = useState(true);
   const [input, setInput] = useState("");
-  const [httpMessages, setHttpMessages] = useState<any[]>([]);
+  const [httpMessages, setHttpMessages] = useState<[]>([]);
+  const isPoster = job && user?.id === job.createdByUserId;
 
   // WebSocket chat (pass undefined safely until job is loaded)
   const {
@@ -77,14 +79,8 @@ export default function JobDetailPage() {
     const loadHistory = async () => {
       if (!firebaseToken || !job?.createdByUserId) return;
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-        const res = await fetch(`${apiUrl}/api/messages?withUserId=${job.createdByUserId}&limit=50`, {
-          headers: { Authorization: `Bearer ${firebaseToken}` },
-        });
-        if (res.ok) {
-          const history = await res.json();
-          setHttpMessages(history);
-        }
+        const history = await fetchMessagesWithUser(firebaseToken, job.createdByUserId, { limit: 50 });
+        setHttpMessages(history);
       } catch (err) {
         console.error("Failed to fetch HTTP chat history:", err);
       }
@@ -119,13 +115,13 @@ export default function JobDetailPage() {
 
   const handleSend = () => {
     if (!input.trim() || !job || !jobId) return;
+    if (isPoster) return; // Prevent poster from sending to self
 
     // Send via WebSocket to job creator with jobId
     sendMessage({
       toUserId: job.createdByUserId,
       text: input.trim(),
-      jobId,
-      jobTitle: job.title,
+      jobData: { id: jobId, title: job.title },
     });
     setInput("");
   };
@@ -134,11 +130,17 @@ export default function JobDetailPage() {
   const displayMessages = useMemo(() => {
     // Merge WebSocket and HTTP history, dedupe by id
     const combined = [...httpMessages, ...wsMessages];
-    const uniqueById = Array.from(new Map(combined.map((m: any) => [m.id, m])).values());
+    const uniqueById = Array.from(new Map(combined.map((m) => [m.id, m])).values());
 
     const messages = uniqueById
-      .filter((msg: any) => msg.message?.jobId === jobId)
-      .map((msg: any) => ({
+      // Only messages for this job
+      .filter((msg) => msg.jobData?.id === jobId)
+      // Only messages involving the logged-in user
+      .filter((msg) => {
+        if (!user?.id) return true;
+        return msg.fromUserId === user.id || msg.toUserId === user.id;
+      })
+      .map((msg) => ({
         id: msg.id,
         sender: msg.fromUserId === user?.id ? ("me" as const) : ("creator" as const),
         text: msg.message?.text ?? "",
@@ -386,7 +388,9 @@ export default function JobDetailPage() {
                 </div>
               ) : displayMessages.length === 0 ? (
                 <p className="text-center text-gray-500 text-sm py-4">
-                  {t("jobDetail.startConversation")}
+                  {isPoster
+                    ? t("jobDetail.posterCannotChat", "You cannot chat with yourself about this job.")
+                    : t("jobDetail.startConversation")}
                 </p>
               ) : (
                 displayMessages.map((msg) => (
@@ -422,29 +426,35 @@ export default function JobDetailPage() {
               )}
             </div>
 
-            <div className="mt-3 flex items-center gap-2 flex-shrink-0">
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                placeholder={t("jobDetail.writeMessage")}
-                disabled={!firebaseToken}
-                className="flex-1 rounded-full border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-              <Button
-                size="icon"
-                onClick={handleSend}
-                disabled={!firebaseToken}
-                aria-label={t("jobDetail.sendMessage")}
-              >
-                <Send size={16} />
-              </Button>
-            </div>
+            {isPoster ? (
+              <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600">
+                {t("jobDetail.posterCannotChat", "You cannot chat with yourself about this job.")}
+              </div>
+            ) : (
+              <div className="mt-3 flex items-center gap-2 flex-shrink-0">
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  placeholder={t("jobDetail.writeMessage")}
+                  disabled={!firebaseToken}
+                  className="flex-1 rounded-full border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
+                <Button
+                  size="icon"
+                  onClick={handleSend}
+                  disabled={!firebaseToken}
+                  aria-label={t("jobDetail.sendMessage")}
+                >
+                  <Send size={16} />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>

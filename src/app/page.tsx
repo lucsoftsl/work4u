@@ -12,6 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getCategoriesWithTranslations } from "@/lib/category-utils";
 import { api } from "@/lib/api";
 import { Job } from "@/api";
+import { ChatHeaderIcon } from "@/components/ChatHeaderIcon";
 
 export default function HomePage() {
   const router = useRouter();
@@ -71,7 +72,12 @@ export default function HomePage() {
               )}
               {/* Show Profile only after mount to match SSR output */}
               {hasUser && (
-                <Button variant="outline" onClick={() => router.push('/profile')}>{t('nav.profile')}</Button>
+                <>
+                  <ChatHeaderIcon />
+                  <Button variant="outline" onClick={() => router.push('/profile')}>
+                    {t('nav.profile')}
+                  </Button>
+                </>
               )}
               {!hasUser && (
                 <Button onClick={() => router.push('/signup')}>{t('nav.getStarted')}</Button>

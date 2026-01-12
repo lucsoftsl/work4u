@@ -2,7 +2,8 @@ import axios from "axios";
 import { mockApi, type Job, type CreateJobPayload, type Application } from "./mocks";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000",
+  // Default to the chat API host; override via NEXT_PUBLIC_API_URL
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001",
   timeout: 10_000,
 });
 
@@ -30,6 +31,28 @@ export async function applyToJob(jobId: string, payload: Omit<Application, "id" 
   if (useMocks) return mockApi.applyToJob(jobId, payload);
   const { data } = await api.post<Application>(`/jobs/${jobId}/apply`, payload);
   return data;
+}
+
+// Chat & user APIs
+export async function fetchConversations(token: string) {
+  const { data } = await api.get(`/api/messages/conversations`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return data;
+}
+
+export async function fetchMessagesWithUser(token: string, withUserId: string, options?: { limit?: number }) {
+  const { data } = await api.get(`/api/messages`, {
+    headers: { Authorization: `Bearer ${token}` },
+    params: { withUserId, ...(options?.limit ? { limit: options.limit } : {}) },
+  });
+  return data;
+}
+
+export async function deleteUserAccount(token: string, userId: string) {
+  await api.delete(`/api/users/${userId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
 
 export { api };

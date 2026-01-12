@@ -11,8 +11,7 @@ import { useTranslation } from '@/lib/i18n';
 import { useAuth } from '@/context/AuthContext';
 import { updateUserProfile as updateProfile, getIdToken } from '@/lib/auth-service';
 import countriesData from '@/data/countries.json';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { deleteUserAccount } from '@/api';
 
 type Country = typeof countriesData[number];
 const countries = countriesData as Country[];
@@ -224,16 +223,7 @@ export default function ProfilePage() {
 
     try {
       const token = await getIdToken();
-      const response = await fetch(`${API_URL}/api/users/${user.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete account');
-      }
+      await deleteUserAccount(token, user.id);
 
       // Sign out and redirect
       await signOut();
