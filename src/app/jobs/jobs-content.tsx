@@ -98,12 +98,12 @@ export default function JobsPageContent() {
     return (
         <>
             {/* Header */}
-            <div className="border-b border-gray-200">
+            <div className="border-b border-border">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('jobs.title')}</h1>
-                            <p className="text-gray-600">{sortedJobs.length} {t('jobs.opportunitiesAvailable')}</p>
+                            <h1 className="text-3xl font-bold text-foreground mb-2">{t('jobs.title')}</h1>
+                            <p className="text-muted-foreground">{sortedJobs.length} {t('jobs.opportunitiesAvailable')}</p>
                         </div>
                         {user && (
                             <Link href="/my-jobs">
@@ -124,7 +124,7 @@ export default function JobsPageContent() {
                         <div className="sticky top-20">
                             <button
                                 onClick={() => setShowFilters(!showFilters)}
-                                className="lg:hidden flex items-center gap-2 w-full py-3 px-4 bg-gray-50 rounded-lg mb-4"
+                                className="lg:hidden flex items-center gap-2 w-full py-3 px-4 bg-muted rounded-lg mb-4"
                             >
                                 <Sliders size={20} />
                                 {t('jobs.filters')}
@@ -133,7 +133,7 @@ export default function JobsPageContent() {
                             <div className={`${showFilters ? "block" : "hidden"} lg:block space-y-6`}>
                                 {/* Category Filter */}
                                 <div>
-                                    <h3 className="font-bold text-gray-900 mb-4">{t('jobs.category')}</h3>
+                                    <h3 className="font-bold text-foreground mb-4">{t('jobs.category')}</h3>
                                     <div className="space-y-2">
                                         {displayedCategories.map((cat) => (
                                             <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
@@ -145,7 +145,7 @@ export default function JobsPageContent() {
                                                     onChange={() => handleCategoryChange(cat.id)}
                                                     className="w-4 h-4 rounded"
                                                 />
-                                                <span className="text-gray-700 text-sm">{cat.name}</span>
+                                                <span className="text-foreground text-sm">{cat.name}</span>
                                             </label>
                                         ))}
                                     </div>
@@ -173,12 +173,12 @@ export default function JobsPageContent() {
 
                                 {/* Budget Filter */}
                                 <div>
-                                    <h3 className="font-bold text-gray-900 mb-4">{t('jobs.budgetType')}</h3>
+                                    <h3 className="font-bold text-foreground mb-4">{t('jobs.budgetType')}</h3>
                                     <div className="space-y-2">
                                         {["Fixed Price", "Hourly", "Both"].map((type) => (
                                             <label key={type} className="flex items-center gap-2 cursor-pointer">
                                                 <input type="checkbox" className="w-4 h-4" />
-                                                <span className="text-gray-700">{type}</span>
+                                                <span className="text-foreground">{type}</span>
                                             </label>
                                         ))}
                                     </div>
@@ -200,11 +200,11 @@ export default function JobsPageContent() {
                         {/* Sort Options */}
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-2">
-                                <span className="text-gray-600">{t('jobs.sortBy')}</span>
+                                <span className="text-muted-foreground">{t('jobs.sortBy')}</span>
                                 <select
                                     value={sortBy}
                                     onChange={(e) => setSortBy(e.target.value as "newest" | "budget" | "applicants")}
-                                    className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                                    className="px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                                 >
                                     <option value="newest">{t('jobs.sort.newest')}</option>
                                     <option value="budget">{t('jobs.sort.budget')}</option>
@@ -216,7 +216,7 @@ export default function JobsPageContent() {
                         {/* Jobs Grid */}
                         {loading ? (
                             <div className="text-center py-12">
-                                <p className="text-gray-600">{t('jobs.title')}...</p>
+                                <p className="text-muted-foreground">{t('jobs.title')}...</p>
                             </div>
                         ) : paginatedJobs.length > 0 ? (
                             <>
@@ -230,7 +230,7 @@ export default function JobsPageContent() {
                                 {totalPages > 1 && (
                                     <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
                                         {/* Mobile-friendly page info */}
-                                        <div className="text-center text-sm text-gray-600">
+                                        <div className="text-center text-sm text-muted-foreground">
                                             {t('jobs.opportunitiesAvailable')}: {sortedJobs.length} | {t('jobs.title')}: {currentPage} / {totalPages}
                                         </div>
 
@@ -288,7 +288,7 @@ export default function JobsPageContent() {
                             </>
                         ) : (
                             <div className="text-center py-12">
-                                <p className="text-gray-600 mb-4">{t('jobs.noJobs')}</p>
+                                <p className="text-muted-foreground mb-4">{t('jobs.noJobs')}</p>
                                 <Button onClick={() => setSelectedCategories([])}>{t('jobs.clearFilters')}</Button>
                             </div>
                         )}

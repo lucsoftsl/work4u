@@ -10,7 +10,7 @@ export function ChatHeaderIcon() {
     return (
         <Link
             href="/chat"
-            className="relative p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-700 hover:text-gray-900"
+            className="relative p-2 rounded-full hover:bg-muted transition-colors text-foreground hover:text-foreground"
             aria-label="Messages"
         >
             <MessageCircle size={24} />

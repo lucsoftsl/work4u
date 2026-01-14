@@ -62,9 +62,9 @@ const CURRENCIES: Currency[] = currenciesData; export function CurrencySelector(
                         setTimeout(() => inputRef.current?.focus(), 0);
                     }
                 }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between bg-white hover:bg-gray-50 transition-colors min-w-40"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary flex items-center justify-between bg-card hover:bg-muted transition-colors min-w-40"
             >
-                <span className="text-gray-900 font-medium flex items-center gap-2">
+                <span className="text-foreground font-medium flex items-center gap-2">
                     {selectedCurrency && (
                         <img
                             src={selectedCurrency.flag}
@@ -76,21 +76,21 @@ const CURRENCIES: Currency[] = currenciesData; export function CurrencySelector(
                 </span>
                 <ChevronDown
                     size={18}
-                    className={`text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""
+                    className={`text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""
                         }`}
                 />
             </button>
 
             {isOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-40">
-                    <div className="p-3 border-b border-gray-200">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-background border border-border rounded-lg shadow-lg z-50 min-w-40">
+                    <div className="p-3 border-b border-border">
                         <input
                             ref={inputRef}
                             type="text"
                             placeholder="Search currency..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground placeholder:text-muted-foreground text-sm"
                         />
                     </div>
                     <div className="max-h-64 overflow-y-auto">
@@ -100,7 +100,7 @@ const CURRENCIES: Currency[] = currenciesData; export function CurrencySelector(
                                     key={currency.code}
                                     type="button"
                                     onClick={() => handleSelect(currency.code)}
-                                    className={`w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex justify-between items-center ${value === currency.code ? "bg-blue-100" : ""
+                                    className={`w-full text-left px-4 py-3 hover:bg-primary/10 transition-colors flex justify-between items-center ${value === currency.code ? "bg-primary/20" : ""
                                         }`}
                                 >
                                     <div className="flex items-center gap-3 flex-1">
@@ -110,14 +110,14 @@ const CURRENCIES: Currency[] = currenciesData; export function CurrencySelector(
                                             className="w-6 h-4 rounded-sm object-cover"
                                         />
                                         <div>
-                                            <p className="font-medium text-gray-900">{currency.code}</p>
-                                            <p className="text-sm text-gray-500">{currency.name}</p>
+                                            <p className="font-medium text-foreground">{currency.code}</p>
+                                            <p className="text-sm text-muted-foreground">{currency.name}</p>
                                         </div>
                                     </div>
                                 </button>
                             ))
                         ) : (
-                            <div className="px-4 py-3 text-center text-gray-500 text-sm">
+                            <div className="px-4 py-3 text-center text-muted-foreground text-sm">
                                 No currencies found
                             </div>
                         )}

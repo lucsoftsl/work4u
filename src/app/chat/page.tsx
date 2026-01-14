@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/context/AuthContext";
 import { useChatWebSocket } from "@/hooks/useChatWebSocket";
 import { fetchConversations, fetchMessagesWithUser } from "@/api";
+import { useTranslation } from "@/lib/i18n";
 
 type JobKey = string; // jobId or "nojob"
 
@@ -105,6 +106,7 @@ function dedupeById(messages: any[]) {
 }
 
 export default function ChatPage() {
+  const { t } = useTranslation();
   const { firebaseToken, user } = useAuth();
   const { isConnected, messages: wsMessages, sendMessage } = useChatWebSocket(firebaseToken, "");
 
@@ -536,10 +538,10 @@ export default function ChatPage() {
 
   if (!firebaseToken) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="bg-white rounded-2xl shadow-lg p-8 text-center space-y-4 max-w-md w-full">
-          <p className="text-lg font-semibold text-gray-900">Sign in to chat</p>
-          <p className="text-gray-600">You need to be signed in to view and send messages.</p>
+      <div className="min-h-screen flex items-center justify-center bg-muted px-4">
+        <div className="bg-card rounded-2xl shadow-lg p-8 text-center space-y-4 max-w-md w-full">
+          <p className="text-lg font-semibold text-foreground">Sign in to chat</p>
+          <p className="text-muted-foreground">You need to be signed in to view and send messages.</p>
           <Button asChild className="w-full">
             <Link href="/signin">Sign In</Link>
           </Button>
@@ -549,16 +551,16 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-full bg-gray-50">
+    <div className="h-full bg-muted">
       <div className="h-full flex min-h-0">
         {/* Column 1 — Users */}
         <aside
-          className={`w-full md:w-96 bg-white border-r border-gray-200 flex flex-col ${selectedUserId ? "hidden md:flex" : ""
+          className={`w-full md:w-96 bg-card border-r border-border flex flex-col ${selectedUserId ? "hidden md:flex" : ""
             }`}
         >
-          <div className="border-b border-gray-200 p-4">
-            <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-            <p className="text-xs text-gray-500 mt-1">Users</p>
+          <div className="border-b border-border p-4">
+            <h1 className="text-2xl font-bold text-foreground">Messages</h1>
+            <p className="text-xs text-muted-foreground mt-1">Users</p>
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -569,7 +571,7 @@ export default function ChatPage() {
                 </div>
               </div>
             ) : usersList.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-gray-500">
+              <div className="flex items-center justify-center h-full text-muted-foreground">
                 <p>No conversations yet</p>
               </div>
             ) : (
@@ -584,16 +586,16 @@ export default function ChatPage() {
                         setSelectedUserId(t.otherUser.id);
                         setSelectedJobKey(null);
                       }}
-                      className={`w-full p-4 hover:bg-gray-50 transition-colors text-left ${active ? "bg-blue-50" : ""
+                      className={`w-full p-4 hover:bg-muted transition-colors text-left ${active ? "bg-primary/10" : ""
                         }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-semibold text-gray-900 truncate">{t.otherUser.name}</p>
-                          <p className="text-sm text-gray-600 truncate">{t.lastMessageText || "—"}</p>
+                          <p className="font-semibold text-foreground truncate">{t.otherUser.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">{t.lastMessageText || "—"}</p>
                         </div>
                         <div className="flex flex-col items-end gap-1">
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-muted-foreground">
                             {t.lastMessageTime
                               ? new Date(t.lastMessageTime).toLocaleTimeString([], {
                                 hour: "2-digit",
@@ -613,7 +615,7 @@ export default function ChatPage() {
                     {/* Nested jobs list for selected user (desktop only) */}
                     {isSelectedUser && !loadingMessages && jobsForSelectedUser.length > 0 && (
                       <div className="hidden md:block px-4 pb-3">
-                        <p className="text-xs text-gray-500 mb-2">Jobs</p>
+                        <p className="text-xs text-muted-foreground mb-2">Jobs</p>
                         <div className="space-y-1">
                           {jobsForSelectedUser.map((j) => {
                             const jobActive = selectedJobKey === j.jobKey;
@@ -621,10 +623,10 @@ export default function ChatPage() {
                               <button
                                 key={j.jobKey}
                                 onClick={() => setSelectedJobKey(j.jobKey)}
-                                className={`w-full flex items-center gap-2 rounded-lg px-2 py-2 text-left hover:bg-gray-50 ${jobActive ? "bg-blue-50" : ""
+                                className={`w-full flex items-center gap-2 rounded-lg px-2 py-2 text-left hover:bg-muted ${jobActive ? "bg-primary/10" : ""
                                   }`}
                               >
-                                <CornerDownRight size={16} className="text-gray-400 flex-shrink-0" />
+                                <CornerDownRight size={16} className="text-muted-foreground flex-shrink-0" />
                                 <div className="min-w-0 flex-1">
                                   {j.jobId ? (
                                     <Link
@@ -635,11 +637,11 @@ export default function ChatPage() {
                                       {j.jobTitle || `Job ${j.jobId}`}
                                     </Link>
                                   ) : (
-                                    <p className="text-sm font-medium text-gray-900 truncate">General</p>
+                                    <p className="text-sm font-medium text-foreground truncate">General</p>
                                   )}
-                                  <p className="text-xs text-gray-600 truncate">{j.lastText || "—"}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{j.lastText || "—"}</p>
                                 </div>
-                                <span className="text-[11px] text-gray-500">
+                                <span className="text-[11px] text-muted-foreground">
                                   {j.lastTime
                                     ? new Date(j.lastTime).toLocaleTimeString([], {
                                       hour: "2-digit",
@@ -662,10 +664,10 @@ export default function ChatPage() {
 
         {/* Column 2 — Jobs for selected user (mobile only) */}
         <aside
-          className={`w-full bg-white border-r border-gray-200 flex flex-col md:hidden ${selectedUserId ? "" : "hidden"
+          className={`w-full bg-card border-r border-border flex flex-col md:hidden ${selectedUserId ? "" : "hidden"
             } ${selectedJobKey ? "hidden" : ""}`}
         >
-          <div className="border-b border-gray-200 p-4 flex items-center gap-3">
+          <div className="border-b border-border p-4 flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
@@ -678,20 +680,20 @@ export default function ChatPage() {
               <ArrowLeft size={18} />
             </Button>
             <div className="min-w-0">
-              <p className="text-xs text-gray-500">Jobs with</p>
-              <p className="font-semibold text-gray-900 truncate">
+              <p className="text-xs text-muted-foreground">Jobs with</p>
+              <p className="font-semibold text-foreground truncate">
                 {selectedThread?.otherUser.name ?? "—"}
               </p>
             </div>
             <div className="ml-auto flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`} />
-              <span className="text-xs text-gray-500">{isConnected ? "Online" : "Offline"}</span>
+              <span className="text-xs text-muted-foreground">{isConnected ? "Online" : "Offline"}</span>
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto">
             {!selectedUserId ? (
-              <div className="flex items-center justify-center h-full text-gray-500">
+              <div className="flex items-center justify-center h-full text-muted-foreground">
                 <p>Select a user</p>
               </div>
             ) : loadingMessages ? (
@@ -701,7 +703,7 @@ export default function ChatPage() {
                 </div>
               </div>
             ) : jobsForSelectedUser.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-gray-500">
+              <div className="flex items-center justify-center h-full text-muted-foreground">
                 <p>No job threads yet</p>
               </div>
             ) : (
@@ -711,7 +713,7 @@ export default function ChatPage() {
                   <button
                     key={j.jobKey}
                     onClick={() => setSelectedJobKey(j.jobKey)}
-                    className={`w-full p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors text-left ${active ? "bg-blue-50" : ""
+                    className={`w-full p-4 border-b border-gray-100 hover:bg-muted transition-colors text-left ${active ? "bg-primary/10" : ""
                       }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -725,11 +727,11 @@ export default function ChatPage() {
                             {j.jobTitle || `Job ${j.jobId}`}
                           </Link>
                         ) : (
-                          <p className="text-sm font-semibold text-gray-900 truncate">General</p>
+                          <p className="text-sm font-semibold text-foreground truncate">General</p>
                         )}
-                        <p className="text-sm text-gray-600 truncate">{j.lastText || "—"}</p>
+                        <p className="text-sm text-muted-foreground truncate">{j.lastText || "—"}</p>
                       </div>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         {j.lastTime
                           ? new Date(j.lastTime).toLocaleTimeString([], {
                             hour: "2-digit",
@@ -738,7 +740,7 @@ export default function ChatPage() {
                           : ""}
                       </span>
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-1">{j.count} messages</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">{j.count} {t('gamification.messages')}</p>
                   </button>
                 );
               })
@@ -749,13 +751,13 @@ export default function ChatPage() {
         {/* Column 3 — Chat */}
         <main className={`flex-1 flex flex-col ${selectedJobKey ? "" : "hidden md:flex"}`}>
           {!selectedUserId || !selectedJobKey ? (
-            <div className="flex items-center justify-center h-full text-gray-500">
+            <div className="flex items-center justify-center h-full text-muted-foreground">
               <p>Select a user and a job to start messaging</p>
             </div>
           ) : (
             <>
               {/* Header */}
-              <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+              <div className="bg-card border-b border-border p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
                   <Button
                     variant="ghost"
@@ -767,7 +769,7 @@ export default function ChatPage() {
                   </Button>
 
                   <div className="min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">
+                    <p className="font-semibold text-foreground truncate">
                       {selectedThread?.otherUser.name ?? "—"}
                     </p>
 
@@ -782,23 +784,23 @@ export default function ChatPage() {
                             {job.jobTitle || `Job ${job.jobId}`}
                           </Link>
                         ) : (
-                          <p className="text-xs text-gray-500">Job</p>
+                          <p className="text-xs text-muted-foreground">Job</p>
                         );
                       })()
                     ) : (
-                      <p className="text-xs text-gray-500">General</p>
+                      <p className="text-xs text-muted-foreground">General</p>
                     )}
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`} />
-                  <span className="text-xs text-gray-500">{isConnected ? "Online" : "Offline"}</span>
+                  <span className="text-xs text-muted-foreground">{isConnected ? "Online" : "Offline"}</span>
                 </div>
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-card">
                 {loadingMessages ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="animate-spin">
@@ -806,7 +808,7 @@ export default function ChatPage() {
                     </div>
                   </div>
                 ) : messagesForSelectedJob.length === 0 ? (
-                  <p className="text-center text-gray-500 text-sm py-4">
+                  <p className="text-center text-muted-foreground text-sm py-4">
                     No messages yet for this job. Start the conversation!
                   </p>
                 ) : (
@@ -815,11 +817,11 @@ export default function ChatPage() {
                     return (
                       <div key={msg.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                         <div
-                          className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${mine ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
+                          className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${mine ? "bg-primary text-white" : "bg-muted text-foreground"
                             }`}
                         >
                           <p className="whitespace-pre-wrap">{getMessageText(msg) || "Sent an image"}</p>
-                          <div className={`mt-1 text-[10px] ${mine ? "text-blue-100" : "text-gray-500"}`}>
+                          <div className={`mt-1 text-[10px] ${mine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                             {getMessageTime(msg)
                               ? new Date(getMessageTime(msg) as string).toLocaleTimeString([], {
                                 hour: "numeric",
@@ -835,7 +837,7 @@ export default function ChatPage() {
               </div>
 
               {/* Input */}
-              <div className="bg-white border-t border-gray-200 p-4 flex-shrink-0">
+              <div className="bg-card border-t border-border p-4 flex-shrink-0">
                 {!isConnected && (
                   <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
                     <AlertCircle size={16} className="text-yellow-700 flex-shrink-0 mt-0.5" />
@@ -856,7 +858,7 @@ export default function ChatPage() {
                       }
                     }}
                     placeholder="Write a message."
-                    className="flex-1 rounded-full border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 rounded-full border border-border px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                   <Button size="icon" onClick={handleSend} disabled={!isConnected} aria-label="Send message">
                     <Send size={16} />

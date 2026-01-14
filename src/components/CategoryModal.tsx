@@ -39,13 +39,13 @@ export function CategoryModal({ isOpen, onClose }: CategoryModalProps) {
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-card rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                 {/* Header */}
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-gray-900">{t('home.browseCategory')}</h2>
+                <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-foreground">{t('home.browseCategory')}</h2>
                     <button
                         onClick={onClose}
-                        className="text-gray-500 hover:text-gray-700 transition"
+                        className="text-muted-foreground hover:text-foreground transition"
                         aria-label="Close modal"
                     >
                         <X size={24} />
@@ -61,12 +61,12 @@ export function CategoryModal({ isOpen, onClose }: CategoryModalProps) {
                                 onClick={() => handleCategoryClick(cat.id)}
                                 disabled={isLoading && selectedCategory === cat.id}
                                 className={`p-4 text-center rounded-lg border-2 transition ${selectedCategory === cat.id
-                                        ? "border-blue-500 bg-blue-50"
-                                        : "border-gray-200 hover:border-blue-500 hover:bg-blue-50"
+                                        ? "border-blue-500 bg-primary/10"
+                                        : "border-border hover:border-primary hover:bg-primary/10"
                                     } disabled:opacity-50`}
                             >
                                 <div className="text-4xl mb-3">{cat.icon}</div>
-                                <p className="font-medium text-gray-900 text-sm line-clamp-2">
+                                <p className="font-medium text-foreground text-sm line-clamp-2">
                                     {cat.name}
                                 </p>
                             </button>
@@ -75,7 +75,7 @@ export function CategoryModal({ isOpen, onClose }: CategoryModalProps) {
                 </div>
 
                 {/* Footer */}
-                <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex justify-end">
+                <div className="border-t border-border px-6 py-4 bg-muted flex justify-end">
                     <Button variant="outline" onClick={onClose}>
                         {t('common.close') || 'Close'}
                     </Button>

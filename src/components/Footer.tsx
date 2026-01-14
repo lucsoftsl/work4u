@@ -25,39 +25,39 @@ export default function Footer() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
                     <div>
                         <h3 className="text-white font-semibold mb-4">work4u</h3>
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                             {t('footer.tagline')}
                         </p>
                     </div>
                     <div>
                         <h4 className="text-white font-semibold mb-4">For Workers</h4>
                         <ul className="space-y-2 text-sm">
-                            <li><Link href="/jobs" className="text-gray-400 hover:text-white transition-colors">Browse Jobs</Link></li>
-                            <li><Link href="/how-it-works" className="text-gray-400 hover:text-white transition-colors">How it Works</Link></li>
-                            <li><Link href="#" className="text-gray-400 hover:text-white transition-colors">Safety Tips</Link></li>
+                            <li><Link href="/jobs" className="text-muted-foreground hover:text-white transition-colors">Browse Jobs</Link></li>
+                            <li><Link href="/how-it-works" className="text-muted-foreground hover:text-white transition-colors">How it Works</Link></li>
+                            <li><Link href="#" className="text-muted-foreground hover:text-white transition-colors">Safety Tips</Link></li>
                         </ul>
                     </div>
                     <div>
                         <h4 className="text-white font-semibold mb-4">For Employers</h4>
                         <ul className="space-y-2 text-sm">
-                            <li><Link href="/post-job" className="text-gray-400 hover:text-white transition-colors">Post a Job</Link></li>
-                            <li><Link href="#" className="text-gray-400 hover:text-white transition-colors">Find Talent</Link></li>
-                            <li><Link href="#" className="text-gray-400 hover:text-white transition-colors">Pricing</Link></li>
+                            <li><Link href="/post-job" className="text-muted-foreground hover:text-white transition-colors">Post a Job</Link></li>
+                            <li><Link href="#" className="text-muted-foreground hover:text-white transition-colors">Find Talent</Link></li>
+                            <li><Link href="#" className="text-muted-foreground hover:text-white transition-colors">Pricing</Link></li>
                         </ul>
                     </div>
                     <div>
                         <h4 className="text-white font-semibold mb-4">Company</h4>
                         <ul className="space-y-2 text-sm">
-                            <li><Link href="#" className="text-gray-400 hover:text-white transition-colors">About</Link></li>
-                            <li><Link href="#" className="text-gray-400 hover:text-white transition-colors">Blog</Link></li>
-                            <li><Link href="#" className="text-gray-400 hover:text-white transition-colors">Contact</Link></li>
+                            <li><Link href="#" className="text-muted-foreground hover:text-white transition-colors">About</Link></li>
+                            <li><Link href="#" className="text-muted-foreground hover:text-white transition-colors">Blog</Link></li>
+                            <li><Link href="#" className="text-muted-foreground hover:text-white transition-colors">Contact</Link></li>
                         </ul>
                     </div>
                 </div>
 
                 {/* Language Selector & Copyright */}
                 <div className="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <p className="text-sm text-gray-400">&copy; 2024 work4u. All rights reserved.</p>
+                    <p className="text-sm text-muted-foreground">&copy; 2024 work4u. All rights reserved.</p>
 
                     {/* Language Dropdown */}
                     <div className="relative">

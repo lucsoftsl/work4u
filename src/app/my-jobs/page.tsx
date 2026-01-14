@@ -44,9 +44,9 @@ export default function MyJobsPage() {
     }, [user?.id, firebaseToken, router]);
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-muted">
             {/* Header */}
-            <div className="border-b border-gray-200 bg-white">
+            <div className="border-b border-border bg-card">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <Button variant="ghost" size="sm" asChild>
@@ -54,7 +54,7 @@ export default function MyJobsPage() {
                                 <ArrowLeft size={16} />
                             </Link>
                         </Button>
-                        <h1 className="text-3xl font-bold text-gray-900">{t('myJobs.title')}</h1>
+                        <h1 className="text-3xl font-bold text-foreground">{t('myJobs.title')}</h1>
                     </div>
                     <Button asChild>
                         <Link href="/post-job" className="flex items-center gap-2">
@@ -69,7 +69,7 @@ export default function MyJobsPage() {
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
                 {loading ? (
                     <div className="text-center py-12">
-                        <p className="text-gray-600">{t('myJobs.loading')}</p>
+                        <p className="text-muted-foreground">{t('myJobs.loading')}</p>
                     </div>
                 ) : error ? (
                     <div className="text-center py-12">
@@ -80,14 +80,14 @@ export default function MyJobsPage() {
                     </div>
                 ) : jobs.length === 0 ? (
                     <div className="text-center py-12">
-                        <p className="text-gray-600 mb-4">{t('myJobs.noJobs')}</p>
+                        <p className="text-muted-foreground mb-4">{t('myJobs.noJobs')}</p>
                         <Button asChild>
                             <Link href="/post-job">{t('myJobs.postFirst')}</Link>
                         </Button>
                     </div>
                 ) : (
                     <div>
-                        <p className="text-gray-600 mb-6">
+                        <p className="text-muted-foreground mb-6">
                             {t('myJobs.activeJobs')} <span className="font-semibold">{jobs.length}</span> {jobs.length === 1 ? t('myJobs.jobSingular') : t('myJobs.jobPlural')}
                         </p>
                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

@@ -28,13 +28,13 @@ export function SearchBar() {
   return (
     <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 max-w-2xl mx-auto">
       <div className="flex-1 relative">
-        <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+        <Search className="absolute left-3 top-3 text-muted-foreground" size={20} />
         <input
           type="text"
           placeholder={t('home.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full pl-10 pr-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
       <input
@@ -42,7 +42,7 @@ export function SearchBar() {
         placeholder={t('home.locationPlaceholder')}
         value={location}
         onChange={(e) => setLocation(e.target.value)}
-        className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex-1 px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
       />
       <Button type="submit" className="md:w-auto" disabled={isLoading}>
         {t('home.search')}

@@ -184,7 +184,7 @@ export default function JobDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-muted">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-12 space-y-6">
           <div className="h-10 w-32 bg-gray-200 rounded animate-pulse" />
           <div className="h-16 bg-gray-200 rounded animate-pulse" />
@@ -199,10 +199,10 @@ export default function JobDetailPage() {
 
   if (!job) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="bg-white shadow-lg rounded-2xl p-8 text-center space-y-4 max-w-md w-full">
-          <p className="text-2xl font-semibold text-gray-900">{t("jobDetail.jobNotFound")}</p>
-          <p className="text-gray-600">
+      <div className="min-h-screen flex items-center justify-center bg-muted px-4">
+        <div className="bg-card shadow-lg rounded-2xl p-8 text-center space-y-4 max-w-md w-full">
+          <p className="text-2xl font-semibold text-foreground">{t("jobDetail.jobNotFound")}</p>
+          <p className="text-muted-foreground">
             {t("jobDetail.jobNotFoundDesc")}
           </p>
           <div className="flex justify-center gap-3">
@@ -219,8 +219,8 @@ export default function JobDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="border-b border-gray-200 bg-white">
+    <div className="min-h-screen bg-muted">
+      <div className="border-b border-border bg-card">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6 flex items-center gap-4">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/jobs" className="flex items-center gap-2">
@@ -230,10 +230,10 @@ export default function JobDetailPage() {
             </Link>
           </Button>
           <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-semibold uppercase">
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary/20 text-blue-800 text-xs font-semibold uppercase">
               {job.category}
             </span>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               {job.title}
             </h1>
           </div>
@@ -243,44 +243,44 @@ export default function JobDetailPage() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 grid lg:grid-cols-3 gap-8">
         {/* Details column */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white shadow-sm rounded-2xl p-6 border border-gray-100">
+          <div className="bg-card shadow-sm rounded-2xl p-6 border border-gray-100">
             <div className="flex flex-wrap items-center gap-4 mb-6">
-              <div className="flex items-center gap-2 text-gray-700">
+              <div className="flex items-center gap-2 text-foreground">
                 <DollarSign size={18} />
                 <div>
-                  <p className="text-sm text-gray-500">{t("jobDetail.budget")}</p>
-                  <p className="text-lg font-semibold text-gray-900">
+                  <p className="text-sm text-muted-foreground">{t("jobDetail.budget")}</p>
+                  <p className="text-lg font-semibold text-foreground">
                     {job.budgetCurrency} {job.budget.toLocaleString()}{" "}
                     {job.budgetType === "HOURLY" ? t("jobDetail.hourly") : t("jobDetail.fixed")}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-gray-700">
+              <div className="flex items-center gap-2 text-foreground">
                 <MapPin size={18} />
                 <div>
-                  <p className="text-sm text-gray-500">{t("jobDetail.location")}</p>
-                  <p className="text-lg font-semibold text-gray-900">
+                  <p className="text-sm text-muted-foreground">{t("jobDetail.location")}</p>
+                  <p className="text-lg font-semibold text-foreground">
                     {job.remote ? t("jobDetail.remote") : job.location}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-gray-700">
+              <div className="flex items-center gap-2 text-foreground">
                 <Clock size={18} />
                 <div>
-                  <p className="text-sm text-gray-500">{t("jobDetail.posted")}</p>
-                  <p className="text-lg font-semibold text-gray-900">
+                  <p className="text-sm text-muted-foreground">{t("jobDetail.posted")}</p>
+                  <p className="text-lg font-semibold text-foreground">
                     {formattedCreatedAt}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-gray-700">
+              <div className="flex items-center gap-2 text-foreground">
                 <Users size={18} />
                 <div>
-                  <p className="text-sm text-gray-500">{t("jobDetail.applicants")}</p>
-                  <p className="text-lg font-semibold text-gray-900">
+                  <p className="text-sm text-muted-foreground">{t("jobDetail.applicants")}</p>
+                  <p className="text-lg font-semibold text-foreground">
                     {job.applicants}
                   </p>
                 </div>
@@ -288,13 +288,13 @@ export default function JobDetailPage() {
             </div>
 
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-foreground">
                 {t("jobDetail.aboutJob")}
               </h2>
-              <p className="text-gray-700 leading-relaxed">{job.description}</p>
+              <p className="text-foreground leading-relaxed">{job.description}</p>
 
               <div className="flex flex-wrap gap-2 pt-2">
-                <span className="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-700">
+                <span className="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-full bg-gray-100 text-foreground">
                   <Shield size={14} /> {t("jobDetail.verifiedPoster")}
                 </span>
                 {job.remote && (
@@ -306,11 +306,11 @@ export default function JobDetailPage() {
             </div>
           </div>
 
-          <div className="bg-white shadow-sm rounded-2xl p-6 border border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+          <div className="bg-card shadow-sm rounded-2xl p-6 border border-gray-100">
+            <h3 className="text-lg font-semibold text-foreground mb-3">
               {t("jobDetail.lookingFor")}
             </h3>
-            <ul className="list-disc list-inside text-gray-700 space-y-2">
+            <ul className="list-disc list-inside text-foreground space-y-2">
               <li>Reliable communicator who can start soon.</li>
               <li>Experience with similar tasks and good reviews.</li>
               <li>Comfortable sharing progress updates and photos.</li>
@@ -320,7 +320,7 @@ export default function JobDetailPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <div className="bg-white shadow-sm rounded-2xl p-6 border border-gray-100 space-y-4">
+          <div className="bg-card shadow-sm rounded-2xl p-6 border border-gray-100 space-y-4">
             <div className="flex items-center gap-3">
               {job.createdBy.image && (
                 <Image
@@ -332,11 +332,11 @@ export default function JobDetailPage() {
                 />
               )}
               <div>
-                <p className="text-sm text-gray-500">{t("jobDetail.postedBy")}</p>
-                <p className="text-base font-semibold text-gray-900">
+                <p className="text-sm text-muted-foreground">{t("jobDetail.postedBy")}</p>
+                <p className="text-base font-semibold text-foreground">
                   {job.createdBy.name}
                 </p>
-                <div className="flex items-center gap-1 text-sm text-gray-700">
+                <div className="flex items-center gap-1 text-sm text-foreground">
                   <Star size={14} className="text-yellow-500 fill-yellow-500" />
                   {job.createdBy.rating} ({job.createdBy.reviews} {t("jobDetail.reviews")})
                 </div>
@@ -355,7 +355,7 @@ export default function JobDetailPage() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full text-red-600 border-red-300 hover:bg-red-50"
+                  className="w-full text-red-600 border-red-700 hover:bg-red-950/50"
                   onClick={handleDeleteJob}
                   disabled={isDeleting}
                 >
@@ -379,11 +379,11 @@ export default function JobDetailPage() {
             )}
           </div>
 
-          <div className="bg-white shadow-sm rounded-2xl p-6 border border-gray-100 flex flex-col h-[28rem]">
+          <div className="bg-card shadow-sm rounded-2xl p-6 border border-gray-100 flex flex-col h-[28rem]">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <p className="text-sm text-gray-500">{t("jobDetail.chatWithPoster")}</p>
-                <p className="text-base font-semibold text-gray-900">
+                <p className="text-sm text-muted-foreground">{t("jobDetail.chatWithPoster")}</p>
+                <p className="text-base font-semibold text-foreground">
                   {job.createdBy.name}
                 </p>
               </div>
@@ -392,7 +392,7 @@ export default function JobDetailPage() {
                   className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"
                     }`}
                 />
-                <span className="text-xs text-gray-600">
+                <span className="text-xs text-muted-foreground">
                   {isConnected ? t("jobDetail.connected") : t("jobDetail.connecting")}
                 </span>
               </div>
@@ -411,7 +411,7 @@ export default function JobDetailPage() {
             )}
 
             {firebaseToken && !isConnected && (
-              <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
+              <div className="mb-3 p-3 bg-primary/10 border border-blue-200 rounded-lg flex items-start gap-2">
                 <AlertCircle
                   size={16}
                   className="text-blue-700 flex-shrink-0 mt-0.5"
@@ -440,7 +440,7 @@ export default function JobDetailPage() {
                   </div>
                 </div>
               ) : displayMessages.length === 0 ? (
-                <p className="text-center text-gray-500 text-sm py-4">
+                <p className="text-center text-muted-foreground text-sm py-4">
                   {isPoster
                     ? t("jobDetail.posterCannotChat", "You cannot chat with yourself about this job.")
                     : t("jobDetail.startConversation")}
@@ -455,14 +455,14 @@ export default function JobDetailPage() {
                     <div
                       className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${msg.sender === "me"
                         ? "bg-blue-600 text-white"
-                        : "bg-gray-100 text-gray-900"
+                        : "bg-gray-100 text-foreground"
                         }`}
                     >
                       <p className="whitespace-pre-wrap">{msg.text}</p>
                       <div
                         className={`mt-1 text-[10px] ${msg.sender === "me"
                           ? "text-blue-100"
-                          : "text-gray-500"
+                          : "text-muted-foreground"
                           }`}
                       >
                         {new Date(msg.timestamp).toLocaleTimeString([], {
@@ -480,7 +480,7 @@ export default function JobDetailPage() {
             </div>
 
             {isPoster ? (
-              <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600">
+              <div className="mt-3 p-3 bg-muted border border-border rounded-lg text-xs text-muted-foreground">
                 {t("jobDetail.posterCannotChat", "You cannot chat with yourself about this job.")}
               </div>
             ) : (
@@ -496,7 +496,7 @@ export default function JobDetailPage() {
                   }}
                   placeholder={t("jobDetail.writeMessage")}
                   disabled={!firebaseToken}
-                  className="flex-1 rounded-full border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="flex-1 rounded-full border border-border px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
                 <Button
                   size="icon"

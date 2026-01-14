@@ -12,16 +12,16 @@ export function ChatNotifications() {
             {notifications.map((notification) => (
                 <div
                     key={notification.id}
-                    className="bg-white rounded-lg shadow-lg border border-blue-200 p-4 animate-slide-in"
+                    className="bg-card rounded-lg shadow-lg border border-blue-200 p-4 animate-slide-in"
                 >
                     <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-3 flex-1">
                             <MessageCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
                             <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-gray-900 text-sm">
+                                <p className="font-semibold text-foreground text-sm">
                                     {notification.senderName}
                                 </p>
-                                <p className="text-gray-600 text-sm line-clamp-2">
+                                <p className="text-muted-foreground text-sm line-clamp-2">
                                     {notification.message.text || "Sent an image"}
                                 </p>
                                 {notification.jobId && (
@@ -36,7 +36,7 @@ export function ChatNotifications() {
                         </div>
                         <button
                             onClick={() => removeNotification(notification.id)}
-                            className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+                            className="text-muted-foreground hover:text-muted-foreground flex-shrink-0"
                         >
                             <X size={16} />
                         </button>

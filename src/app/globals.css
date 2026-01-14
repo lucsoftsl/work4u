@@ -3,28 +3,91 @@
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221.2 83.2% 53.3%;
+  /* MMORPG Dark Fantasy Theme */
+  --background: 240 10% 8%;
+  --foreground: 40 15% 92%;
+  --card: 240 10% 12%;
+  --card-foreground: 40 15% 92%;
+  --popover: 240 15% 10%;
+  --popover-foreground: 40 15% 92%;
+  --primary: 266 85% 58%; /* Epic purple */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 45 93% 47%; /* Gold */
+  --secondary-foreground: 240 10% 8%;
+  --muted: 240 10% 20%;
+  --muted-foreground: 40 10% 60%;
+  --accent: 142 76% 36%; /* Success green */
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 40%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 240 10% 20%;
+  --input: 240 10% 18%;
+  --ring: 266 85% 58%;
   --radius: 0.75rem;
+  
+  /* Rarity colors */
+  --common: 158 10% 50%;
+  --uncommon: 142 76% 36%;
+  --rare: 217 91% 60%;
+  --epic: 266 85% 58%;
+  --legendary: 45 93% 47%;
+  
+  /* XP and progression */
+  --xp-bar: 142 76% 36%;
+  --xp-bar-bg: 240 10% 20%;
+  
+  /* Special effects */
+  --glow-gold: 45 93% 47%;
+  --glow-purple: 266 85% 58%;
+  --glow-blue: 217 91% 60%;
 }
 
 body {
   @apply bg-background text-foreground min-h-screen antialiased;
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(266, 85%, 20%, 0.1) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(45, 93%, 20%, 0.1) 0px, transparent 50%);
+}
+
+/* Rarity glow effects */
+.rarity-common {
+  @apply border-[hsl(var(--common))];
+}
+
+.rarity-uncommon {
+  @apply border-[hsl(var(--uncommon))] shadow-[0_0_10px_rgba(34,197,94,0.3)];
+}
+
+.rarity-rare {
+  @apply border-[hsl(var(--rare))] shadow-[0_0_15px_rgba(59,130,246,0.4)];
+}
+
+.rarity-epic {
+  @apply border-[hsl(var(--epic))] shadow-[0_0_20px_rgba(168,85,247,0.5)];
+}
+
+.rarity-legendary {
+  @apply border-[hsl(var(--legendary))] shadow-[0_0_25px_rgba(234,179,8,0.6)];
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 25px rgba(234, 179, 8, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(234, 179, 8, 0.8);
+  }
+}
+
+/* XP Bar styles */
+.xp-bar-fill {
+  @apply bg-gradient-to-r from-green-500 via-emerald-400 to-green-500;
+  animation: shimmer 2s linear infinite;
+  background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }

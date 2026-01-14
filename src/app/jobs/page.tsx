@@ -6,10 +6,10 @@ import Footer from "@/components/Footer";
 
 export default function JobsPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       <Suspense fallback={
         <div className="text-center py-12">
-          <p className="text-gray-600">Loading jobs...</p>
+          <p className="text-muted-foreground">Loading jobs...</p>
         </div>
       }>
         <JobsPageContent />

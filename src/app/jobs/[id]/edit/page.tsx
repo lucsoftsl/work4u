@@ -113,26 +113,26 @@ export default function EditJobPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-white flex items-center justify-center">
+            <div className="min-h-screen bg-card flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                    <p className="text-gray-600">{t('common.loading')}</p>
+                    <p className="text-muted-foreground">{t('common.loading')}</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-card">
             {/* Header */}
-            <div className="border-b border-gray-200">
+            <div className="border-b border-border">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex items-center gap-4">
                     <Link href={`/jobs/${jobId}`}>
                         <Button variant="outline" size="sm">
                             <ChevronLeft size={18} />
                         </Button>
                     </Link>
-                    <h1 className="text-3xl font-bold text-gray-900">{t('jobDetail.editJob')}</h1>
+                    <h1 className="text-3xl font-bold text-foreground">{t('jobDetail.editJob')}</h1>
                 </div>
             </div>
 
@@ -145,7 +145,7 @@ export default function EditJobPage() {
                                 key={s}
                                 className={`flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm ${s <= step
                                     ? "bg-blue-600 text-white"
-                                    : "bg-gray-200 text-gray-600"
+                                    : "bg-gray-200 text-muted-foreground"
                                     }`}
                             >
                                 {s}
@@ -170,28 +170,28 @@ export default function EditJobPage() {
                     {/* Step 1: Job Basics */}
                     {step === 1 && (
                         <div className="space-y-6">
-                            <h2 className="text-2xl font-bold text-gray-900">{t('post.steps.basics')}</h2>
+                            <h2 className="text-2xl font-bold text-foreground">{t('post.steps.basics')}</h2>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">{t('post.labels.jobTitle')}</label>
+                                <label className="block text-sm font-medium text-foreground mb-2">{t('post.labels.jobTitle')}</label>
                                 <input
                                     type="text"
                                     name="title"
                                     value={formData.title}
                                     onChange={handleChange}
                                     placeholder="e.g., Website Design for E-commerce"
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
                                     required
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">{t('post.labels.category')}</label>
+                                <label className="block text-sm font-medium text-foreground mb-2">{t('post.labels.category')}</label>
                                 <select
                                     name="category"
                                     value={formData.category}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
                                     required
                                 >
                                     <option value="">Select a category</option>
@@ -204,14 +204,14 @@ export default function EditJobPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">{t('post.labels.description')}</label>
+                                <label className="block text-sm font-medium text-foreground mb-2">{t('post.labels.description')}</label>
                                 <textarea
                                     name="description"
                                     value={formData.description}
                                     onChange={handleChange}
                                     placeholder="Describe the work in detail..."
                                     rows={6}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
                                     required
                                 />
                             </div>
@@ -221,16 +221,16 @@ export default function EditJobPage() {
                     {/* Step 2: Job Details */}
                     {step === 2 && (
                         <div className="space-y-6">
-                            <h2 className="text-2xl font-bold text-gray-900">{t('post.steps.details')}</h2>
+                            <h2 className="text-2xl font-bold text-foreground">{t('post.steps.details')}</h2>
 
                             <div className="grid md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('post.labels.budgetType')}</label>
+                                    <label className="block text-sm font-medium text-foreground mb-2">{t('post.labels.budgetType')}</label>
                                     <select
                                         name="budgetType"
                                         value={formData.budgetType}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
                                     >
                                         {BUDGET_TYPES.map((type) => (
                                             <option key={type.value} value={type.value}>
@@ -241,7 +241,7 @@ export default function EditJobPage() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('post.labels.budget')}</label>
+                                    <label className="block text-sm font-medium text-foreground mb-2">{t('post.labels.budget')}</label>
                                     <div className="flex gap-2">
                                         <CurrencyInput
                                             name="budget"
@@ -251,7 +251,7 @@ export default function EditJobPage() {
                                             }}
                                             placeholder="0"
                                             decimalsLimit={2}
-                                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="flex-1 px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
                                             required
                                         />
                                         <div className="w-56">
@@ -267,12 +267,12 @@ export default function EditJobPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">{t('post.labels.duration')}</label>
+                                <label className="block text-sm font-medium text-foreground mb-2">{t('post.labels.duration')}</label>
                                 <select
                                     name="duration"
                                     value={formData.duration}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
                                     required
                                 >
                                     <option value="">Select duration</option>
@@ -285,12 +285,12 @@ export default function EditJobPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">{t('post.labels.experience')}</label>
+                                <label className="block text-sm font-medium text-foreground mb-2">{t('post.labels.experience')}</label>
                                 <select
                                     name="experienceLevel"
                                     value={formData.experienceLevel}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
                                 >
                                     {EXPERIENCE_LEVELS.map((level) => (
                                         <option key={level.value} value={level.value}>
@@ -301,14 +301,14 @@ export default function EditJobPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">{t('post.labels.skills')}</label>
+                                <label className="block text-sm font-medium text-foreground mb-2">{t('post.labels.skills')}</label>
                                 <input
                                     type="text"
                                     name="skillsRequired"
                                     value={formData.skillsRequired}
                                     onChange={handleChange}
                                     placeholder="e.g., React, Node.js, MongoDB (comma separated)"
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
                                 />
                             </div>
                         </div>
@@ -317,9 +317,9 @@ export default function EditJobPage() {
                     {/* Step 3: Location */}
                     {step === 3 && (
                         <div className="space-y-6">
-                            <h2 className="text-2xl font-bold text-gray-900">{t('post.steps.location')}</h2>
+                            <h2 className="text-2xl font-bold text-foreground">{t('post.steps.location')}</h2>
 
-                            <label className="flex items-center gap-3 p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                            <label className="flex items-center gap-3 p-4 border border-border rounded-lg cursor-pointer hover:bg-muted">
                                 <input
                                     type="checkbox"
                                     name="remote"
@@ -328,21 +328,21 @@ export default function EditJobPage() {
                                     className="w-5 h-5"
                                 />
                                 <div>
-                                    <p className="font-medium text-gray-900">{t('post.labels.remote')}</p>
-                                    <p className="text-sm text-gray-600">{t('post.labels.remoteDesc')}</p>
+                                    <p className="font-medium text-foreground">{t('post.labels.remote')}</p>
+                                    <p className="text-sm text-muted-foreground">{t('post.labels.remoteDesc')}</p>
                                 </div>
                             </label>
 
                             {!formData.remote && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('post.labels.location')}</label>
+                                    <label className="block text-sm font-medium text-foreground mb-2">{t('post.labels.location')}</label>
                                     <input
                                         type="text"
                                         name="location"
                                         value={formData.location}
                                         onChange={handleChange}
                                         placeholder={t('post.labels.locationPlaceholder')}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
                                     />
                                 </div>
                             )}
@@ -352,36 +352,36 @@ export default function EditJobPage() {
                     {/* Step 4: Review */}
                     {step === 4 && (
                         <div className="space-y-6">
-                            <h2 className="text-2xl font-bold text-gray-900">{t('post.steps.review')}</h2>
+                            <h2 className="text-2xl font-bold text-foreground">{t('post.steps.review')}</h2>
 
-                            <div className="bg-gray-50 p-6 rounded-lg space-y-4">
+                            <div className="bg-muted p-6 rounded-lg space-y-4">
                                 <div>
-                                    <p className="text-sm text-gray-600">{t('post.review.title')}</p>
-                                    <p className="font-bold text-gray-900">{formData.title}</p>
+                                    <p className="text-sm text-muted-foreground">{t('post.review.title')}</p>
+                                    <p className="font-bold text-foreground">{formData.title}</p>
                                 </div>
                                 <div>
-                                    <p className="text-sm text-gray-600">{t('post.review.category')}</p>
-                                    <p className="font-bold text-gray-900">
+                                    <p className="text-sm text-muted-foreground">{t('post.review.category')}</p>
+                                    <p className="font-bold text-foreground">
                                         {getCategoriesWithTranslations(t).find((c) => c.id === formData.category)?.name}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-sm text-gray-600">{t('post.review.budget')}</p>
-                                    <p className="font-bold text-gray-900">
+                                    <p className="text-sm text-muted-foreground">{t('post.review.budget')}</p>
+                                    <p className="font-bold text-foreground">
                                         {formData.budgetCurrency} {formData.budget} ({formData.budgetType})
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-sm text-gray-600">{t('post.review.location')}</p>
-                                    <p className="font-bold text-gray-900">
+                                    <p className="text-sm text-muted-foreground">{t('post.review.location')}</p>
+                                    <p className="font-bold text-foreground">
                                         {formData.remote ? t('post.review.remote') : formData.location}
                                     </p>
                                 </div>
                             </div>
 
-                            <label className="flex items-start gap-3 p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                            <label className="flex items-start gap-3 p-4 border border-border rounded-lg cursor-pointer hover:bg-muted">
                                 <input type="checkbox" className="w-5 h-5 mt-1" required />
-                                <p className="text-sm text-gray-700">{t('jobDetail.confirmUpdate')}</p>
+                                <p className="text-sm text-foreground">{t('jobDetail.confirmUpdate')}</p>
                             </label>
                         </div>
                     )}

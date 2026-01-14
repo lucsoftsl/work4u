@@ -205,16 +205,16 @@ export default function SignUpComponent() {
   }, [isAuthenticated, router]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
 
       {/* Content */}
       <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">
               {t('auth.signUp.title')}
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
+            <p className="mt-2 text-center text-sm text-muted-foreground">
               {t('auth.signUp.subtitle')}
             </p>
           </div>
@@ -228,7 +228,7 @@ export default function SignUpComponent() {
 
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-foreground">
                 {t('auth.signUp.email')}
               </label>
               <input
@@ -237,7 +237,7 @@ export default function SignUpComponent() {
                 type="email"
                 autoComplete="email"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
                 value={formData.email}
                 onChange={handleInputChange}
               />
@@ -248,7 +248,7 @@ export default function SignUpComponent() {
 
             {/* Password */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-foreground">
                 {t('auth.signUp.password')}
               </label>
               <input
@@ -257,7 +257,7 @@ export default function SignUpComponent() {
                 type="password"
                 autoComplete="new-password"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
                 value={formData.password}
                 onChange={handleInputChange}
               />
@@ -268,7 +268,7 @@ export default function SignUpComponent() {
 
             {/* Display Name */}
             <div>
-              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="displayName" className="block text-sm font-medium text-foreground">
                 {t('auth.signUp.displayName')}
               </label>
               <input
@@ -276,7 +276,7 @@ export default function SignUpComponent() {
                 name="displayName"
                 type="text"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
                 value={formData.displayName}
                 onChange={handleInputChange}
               />
@@ -287,13 +287,13 @@ export default function SignUpComponent() {
 
             {/* User Type */}
             <div>
-              <label htmlFor="userType" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="userType" className="block text-sm font-medium text-foreground">
                 {t('auth.signUp.accountType')}
               </label>
               <select
                 id="userType"
                 name="userType"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
                 value={formData.userType}
                 onChange={handleInputChange}
               >
@@ -304,7 +304,7 @@ export default function SignUpComponent() {
 
             {/* Worker Types */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 {t('auth.signUp.whatToDo')}
               </label>
               <div className="space-y-2">
@@ -315,9 +315,9 @@ export default function SignUpComponent() {
                     value="WORKER"
                     checked={formData.workerTypes.includes('WORKER')}
                     onChange={handleWorkerTypeChange}
-                    className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="rounded border-border text-blue-600 shadow-sm focus:border-primary focus:ring-primary"
                   />
-                  <span className="ml-2 text-sm text-gray-700">
+                  <span className="ml-2 text-sm text-foreground">
                     {t('auth.signUp.offerServices')}
                   </span>
                 </label>
@@ -329,9 +329,9 @@ export default function SignUpComponent() {
                     value="REQUESTOR"
                     checked={formData.workerTypes.includes('REQUESTOR')}
                     onChange={handleWorkerTypeChange}
-                    className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="rounded border-border text-blue-600 shadow-sm focus:border-primary focus:ring-primary"
                   />
-                  <span className="ml-2 text-sm text-gray-700">
+                  <span className="ml-2 text-sm text-foreground">
                     {t('auth.signUp.postTasks')}
                   </span>
                 </label>
@@ -342,7 +342,7 @@ export default function SignUpComponent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? t('auth.signUp.creating') : t('auth.signUp.createAccount')}
             </button>
@@ -350,10 +350,10 @@ export default function SignUpComponent() {
             {/* Divider */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
+                <div className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-50 text-gray-500">{t('auth.signUp.orDivider')}</span>
+                <span className="px-2 bg-muted text-muted-foreground">{t('auth.signUp.orDivider')}</span>
               </div>
             </div>
 
@@ -362,7 +362,7 @@ export default function SignUpComponent() {
               type="button"
               onClick={handleGoogleSignUp}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-3 py-2 px-4 border border-border rounded-md shadow-sm bg-card text-sm font-medium text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -374,7 +374,7 @@ export default function SignUpComponent() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-600">
+          <p className="text-center text-sm text-muted-foreground">
             {t('auth.signUp.haveAccount')}{' '}
             <a href="/signin" className="font-medium text-blue-600 hover:text-blue-500">
               {t('auth.signUp.signInLink')}
@@ -388,12 +388,12 @@ export default function SignUpComponent() {
         <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             {/* Background overlay */}
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => !loading && setShowGoogleModal(false)} />
+            <div className="fixed inset-0 bg-muted0 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => !loading && setShowGoogleModal(false)} />
 
             {/* Modal panel */}
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
+            <div className="inline-block align-bottom bg-card rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-card px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <h3 className="text-lg font-medium leading-6 text-foreground mb-4">
                   {t('auth.signUp.title')}
                 </h3>
 
@@ -405,13 +405,13 @@ export default function SignUpComponent() {
 
                 {/* Account Type */}
                 <div className="mb-4">
-                  <label htmlFor="googleUserType" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="googleUserType" className="block text-sm font-medium text-foreground mb-1">
                     {t('auth.signUp.accountType')}
                   </label>
                   <select
                     id="googleUserType"
                     name="googleUserType"
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="block w-full px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
                     value={googleUserType}
                     onChange={(e) => setGoogleUserType(e.target.value as 'PERSONAL' | 'ENTERPRISE')}
                   >
@@ -422,7 +422,7 @@ export default function SignUpComponent() {
 
                 {/* Worker Types */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     {t('auth.signUp.whatToDo')}
                   </label>
                   <div className="space-y-2">
@@ -433,9 +433,9 @@ export default function SignUpComponent() {
                         value="WORKER"
                         checked={googleWorkerTypes.includes('WORKER')}
                         onChange={handleGoogleWorkerTypeChange}
-                        className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="rounded border-border text-blue-600 shadow-sm focus:border-primary focus:ring-primary"
                       />
-                      <span className="ml-2 text-sm text-gray-700">
+                      <span className="ml-2 text-sm text-foreground">
                         {t('auth.signUp.offerServices')}
                       </span>
                     </label>
@@ -447,9 +447,9 @@ export default function SignUpComponent() {
                         value="REQUESTOR"
                         checked={googleWorkerTypes.includes('REQUESTOR')}
                         onChange={handleGoogleWorkerTypeChange}
-                        className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="rounded border-border text-blue-600 shadow-sm focus:border-primary focus:ring-primary"
                       />
-                      <span className="ml-2 text-sm text-gray-700">
+                      <span className="ml-2 text-sm text-foreground">
                         {t('auth.signUp.postTasks')}
                       </span>
                     </label>
@@ -457,12 +457,12 @@ export default function SignUpComponent() {
                 </div>
               </div>
 
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-3">
+              <div className="bg-muted px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-3">
                 <button
                   type="button"
                   onClick={completeGoogleSignUp}
                   disabled={loading || googleWorkerTypes.length === 0}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? t('auth.signUp.creating') : t('auth.signUp.createAccount')}
                 </button>
@@ -470,7 +470,7 @@ export default function SignUpComponent() {
                   type="button"
                   onClick={() => setShowGoogleModal(false)}
                   disabled={loading}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-border shadow-sm px-4 py-2 bg-card text-base font-medium text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>

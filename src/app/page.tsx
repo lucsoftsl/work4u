@@ -49,22 +49,27 @@ export default function HomePage() {
 
   const hasUser = mounted && !loading && isAuthenticated;
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white">
+      <nav className="sticky top-0 z-50 border-b-2 border-primary/30 bg-card shadow-lg shadow-primary/10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link href="/" className="text-2xl font-bold text-blue-600">
+            <Link href="/" className="flex items-center gap-2 text-2xl font-bold bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent">
+              <span className="text-3xl">⚔️</span>
               work4u
+              <span className="text-xs text-muted-foreground font-normal">Quest Board</span>
             </Link>
             <div className="hidden md:flex items-center gap-8">
-              <Link href="/jobs" className="text-gray-600 hover:text-gray-900">
+              <Link href="/jobs" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
+                <span className="text-sm">📜</span>
                 {t('nav.findWork')}
               </Link>
-              <Link href="/post-job" className="text-gray-600 hover:text-gray-900">
+              <Link href="/post-job" className="text-muted-foreground hover:text-secondary transition-colors flex items-center gap-1">
+                <span className="text-sm">✨</span>
                 {t('nav.postJob')}
               </Link>
-              <Link href="/how-it-works" className="text-gray-600 hover:text-gray-900">
+              <Link href="/how-it-works" className="text-muted-foreground hover:text-accent transition-colors flex items-center gap-1">
+                <span className="text-sm">📖</span>
                 {t('nav.howItWorks')}
               </Link>
             </div>
@@ -90,13 +95,18 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-50 to-indigo-100 py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section className="relative py-20 overflow-hidden">
+        {/* Background effects */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-secondary/10" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary/20 rounded-full blur-3xl" />
+
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center">
-            <h1 className="text-5xl font-bold text-gray-900 mb-4">
+            <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent animate-float">
               {t('home.heroTitle')}
             </h1>
-            <p className="text-xl text-gray-600 mb-8">
+            <p className="text-xl text-muted-foreground mb-8">
               {t('home.heroSubtitle')}
             </p>
             <SearchBar />
@@ -105,10 +115,10 @@ export default function HomePage() {
       </section>
 
       {/* Categories Section */}
-      <section className="py-12 border-b border-gray-200">
+      <section className="py-12 border-b border-border">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">{t('home.browseCategory')}</h2>
+            <h2 className="text-2xl font-bold text-foreground">{t('home.browseCategory')}</h2>
             <Button variant="outline" onClick={() => setIsCategoryModalOpen(true)}>
               {t('common.seeAll') || 'See All'} →
             </Button>
@@ -118,10 +128,10 @@ export default function HomePage() {
               <Link
                 key={cat.id}
                 href={`/jobs?category=${cat.id}`}
-                className="p-4 text-center rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition"
+                className="p-4 text-center rounded-lg border border-border hover:border-primary hover:bg-primary/10 transition"
               >
                 <div className="text-2xl mb-2">{cat.icon}</div>
-                <p className="font-medium text-gray-900 text-sm">{cat.name}</p>
+                <p className="font-medium text-foreground text-sm">{cat.name}</p>
               </Link>
             ))}
           </div>
@@ -132,7 +142,7 @@ export default function HomePage() {
       <section className="py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">{t('home.featuredTitle')}</h2>
+            <h2 className="text-2xl font-bold text-foreground">{t('home.featuredTitle')}</h2>
             <Link href="/jobs" className="text-blue-600 hover:text-blue-700 font-medium">
               {t('home.viewAll')} →
             </Link>
@@ -140,9 +150,9 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {jobsLoading ? (
               <>
-                <div className="border border-gray-200 rounded-lg p-6 animate-pulse h-80 bg-gray-100" />
-                <div className="border border-gray-200 rounded-lg p-6 animate-pulse h-80 bg-gray-100" />
-                <div className="border border-gray-200 rounded-lg p-6 animate-pulse h-80 bg-gray-100" />
+                <div className="border border-border rounded-lg p-6 animate-pulse h-80 bg-gray-100" />
+                <div className="border border-border rounded-lg p-6 animate-pulse h-80 bg-gray-100" />
+                <div className="border border-border rounded-lg p-6 animate-pulse h-80 bg-gray-100" />
               </>
             ) : featuredJobs.length > 0 ? (
               featuredJobs.map((job) => (
@@ -150,7 +160,7 @@ export default function HomePage() {
               ))
             ) : (
               <div className="col-span-full text-center py-12">
-                <p className="text-gray-600">{t('jobs.noJobs')}</p>
+                <p className="text-muted-foreground">{t('jobs.noJobs')}</p>
               </div>
             )}
           </div>
