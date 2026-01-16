@@ -5,7 +5,7 @@ import { ChatHeaderIcon } from "@/components/ChatHeaderIcon";
 import { XPBar } from '@/components/gamification/XPBar';
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Swords, Scroll, User, Briefcase } from 'lucide-react';
+import { Swords, Scroll, User, Briefcase, Settings } from 'lucide-react';
 
 export function AppHeader() {
     const pathname = usePathname();
@@ -49,6 +49,16 @@ export function AppHeader() {
                                 <User className="w-4 h-4 text-secondary" />
                                 <span className="text-sm font-medium">Character</span>
                             </Link>
+                            {true && ( // TODO: Check if user is ADMIN
+                                <Link
+                                    href="/admin"
+                                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/20 hover:bg-secondary/30 transition-colors border border-secondary/50"
+                                    title="Admin Dashboard"
+                                >
+                                    <Settings className="w-4 h-4 text-secondary" />
+                                    <span className="text-sm font-medium">Admin</span>
+                                </Link>
+                            )}
                             <ChatHeaderIcon />
                         </div>
                     )}
