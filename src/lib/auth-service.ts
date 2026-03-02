@@ -12,12 +12,23 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-function parseAddress(addressValue?: string | null) {
+function parseAddress(addressValue?: unknown) {
     if (!addressValue) {
         return { country: null, state: null, addressLine: null, city: null, postcode: null, number: null };
     }
+    if (typeof addressValue === 'object') {
+        const parsed = addressValue as Record<string, any>;
+        return {
+            country: parsed.country ?? null,
+            state: parsed.state ?? null,
+            addressLine: parsed.address ?? parsed.location ?? null,
+            city: parsed.city ?? null,
+            postcode: parsed.postcode ?? null,
+            number: parsed.number ?? null,
+        };
+    }
     try {
-        const parsed = JSON.parse(addressValue);
+        const parsed = JSON.parse(String(addressValue));
         return {
             country: parsed.country ?? null,
             state: parsed.state ?? null,
@@ -104,8 +115,8 @@ export async function signUp(data: SignUpData): Promise<AuthUser> {
         // 2. Get Firebase ID token
         const token = await firebaseUser.getIdToken();
 
-        // 3. Create user record in backend (basic fields only)
-        const response = await fetch(`${API_URL}/api/users`, {
+        // 3. Signup step 1
+        const response = await fetch(`${API_URL}/api/signup/step-1`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -114,7 +125,11 @@ export async function signUp(data: SignUpData): Promise<AuthUser> {
             body: JSON.stringify({
                 email: data.email,
                 displayName: data.displayName,
+                phoneNumber: data.phoneNumber,
                 userType: data.userType,
+                authProvider: 'PASSWORD',
+                emailVerified: false,
+                phoneVerified: false,
             }),
         });
 
@@ -157,6 +172,11 @@ export async function signUp(data: SignUpData): Promise<AuthUser> {
             status: 'PENDING_VERIFICATION',
             userType: data.userType,
             workerTypes: data.workerTypes,
+            onboardingStep: 1,
+            onboardingCompleted: false,
+            authProvider: 'PASSWORD',
+            emailVerified: false,
+            phoneVerified: false,
             country: null,
             state: null,
             address: null,
@@ -227,6 +247,12 @@ export async function signInWithGoogle(): Promise<AuthUser> {
                 status: apiUser.status as any,
                 userType: apiUser.userType as any,
                 workerTypes: workerTypes as any,
+                accountMode: apiUser.accountMode ?? null,
+                profileTier: apiUser.profileTier ?? null,
+                onboardingStep: Number(apiUser.onboardingStep ?? 1),
+                onboardingCompleted: Boolean(apiUser.onboardingCompleted),
+                emailVerified: Boolean(apiUser.emailVerified),
+                phoneVerified: Boolean(apiUser.phoneVerified),
                 country: parsedAddress.country,
                 state: parsedAddress.state,
                 address: apiUser.address ?? null,
@@ -257,8 +283,8 @@ export async function signUpWithGoogle(userType: 'PERSONAL' | 'ENTERPRISE', work
         // Get Firebase ID token
         const token = await firebaseUser.getIdToken();
 
-        // Create user record in backend (basic fields only)
-        const response = await fetch(`${API_URL}/api/users`, {
+        // Signup step 1
+        const response = await fetch(`${API_URL}/api/signup/step-1`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -268,6 +294,9 @@ export async function signUpWithGoogle(userType: 'PERSONAL' | 'ENTERPRISE', work
                 email: firebaseUser.email,
                 displayName: firebaseUser.displayName,
                 userType,
+                authProvider: 'GOOGLE',
+                emailVerified: true,
+                phoneVerified: false,
             }),
         });
 
@@ -309,6 +338,13 @@ export async function signUpWithGoogle(userType: 'PERSONAL' | 'ENTERPRISE', work
             status: 'PENDING_VERIFICATION',
             userType,
             workerTypes,
+            onboardingStep: 1,
+            onboardingCompleted: false,
+            accountMode: null,
+            profileTier: null,
+            authProvider: 'GOOGLE',
+            emailVerified: true,
+            phoneVerified: false,
             country: null,
             state: null,
             address: null,
@@ -381,6 +417,12 @@ export async function signIn(data: SignInData): Promise<AuthUser> {
             status: apiUser.status as any,
             userType: apiUser.userType as any,
             workerTypes: workerTypes as any,
+            accountMode: apiUser.accountMode ?? null,
+            profileTier: apiUser.profileTier ?? null,
+            onboardingStep: Number(apiUser.onboardingStep ?? 1),
+            onboardingCompleted: Boolean(apiUser.onboardingCompleted),
+            emailVerified: Boolean(apiUser.emailVerified),
+            phoneVerified: Boolean(apiUser.phoneVerified),
             country: parsedAddress.country,
             state: parsedAddress.state,
             address: apiUser.address ?? null,
@@ -467,6 +509,12 @@ export function getCurrentUser(): Promise<AuthUser | null> {
                     status: apiUser.status as any,
                     userType: apiUser.userType as any,
                     workerTypes: workerTypes as any,
+                    accountMode: apiUser.accountMode ?? null,
+                    profileTier: apiUser.profileTier ?? null,
+                    onboardingStep: Number(apiUser.onboardingStep ?? 1),
+                    onboardingCompleted: Boolean(apiUser.onboardingCompleted),
+                    emailVerified: Boolean(apiUser.emailVerified),
+                    phoneVerified: Boolean(apiUser.phoneVerified),
                     country: parsedAddress.country,
                     state: parsedAddress.state,
                     address: apiUser.address ?? null,
@@ -494,7 +542,14 @@ export async function updateUserProfile(
         phoneNumber: string;
         userType: string;
         workerTypes: string[];
-        address?: string | null;
+        address?: Record<string, any> | null;
+        accountMode?: 'REQUESTOR' | 'WORKER' | 'BOTH';
+        profileTier?: 'BASIC' | 'EXTENDED';
+        onboardingStep?: number;
+        onboardingCompleted?: boolean;
+        emailVerified?: boolean;
+        phoneVerified?: boolean;
+        status?: 'ACTIVE' | 'PENDING_DELETION' | 'PENDING_VERIFICATION';
     }>
 ): Promise<ApiUser> {
     const token = await getIdToken();
@@ -510,6 +565,54 @@ export async function updateUserProfile(
 
     if (!response.ok) {
         throw new Error(`Failed to update profile: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export async function completeSignupStep2(
+    accountMode: 'REQUESTOR' | 'WORKER' | 'BOTH'
+): Promise<ApiUser> {
+    const token = await getIdToken();
+
+    const response = await fetch(`${API_URL}/api/signup/step-2`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ accountMode }),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to complete signup step 2: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export async function completeSignupStep3(data: {
+    displayName?: string;
+    phoneNumber?: string;
+    location: string;
+    bio?: string;
+    primarySkill?: string;
+    hourlyRate?: string;
+    serviceRadiusKm?: string;
+}): Promise<ApiUser> {
+    const token = await getIdToken();
+
+    const response = await fetch(`${API_URL}/api/signup/step-3`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to complete signup step 3: ${response.statusText}`);
     }
 
     return response.json();

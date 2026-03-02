@@ -1,5 +1,3 @@
-import { User as FirebaseUser, UserCredential } from 'firebase/auth';
-
 export interface AuthUser {
     id: string;
     email: string | null;
@@ -9,6 +7,12 @@ export interface AuthUser {
     status: 'ACTIVE' | 'PENDING_VERIFICATION' | 'PENDING_DELETION';
     userType: 'PERSONAL' | 'ENTERPRISE' | 'ADMIN';
     workerTypes: ('WORKER' | 'REQUESTOR')[];
+    accountMode?: 'REQUESTOR' | 'WORKER' | 'BOTH' | null;
+    profileTier?: 'BASIC' | 'EXTENDED' | null;
+    onboardingStep?: number;
+    onboardingCompleted?: boolean;
+    emailVerified?: boolean;
+    phoneVerified?: boolean;
     country?: string | null;
     state?: string | null;
     address?: string | null;
@@ -22,6 +26,7 @@ export interface SignUpData {
     email: string;
     password: string;
     displayName: string;
+    phoneNumber?: string;
     userType: 'PERSONAL' | 'ENTERPRISE' | 'ADMIN';
     workerTypes: ('WORKER' | 'REQUESTOR')[];
     country?: string;
@@ -49,6 +54,12 @@ export interface ApiUser {
     phoneNumber?: string;
     // Worker types for the user; API returns array or comma-separated string
     workerTypes?: string[] | string;
+    accountMode?: 'REQUESTOR' | 'WORKER' | 'BOTH' | null;
+    profileTier?: 'BASIC' | 'EXTENDED' | null;
+    onboardingStep?: number;
+    onboardingCompleted?: boolean;
+    emailVerified?: boolean;
+    phoneVerified?: boolean;
     country?: string | null;
     state?: string | null;
     address?: string | null;

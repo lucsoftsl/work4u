@@ -11,8 +11,8 @@ export function AppHeader() {
     const pathname = usePathname();
     const { isAuthenticated } = useAuth();
 
-    // Don't show header on home page
-    if (pathname === '/') {
+    // Don't show header on public marketing and auth onboarding screens
+    if (pathname === '/' || pathname.startsWith('/signup')) {
         return null;
     }
 
