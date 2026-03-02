@@ -49,6 +49,14 @@ Translations live in `src/locales/{en,fr,es}.json` with a helper `getTranslator(
 - `npm run build` — production build
 - `npm run start` — start production build
 - `npm run lint` — lint
+- `npm run test:landing-contract` — run landing payload contract unit tests
+- `npm run check:landing-api` — hit `GET /api/landing` and fail if response violates contract
+
+## 🧱 Landing Contract (Design-Driven + TDD)
+- Frontend contract is defined in `src/types/landing.ts`.
+- Frontend fetches `GET /api/landing` using `src/lib/landing-api.ts` and strictly validates response shape at runtime.
+- Use `http/landing.http` for manual endpoint testing.
+- Use `LANDING_API_CONTRACT_MIGRATION.sql` to store and publish landing payloads in MySQL.
 
 ## 🧪 Mock Data
 See `src/api/mocks.ts` for editable in-memory seed data.

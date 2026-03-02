@@ -1,11 +1,13 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  content: [
-    "./src/**/*.{js,ts,jsx,tsx,mdx}",
-  ],
+  darkMode: ["class"],
+  content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
+      fontFamily: {
+        display: ["Inter", "system-ui", "sans-serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -57,97 +59,54 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      boxShadow: {
+        soft: "0 8px 30px rgba(15, 23, 42, 0.10)",
+      },
       animation: {
         "slide-in": "slideIn 0.3s ease-out",
         "level-up": "levelUp 0.8s ease-out",
-        "achievement": "achievement 0.5s ease-out",
+        achievement: "achievement 0.5s ease-out",
         "coin-collect": "coinCollect 0.6s ease-out",
         "xp-gain": "xpGain 0.4s ease-out",
         "pulse-glow": "pulseGlow 2s ease-in-out infinite",
-        "shimmer": "shimmer 2s linear infinite",
-        "float": "float 3s ease-in-out infinite",
+        shimmer: "shimmer 2s linear infinite",
+        float: "float 3s ease-in-out infinite",
       },
       keyframes: {
         slideIn: {
-          "0%": {
-            transform: "translateX(400px)",
-            opacity: "0",
-          },
-          "100%": {
-            transform: "translateX(0)",
-            opacity: "1",
-          },
+          "0%": { transform: "translateX(400px)", opacity: "0" },
+          "100%": { transform: "translateX(0)", opacity: "1" },
         },
         levelUp: {
-          "0%": {
-            transform: "scale(0) rotate(-180deg)",
-            opacity: "0",
-          },
-          "50%": {
-            transform: "scale(1.2) rotate(10deg)",
-          },
-          "100%": {
-            transform: "scale(1) rotate(0deg)",
-            opacity: "1",
-          },
+          "0%": { transform: "scale(0) rotate(-180deg)", opacity: "0" },
+          "50%": { transform: "scale(1.2) rotate(10deg)" },
+          "100%": { transform: "scale(1) rotate(0deg)", opacity: "1" },
         },
         achievement: {
-          "0%": {
-            transform: "translateY(-100px)",
-            opacity: "0",
-          },
-          "100%": {
-            transform: "translateY(0)",
-            opacity: "1",
-          },
+          "0%": { transform: "translateY(-100px)", opacity: "0" },
+          "100%": { transform: "translateY(0)", opacity: "1" },
         },
         coinCollect: {
-          "0%": {
-            transform: "translateY(0) scale(1)",
-            opacity: "1",
-          },
-          "50%": {
-            transform: "translateY(-20px) scale(1.5)",
-          },
-          "100%": {
-            transform: "translateY(-100px) scale(0)",
-            opacity: "0",
-          },
+          "0%": { transform: "translateY(0) scale(1)", opacity: "1" },
+          "50%": { transform: "translateY(-20px) scale(1.5)" },
+          "100%": { transform: "translateY(-100px) scale(0)", opacity: "0" },
         },
         xpGain: {
-          "0%": {
-            transform: "scale(1)",
-          },
-          "50%": {
-            transform: "scale(1.05)",
-          },
-          "100%": {
-            transform: "scale(1)",
-          },
+          "0%": { transform: "scale(1)" },
+          "50%": { transform: "scale(1.05)" },
+          "100%": { transform: "scale(1)" },
         },
         pulseGlow: {
-          "0%, 100%": {
-            boxShadow: "0 0 25px rgba(234, 179, 8, 0.6)",
-          },
-          "50%": {
-            boxShadow: "0 0 35px rgba(234, 179, 8, 0.8)",
-          },
+          "0%, 100%": { boxShadow: "0 0 24px rgba(245, 158, 11, 0.50)" },
+          "50%": { boxShadow: "0 0 34px rgba(245, 158, 11, 0.80)" },
         },
         shimmer: {
-          "0%": {
-            backgroundPosition: "-200% 0",
-          },
-          "100%": {
-            backgroundPosition: "200% 0",
-          },
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
         },
         float: {
-          "0%, 100%": {
-            transform: "translateY(0px)",
-          },
-          "50%": {
-            transform: "translateY(-10px)",
-          },
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-10px)" },
         },
       },
     },

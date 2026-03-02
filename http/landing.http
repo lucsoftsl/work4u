@@ -1,0 +1,33 @@
+### Landing payload contract (must satisfy src/types/landing.ts)
+@baseUrl = http://localhost:3001
+
+### 1) Read landing content
+GET {{baseUrl}}/api/landing
+Accept: application/json
+
+### 2) Optional: publish a new landing snapshot (backend to implement)
+POST {{baseUrl}}/api/admin/landing/publish
+Content-Type: application/json
+
+{
+  "source": "design-driven-update",
+  "notes": "Publish updated hero image and category ordering"
+}
+
+### Expected critical response fields (GET /api/landing)
+# hero.desktopTitleLine1
+# hero.desktopTitleLine2
+# hero.desktopSubtitle
+# hero.desktopSearchPlaceholder
+# hero.desktopImageUrl
+# hero.mobileTitle
+# categories.desktopItems[]
+# categories.mobileItems[]
+# professionals.items[]
+# jobs.items[]
+# footer.columns[]
+# footer.mobileLinks[]
+# mobile.topRatedItems[]
+# mobile.activeJobItems[]
+# mobile.bottomNav[]
+# actions.*

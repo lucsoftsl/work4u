@@ -1,93 +1,166 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* MMORPG Dark Fantasy Theme */
-  --background: 240 10% 8%;
-  --foreground: 40 15% 92%;
-  --card: 240 10% 12%;
-  --card-foreground: 40 15% 92%;
-  --popover: 240 15% 10%;
-  --popover-foreground: 40 15% 92%;
-  --primary: 266 85% 58%; /* Epic purple */
+  --background: 210 20% 97%;
+  --foreground: 224 38% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 224 38% 15%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 224 38% 15%;
+  --primary: 196 63% 43%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 45 93% 47%; /* Gold */
-  --secondary-foreground: 240 10% 8%;
-  --muted: 240 10% 20%;
-  --muted-foreground: 40 10% 60%;
-  --accent: 142 76% 36%; /* Success green */
-  --accent-foreground: 0 0% 100%;
+  --secondary: 210 16% 90%;
+  --secondary-foreground: 224 38% 15%;
+  --muted: 210 20% 93%;
+  --muted-foreground: 215 18% 45%;
+  --accent: 39 96% 50%;
+  --accent-foreground: 30 90% 14%;
   --destructive: 0 84% 40%;
   --destructive-foreground: 0 0% 100%;
-  --border: 240 10% 20%;
-  --input: 240 10% 18%;
-  --ring: 266 85% 58%;
-  --radius: 0.75rem;
-  
-  /* Rarity colors */
-  --common: 158 10% 50%;
-  --uncommon: 142 76% 36%;
-  --rare: 217 91% 60%;
-  --epic: 266 85% 58%;
-  --legendary: 45 93% 47%;
-  
-  /* XP and progression */
-  --xp-bar: 142 76% 36%;
-  --xp-bar-bg: 240 10% 20%;
-  
-  /* Special effects */
-  --glow-gold: 45 93% 47%;
-  --glow-purple: 266 85% 58%;
-  --glow-blue: 217 91% 60%;
+  --border: 214 30% 88%;
+  --input: 214 30% 88%;
+  --ring: 196 63% 43%;
+  --radius: 0.9rem;
+
+  --common: 210 12% 58%;
+  --uncommon: 150 58% 42%;
+  --rare: 214 95% 65%;
+  --epic: 262 82% 66%;
+  --legendary: 39 96% 50%;
+  --xp-bar: 150 58% 42%;
+  --xp-bar-bg: 215 24% 80%;
+
+  --canvas: 210 20% 97%;
+  --canvas-alt: 210 24% 94%;
+  --panel: 0 0% 100%;
+  --ink: 224 38% 15%;
+  --ink-muted: 217 17% 37%;
+  --ink-subtle: 217 16% 58%;
+  --brand: 196 63% 43%;
+  --brand-strong: 196 68% 37%;
+  --outline: 214 30% 88%;
 }
 
-body {
-  @apply bg-background text-foreground min-h-screen antialiased;
-  background-image: 
-    radial-gradient(at 0% 0%, hsla(266, 85%, 20%, 0.1) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, hsla(45, 93%, 20%, 0.1) 0px, transparent 50%);
+.dark {
+  --background: 207 52% 9%;
+  --foreground: 210 23% 95%;
+  --card: 220 38% 18%;
+  --card-foreground: 210 23% 95%;
+  --popover: 220 38% 18%;
+  --popover-foreground: 210 23% 95%;
+  --primary: 196 63% 45%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 38% 24%;
+  --secondary-foreground: 210 23% 95%;
+  --muted: 220 38% 22%;
+  --muted-foreground: 217 13% 66%;
+  --accent: 39 96% 50%;
+  --accent-foreground: 30 90% 14%;
+  --destructive: 0 73% 52%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 216 33% 30%;
+  --input: 216 33% 30%;
+  --ring: 196 63% 45%;
+
+  --canvas: 207 52% 9%;
+  --canvas-alt: 214 56% 12%;
+  --panel: 220 38% 18%;
+  --ink: 210 23% 95%;
+  --ink-muted: 216 16% 70%;
+  --ink-subtle: 216 14% 56%;
+  --brand: 196 63% 45%;
+  --brand-strong: 195 70% 54%;
+  --outline: 216 33% 30%;
 }
 
-/* Rarity glow effects */
-.rarity-common {
-  @apply border-[hsl(var(--common))];
-}
-
-.rarity-uncommon {
-  @apply border-[hsl(var(--uncommon))] shadow-[0_0_10px_rgba(34,197,94,0.3)];
-}
-
-.rarity-rare {
-  @apply border-[hsl(var(--rare))] shadow-[0_0_15px_rgba(59,130,246,0.4)];
-}
-
-.rarity-epic {
-  @apply border-[hsl(var(--epic))] shadow-[0_0_20px_rgba(168,85,247,0.5)];
-}
-
-.rarity-legendary {
-  @apply border-[hsl(var(--legendary))] shadow-[0_0_25px_rgba(234,179,8,0.6)];
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 25px rgba(234, 179, 8, 0.6);
+@layer base {
+  html,
+  body {
+    min-height: 100%;
   }
-  50% {
-    box-shadow: 0 0 35px rgba(234, 179, 8, 0.8);
+
+  body {
+    @apply bg-background text-foreground antialiased;
   }
 }
 
-/* XP Bar styles */
-.xp-bar-fill {
-  @apply bg-gradient-to-r from-green-500 via-emerald-400 to-green-500;
-  animation: shimmer 2s linear infinite;
-  background-size: 200% 100%;
-}
+@layer utilities {
+  .bg-canvas {
+    background-color: hsl(var(--canvas));
+  }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  .bg-canvas-alt {
+    background-color: hsl(var(--canvas-alt));
+  }
+
+  .bg-panel {
+    background-color: hsl(var(--panel));
+  }
+
+  .text-ink {
+    color: hsl(var(--ink));
+  }
+
+  .text-ink-muted {
+    color: hsl(var(--ink-muted));
+  }
+
+  .text-ink-subtle {
+    color: hsl(var(--ink-subtle));
+  }
+
+  .bg-brand {
+    background-color: hsl(var(--brand));
+  }
+
+  .bg-brand-strong {
+    background-color: hsl(var(--brand-strong));
+  }
+
+  .text-brand {
+    color: hsl(var(--brand));
+  }
+
+  .border-outline {
+    border-color: hsl(var(--outline));
+  }
+
+  .shadow-soft {
+    box-shadow: 0 10px 35px rgba(15, 23, 42, 0.1);
+  }
+
+  .xp-bar-fill {
+    @apply bg-gradient-to-r from-green-500 via-emerald-400 to-green-500;
+    animation: shimmer 2s linear infinite;
+    background-size: 200% 100%;
+  }
+
+  .rarity-common {
+    border-color: hsl(var(--common));
+  }
+
+  .rarity-uncommon {
+    border-color: hsl(var(--uncommon));
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.25);
+  }
+
+  .rarity-rare {
+    border-color: hsl(var(--rare));
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.28);
+  }
+
+  .rarity-epic {
+    border-color: hsl(var(--epic));
+    box-shadow: 0 0 16px rgba(168, 85, 247, 0.32);
+  }
+
+  .rarity-legendary {
+    border-color: hsl(var(--legendary));
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.45);
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
 }

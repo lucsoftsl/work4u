@@ -1,198 +1,403 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
-import { JobCard } from "@/components/JobCard";
-import { SearchBar } from "@/components/SearchBar";
-import Footer from "@/components/Footer";
-import { CategoryModal } from "@/components/CategoryModal";
-import { useRouter } from "next/navigation";
-import { useTranslation } from "@/lib/i18n";
+import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { getCategoriesWithTranslations } from "@/lib/category-utils";
-import { api } from "@/lib/api";
-import { Job } from "@/api";
-import { ChatHeaderIcon } from "@/components/ChatHeaderIcon";
+import { Bell, Bolt } from "lucide-react";
+import { fetchLandingContent } from "@/lib/landing-api";
+import type { LandingResponse } from "@/types/landing";
+import {
+  DesktopCategoryCard,
+  MobileCategoryCard,
+  ProfessionalCard,
+  FeaturedJobCard,
+  FooterColumn,
+  HeroSearch,
+  TopProCard,
+  ActiveJobCard,
+  FooterActions,
+  MobileNavItem,
+} from "@/components/landing/ui";
+import {
+  resolveBottomNavIcon,
+  resolveCategoryIcon,
+  resolveJobToneClass,
+  resolveMobileTagClass,
+} from "@/components/landing/icon-map";
 
 export default function HomePage() {
   const router = useRouter();
-  const { t } = useTranslation();
-  const { isAuthenticated, loading } = useAuth();
-  const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
-  const [jobsLoading, setJobsLoading] = useState(true);
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const { isAuthenticated } = useAuth();
 
-  // Avoid hydration mismatch by deferring client-only checks until mounted
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    const id = window.requestAnimationFrame(() => setMounted(true));
-    return () => window.cancelAnimationFrame(id);
-  }, []);
+  const [query, setQuery] = useState("");
+  const [landing, setLanding] = useState<LandingResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load featured jobs from API
   useEffect(() => {
-    const loadFeaturedJobs = async () => {
+    const controller = new AbortController();
+
+    const load = async () => {
       try {
-        const jobs = await api.listJobs({ limit: 3 });
-        setFeaturedJobs(jobs.slice(0, 3));
-      } catch (error) {
-        console.error("Failed to load featured jobs:", error);
-        setFeaturedJobs([]);
+        setLoading(true);
+        setError(null);
+        const data = await fetchLandingContent(controller.signal);
+        setLanding(data);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setError(err instanceof Error ? err.message : "Failed to load landing content");
       } finally {
-        setJobsLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
-    loadFeaturedJobs();
+    void load();
+    return () => controller.abort();
   }, []);
 
-  const hasUser = mounted && !loading && isAuthenticated;
+  const handleSearch = () => {
+    const trimmed = query.trim();
+    router.push(`/jobs${trimmed ? `?keywords=${encodeURIComponent(trimmed)}` : ""}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#eef1f4] text-sm text-ink-muted">
+        Loading landing content...
+      </div>
+    );
+  }
+
+  if (!landing) {
+    return (
+      <div className="min-h-screen bg-[#eef1f4] p-6">
+        <div className="mx-auto max-w-3xl rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <p className="font-semibold">Landing API is not ready.</p>
+          <p className="mt-1">{error || "Unknown error"}</p>
+          <p className="mt-2">Expected endpoint: `GET /api/landing`.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const joinNowHref = isAuthenticated ? landing.actions.joinNowAuthHref : landing.actions.joinNowGuestHref;
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 border-b-2 border-primary/30 bg-card shadow-lg shadow-primary/10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2 text-2xl font-bold bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent">
-              <span className="text-3xl">⚔️</span>
-              work4u
-              <span className="text-xs text-muted-foreground font-normal">Quest Board</span>
-            </Link>
-            <div className="hidden md:flex items-center gap-8">
-              <Link href="/jobs" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
-                <span className="text-sm">📜</span>
-                {t('nav.findWork')}
-              </Link>
-              <Link href="/post-job" className="text-muted-foreground hover:text-secondary transition-colors flex items-center gap-1">
-                <span className="text-sm">✨</span>
-                {t('nav.postJob')}
-              </Link>
-              <Link href="/how-it-works" className="text-muted-foreground hover:text-accent transition-colors flex items-center gap-1">
-                <span className="text-sm">📖</span>
-                {t('nav.howItWorks')}
-              </Link>
-            </div>
-            <div className="flex items-center gap-4">
-              {!hasUser && (
-                <Button variant="outline" onClick={() => router.push('/signin')}>{t('nav.signIn')}</Button>
-              )}
-              {/* Show Profile only after mount to match SSR output */}
-              {hasUser && (
-                <>
-                  <ChatHeaderIcon />
-                  <Button variant="outline" onClick={() => router.push('/profile')}>
-                    {t('nav.profile')}
-                  </Button>
-                </>
-              )}
-              {!hasUser && (
-                <Button onClick={() => router.push('/signup')}>{t('nav.getStarted')}</Button>
-              )}
-            </div>
+    <div className="min-h-screen bg-[#eef1f4] text-ink">
+      <header className="sticky top-0 z-40 border-b border-outline bg-[#eef1f4]">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <Link href="/" className="flex items-center gap-2 text-lg font-bold text-ink">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand text-white">
+              <Bolt className="h-3.5 w-3.5" />
+            </span>
+            {landing.footer.brand}
+          </Link>
+
+          <div className="hidden items-center gap-4 md:flex">
+            <button onClick={() => router.push(landing.actions.signInHref)} className="text-xs font-semibold text-ink hover:text-brand">
+              {landing.actions.signInLabel}
+            </button>
+            <button
+              onClick={() => router.push(joinNowHref)}
+              className="rounded-full bg-brand px-4 py-2 text-xs font-bold text-white"
+            >
+              {landing.actions.joinNowLabel}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-4 md:hidden">
+            <button className="relative rounded-full p-2 text-ink-muted" aria-label={landing.actions.notificationsLabel}>
+              <Bell className="h-5 w-5" />
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent" />
+            </button>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-xs font-bold text-ink-muted shadow-soft">
+              U
+            </span>
           </div>
         </div>
-      </nav>
+      </header>
 
-      {/* Hero Section */}
-      <section className="relative py-20 overflow-hidden">
-        {/* Background effects */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-secondary/10" />
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary/20 rounded-full blur-3xl" />
-
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center">
-            <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent animate-float">
-              {t('home.heroTitle')}
-            </h1>
-            <p className="text-xl text-muted-foreground mb-8">
-              {t('home.heroSubtitle')}
-            </p>
-            <SearchBar />
-          </div>
-        </div>
-      </section>
-
-      {/* Categories Section */}
-      <section className="py-12 border-b border-border">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-foreground">{t('home.browseCategory')}</h2>
-            <Button variant="outline" onClick={() => setIsCategoryModalOpen(true)}>
-              {t('common.seeAll') || 'See All'} →
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {getCategoriesWithTranslations(t).slice(0, 12).map((cat) => (
-              <Link
-                key={cat.id}
-                href={`/jobs?category=${cat.id}`}
-                className="p-4 text-center rounded-lg border border-border hover:border-primary hover:bg-primary/10 transition"
+      <main>
+        <section className="hidden px-4 py-16 md:block">
+          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-center">
+            <div>
+              <h1 className="max-w-xl font-display text-5xl font-black leading-[1.05] tracking-tight text-ink lg:text-6xl">
+                {landing.hero.desktopTitleLine1}
+                <br />
+                <span className="text-brand">{landing.hero.desktopTitleLine2}</span>
+              </h1>
+              <p className="mt-6 max-w-lg text-lg text-ink-muted">{landing.hero.desktopSubtitle}</p>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleSearch();
+                }}
+                className="mt-8 flex items-center gap-2 rounded-full border border-outline bg-white p-2"
               >
-                <div className="text-2xl mb-2">{cat.icon}</div>
-                <p className="font-medium text-foreground text-sm">{cat.name}</p>
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={landing.hero.desktopSearchPlaceholder}
+                  className="w-full border-none bg-transparent px-4 py-2 text-sm text-ink outline-none placeholder:text-ink-subtle"
+                />
+                <button className="rounded-full bg-brand px-8 py-3 text-sm font-bold text-white">{landing.actions.searchButtonLabel}</button>
+              </form>
+            </div>
+
+            <div className="rounded-2xl border border-outline bg-[#edf0f2] p-3">
+              <div className="h-[460px] overflow-hidden rounded-xl bg-white shadow-soft">
+                <div className="relative h-full w-full">
+                  <Image
+                    src={landing.hero.desktopImageUrl}
+                    alt="Landing hero"
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto w-full max-w-[460px] pb-28 md:hidden">
+          <div className="px-4 pt-7">
+            <div className="overflow-hidden rounded-[2rem] bg-brand text-white shadow-soft">
+              <div className="grid grid-cols-3">
+                <div className="col-span-2 p-6 pb-4">
+                  <h1 className="max-w-[9.8ch] font-display text-[2.45rem] font-black leading-[1.05] tracking-tight">
+                    {landing.hero.mobileTitle}
+                  </h1>
+                  <span className="mt-4 inline-flex rounded-full bg-white/20 px-4 py-1 text-[0.95rem] font-medium">
+                    {landing.hero.mobileBadge}
+                  </span>
+                </div>
+                <div className="mt-auto h-[162px] bg-gradient-to-br from-[#83bd5c] via-[#4fa077] to-[#2d6f6e]" />
+              </div>
+
+              <div className="p-4 pt-0">
+                <HeroSearch
+                  value={query}
+                  onChange={setQuery}
+                  placeholder={landing.hero.mobileSearchPlaceholder}
+                  onSubmit={handleSearch}
+                  filterLabel={landing.hero.filterAriaLabel}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="px-4 pt-10">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-display text-[2.1rem] font-black leading-none text-ink">{landing.categories.mobileTitle}</h2>
+              <Link href={landing.actions.categoryViewAllHref} className="text-[1.4rem] font-bold text-brand">
+                {landing.categories.mobileViewAllLabel}
               </Link>
+            </div>
+
+            <div className="flex gap-4 overflow-x-auto pb-1">
+              {landing.categories.mobileItems.map((category) => (
+                <MobileCategoryCard
+                  key={category.slug}
+                  icon={resolveCategoryIcon(category.iconKey)}
+                  name={category.name}
+                  onClick={() => router.push(`/jobs?category=${encodeURIComponent(category.slug)}`)}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="px-4 pt-12">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="font-display text-[2.2rem] font-black leading-none text-ink">{landing.mobile.topRatedTitle}</h2>
+              <span className="rounded-full bg-[#fbe6bc] px-4 py-1 text-xs font-black uppercase tracking-[0.18em] text-[#f59e0b]">
+                {landing.mobile.topRatedBadge}
+              </span>
+            </div>
+
+            <div className="flex gap-4 overflow-x-auto pb-1">
+              {landing.mobile.topRatedItems.map((professional) => (
+                <TopProCard
+                  key={professional.id}
+                  name={professional.name}
+                  rating={professional.rating}
+                  reviews={professional.reviews}
+                  jobsCompleted={professional.jobsCompletedLabel}
+                  jobsCompletedPct={professional.jobsCompletedPct}
+                  responsiveness={professional.responsivenessLabel}
+                  responsivenessPct={professional.responsivenessPct}
+                  distance={professional.distanceLabel}
+                  jobsCompletedTitle={landing.mobile.topRatedJobsCompletedTitle}
+                  responsivenessTitle={landing.mobile.topRatedResponsivenessTitle}
+                  ctaLabel={professional.ctaLabel}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-10 bg-[#dfe4e8] px-4 py-8">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="font-display text-[2.2rem] font-black leading-none text-ink">{landing.mobile.activeJobsTitle}</h2>
+              <button className="rounded-full bg-white px-5 py-1.5 text-[0.95rem] font-semibold text-ink">{landing.mobile.activeJobsFilterLabel}</button>
+            </div>
+
+            <div className="space-y-4">
+              {landing.mobile.activeJobItems.map((job) => (
+                <ActiveJobCard
+                  key={job.id}
+                  title={job.title}
+                  budget={job.budgetLabel}
+                  location={job.locationLabel}
+                  tag={job.tagLabel}
+                  tagClass={resolveMobileTagClass(job.tagTone)}
+                  applicants={job.applicantsLabel}
+                  action={job.actionLabel}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="hidden bg-[#e7ebee] py-16 md:block">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-8 flex items-end justify-between">
+              <div>
+                <h2 className="font-display text-4xl font-black tracking-tight lg:text-5xl">{landing.categories.desktopTitle}</h2>
+                <p className="mt-2 text-ink-muted">{landing.categories.desktopSubtitle}</p>
+              </div>
+              <Link href={landing.actions.categoryViewAllHref} className="text-sm font-bold text-brand hover:underline">
+                {landing.categories.desktopViewAllLabel} <span aria-hidden>→</span>
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {landing.categories.desktopItems.map((category) => (
+                <DesktopCategoryCard
+                  key={category.slug}
+                  icon={resolveCategoryIcon(category.iconKey)}
+                  name={category.name}
+                  count={category.countLabel}
+                  onClick={() => router.push(`/jobs?category=${encodeURIComponent(category.slug)}`)}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="hidden py-20 md:block">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-10 text-center">
+              <span className="inline-flex rounded-full bg-accent/15 px-4 py-1 text-xs font-extrabold uppercase tracking-[0.22em] text-accent">
+                {landing.professionals.badgeLabel}
+              </span>
+              <h2 className="mt-4 font-display text-4xl font-black tracking-tight lg:text-5xl">{landing.professionals.title}</h2>
+              <p className="mt-2 text-ink-muted">{landing.professionals.subtitle}</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              {landing.professionals.items.map((professional) => (
+                <ProfessionalCard
+                  key={professional.id}
+                  name={professional.name}
+                  title={professional.title}
+                  rating={professional.rating}
+                  distance={professional.distanceLabel}
+                  tags={professional.tags}
+                  jobsCompleted={professional.jobsCompleted}
+                  responsiveness={professional.responsiveness}
+                  communication={professional.communication}
+                  cta={landing.professionals.ctaLabel}
+                  verified={landing.professionals.verifiedLabel}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="hidden bg-[#e7ebee] py-16 md:block">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-8 flex items-end justify-between">
+              <div>
+                <h2 className="font-display text-4xl font-black tracking-tight lg:text-5xl">{landing.jobs.title}</h2>
+                <p className="mt-2 text-ink-muted">{landing.jobs.subtitle}</p>
+              </div>
+              <Link href={landing.actions.jobsViewAllHref} className="text-sm font-bold text-brand hover:underline">
+                {landing.jobs.viewAllLabel} <span aria-hidden>→</span>
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              {landing.jobs.items.map((job) => (
+                <FeaturedJobCard
+                  key={job.id}
+                  type={job.typeLabel}
+                  typeClass={resolveJobToneClass(job.typeTone)}
+                  budget={job.budgetLabel}
+                  title={job.title}
+                  location={job.locationLabel}
+                  action={job.actionLabel}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="hidden border-t border-outline bg-[#eef1f4] py-16 md:block">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 gap-10 md:grid-cols-5">
+            <div className="col-span-2">
+              <Link href="/" className="flex items-center gap-2 text-2xl font-black text-ink">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white">
+                  <Bolt className="h-4 w-4" />
+                </span>
+                {landing.footer.brand}
+              </Link>
+              <p className="mt-4 max-w-xs text-ink-muted">{landing.footer.tagline}</p>
+            </div>
+
+            {landing.footer.columns.map((column) => (
+              <FooterColumn
+                key={column.title}
+                title={column.title}
+                links={column.links}
+              />
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* Featured Jobs Section */}
-      <section className="py-16">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-foreground">{t('home.featuredTitle')}</h2>
-            <Link href="/jobs" className="text-blue-600 hover:text-blue-700 font-medium">
-              {t('home.viewAll')} →
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {jobsLoading ? (
-              <>
-                <div className="border border-border rounded-lg p-6 animate-pulse h-80 bg-gray-100" />
-                <div className="border border-border rounded-lg p-6 animate-pulse h-80 bg-gray-100" />
-                <div className="border border-border rounded-lg p-6 animate-pulse h-80 bg-gray-100" />
-              </>
-            ) : featuredJobs.length > 0 ? (
-              featuredJobs.map((job) => (
-                <JobCard key={job.id} job={job} />
-              ))
-            ) : (
-              <div className="col-span-full text-center py-12">
-                <p className="text-muted-foreground">{t('jobs.noJobs')}</p>
-              </div>
-            )}
+          <div className="mt-12 border-t border-outline pt-6 text-xs text-ink-subtle">
+            {landing.footer.copyright}
           </div>
         </div>
-      </section>
+      </footer>
 
-      {/* CTA Section */}
-      <section className="bg-blue-600 py-16">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">{t('home.ctaTitle')}</h2>
-          <p className="text-blue-100 mb-8 text-lg">
-            {t('home.ctaSubtitle')}
-          </p>
-          <div className="flex gap-4 justify-center">
-            <Button variant="secondary" size="lg" onClick={() => router.push('/jobs')}>
-              {t('home.ctaFindWork')}
-            </Button>
-            <Button variant="outline" size="lg" className="text-white border-white hover:bg-blue-700" onClick={() => router.push('/post-job')}>
-              {t('home.ctaPostJob')}
-            </Button>
+      <footer className="pb-[calc(env(safe-area-inset-bottom)+6.5rem)] pt-10 text-center md:hidden">
+        <div className="mx-auto max-w-[460px] px-4">
+          <div className="flex items-center justify-center gap-8 text-[1.2rem] font-semibold text-[#7f8fa8]">
+            {landing.footer.mobileLinks.map((link) => (
+              <Link key={link.label} href={link.href}>{link.label}</Link>
+            ))}
           </div>
+          <p className="mt-5 text-[0.85rem] font-bold tracking-[0.12em] text-[#8795aa]">{landing.footer.copyright}</p>
+          <FooterActions />
         </div>
-      </section>
+      </footer>
 
-      {/* Footer */}
-      <Footer />
-
-      {/* Category Modal */}
-      <CategoryModal
-        isOpen={isCategoryModalOpen}
-        onClose={() => setIsCategoryModalOpen(false)}
-      />
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-outline bg-white/95 px-6 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur-md md:hidden">
+        <div className="mx-auto flex w-full max-w-[460px] items-center justify-between">
+          {landing.mobile.bottomNav.map((item, index) => (
+            <MobileNavItem
+              key={`${item.iconKey}-${item.label}`}
+              label={item.label}
+              icon={resolveBottomNavIcon(item.iconKey)}
+              badge={item.badge}
+              active={index === 0}
+            />
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }
