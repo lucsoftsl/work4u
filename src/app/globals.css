@@ -42,7 +42,10 @@
   --ink-subtle: 217 16% 58%;
   --brand: 196 63% 43%;
   --brand-strong: 196 68% 37%;
+  --brand-soft: 196 48% 92%;
   --outline: 214 30% 88%;
+  --success: 155 47% 42%;
+  --warning: 39 96% 50%;
 }
 
 .dark {
@@ -85,6 +88,9 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    background:
+      radial-gradient(circle at top left, rgba(30, 109, 138, 0.08), transparent 28%),
+      linear-gradient(180deg, #f8fbfc 0%, #eef4f6 100%);
   }
 }
 
@@ -117,6 +123,10 @@
     background-color: hsl(var(--brand));
   }
 
+  .bg-brand-soft {
+    background-color: hsl(var(--brand-soft));
+  }
+
   .bg-brand-strong {
     background-color: hsl(var(--brand-strong));
   }
@@ -129,8 +139,55 @@
     border-color: hsl(var(--outline));
   }
 
+  .font-display {
+    font-family: Inter, sans-serif;
+  }
+
   .shadow-soft {
     box-shadow: 0 10px 35px rgba(15, 23, 42, 0.1);
+  }
+
+  .surface-card {
+    @apply rounded-[28px] border border-outline bg-white shadow-soft;
+  }
+
+  .surface-panel {
+    @apply rounded-[24px] border border-outline bg-white/90 backdrop-blur;
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center rounded-full bg-brand-soft px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-brand;
+  }
+
+  .section-heading {
+    @apply font-display text-3xl font-black tracking-tight text-ink md:text-4xl;
+  }
+
+  .field-shell {
+    @apply rounded-2xl border border-outline bg-white px-4 py-3 text-sm text-ink outline-none transition;
+  }
+
+  .field-shell:focus,
+  .field-shell:focus-within {
+    border-color: hsl(var(--brand));
+    box-shadow: 0 0 0 4px rgba(30, 109, 138, 0.14);
+  }
+
+  .primary-cta {
+    @apply inline-flex items-center justify-center rounded-full bg-brand px-5 py-3 text-sm font-bold text-white transition;
+  }
+
+  .primary-cta:hover {
+    background-color: hsl(var(--brand-strong));
+  }
+
+  .secondary-cta {
+    @apply inline-flex items-center justify-center rounded-full border border-outline bg-white px-5 py-3 text-sm font-bold text-ink transition;
+  }
+
+  .secondary-cta:hover {
+    border-color: rgba(30, 109, 138, 0.4);
+    color: hsl(var(--brand));
   }
 
   .xp-bar-fill {

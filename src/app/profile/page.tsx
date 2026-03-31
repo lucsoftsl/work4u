@@ -169,14 +169,14 @@ export default function ProfilePage() {
 
     try {
       // Update profile fields including workerTypes in one PATCH
-      const addressPayload = JSON.stringify({
+      const addressPayload = {
         country: formData.country || '',
         state: formData.state || '',
         address: formData.address || '',
         city: formData.city || '',
         postcode: formData.postcode || '',
         number: formData.number || '',
-      });
+      };
 
       const updated = await updateProfile(user.id, {
         displayName: formData.displayName,
@@ -194,7 +194,7 @@ export default function ProfilePage() {
           : formData.workerTypes;
 
       const parsedAddressUpdated = parseAddress(updated.address as string | null);
-      const normalizedAddressString = updated.address ?? addressPayload;
+      const normalizedAddressString = updated.address ?? JSON.stringify(addressPayload);
 
       // Update Redux state with new user data
       dispatch(setUser({

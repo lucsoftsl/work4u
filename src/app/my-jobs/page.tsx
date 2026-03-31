@@ -3,114 +3,111 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/Button";
+import { ArrowLeft, Plus } from "lucide-react";
 import Footer from "@/components/Footer";
 import { JobCard } from "@/components/JobCard";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/lib/i18n";
 import type { Job } from "@/api/types";
-import { ArrowLeft, Plus } from "lucide-react";
 
 export default function MyJobsPage() {
-    const { t } = useTranslation();
-    const router = useRouter();
-    const { user, firebaseToken } = useAuth();
-    const [jobs, setJobs] = useState<Job[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
+  const router = useRouter();
+  const { user, firebaseToken } = useAuth();
 
-    useEffect(() => {
-        if (!user?.id || !firebaseToken) {
-            router.push('/');
-            return;
-        }
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-        const loadMyJobs = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                const myJobs = await api.getMyJobs(user.id, firebaseToken);
-                setJobs(myJobs);
-            } catch (err) {
-                console.error('Failed to load jobs:', err);
-                setError('Failed to load your jobs. Please try again.');
-            } finally {
-                setLoading(false);
-            }
-        };
+  useEffect(() => {
+    if (!user?.id || !firebaseToken) {
+      router.push('/signin');
+      return;
+    }
 
-        loadMyJobs();
-    }, [user?.id, firebaseToken, router]);
+    const loadMyJobs = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        setJobs(await api.getMyJobs(user.id, firebaseToken));
+      } catch (err) {
+        console.error('Failed to load jobs:', err);
+        setError('Failed to load your jobs. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return (
-        <div className="min-h-screen bg-muted">
-            {/* Header */}
-            <div className="border-b border-border bg-card">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="sm" asChild>
-                            <Link href="/profile" className="flex items-center gap-2">
-                                <ArrowLeft size={16} />
-                            </Link>
-                        </Button>
-                        <h1 className="text-3xl font-bold text-foreground">{t('myJobs.title')}</h1>
-                    </div>
-                    <Button asChild>
-                        <Link href="/post-job" className="flex items-center gap-2">
-                            <Plus size={18} />
-                            {t('myJobs.postNew')}
-                        </Link>
-                    </Button>
-                </div>
+    void loadMyJobs();
+  }, [user?.id, firebaseToken, router]);
+
+  return (
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <section className="surface-card overflow-hidden p-6 md:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-semibold text-brand">
+                <ArrowLeft className="h-4 w-4" />
+                Back to dashboard
+              </Link>
+              <h1 className="mt-4 section-heading">{t('myJobs.title')}</h1>
+              <p className="mt-3 text-sm leading-6 text-ink-muted">
+                Review the jobs you have published and jump back into any active posting.
+              </p>
             </div>
+            <Link href="/post-job" className="primary-cta">
+              <Plus className="mr-2 h-4 w-4" />
+              {t('myJobs.postNew')}
+            </Link>
+          </div>
+        </section>
 
-            {/* Content */}
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
-                {loading ? (
-                    <div className="text-center py-12">
-                        <p className="text-muted-foreground">{t('myJobs.loading')}</p>
-                    </div>
-                ) : error ? (
-                    <div className="text-center py-12">
-                        <p className="text-red-600 mb-4">{error}</p>
-                        <Button onClick={() => window.location.reload()}>
-                            {t('myJobs.tryAgain')}
-                        </Button>
-                    </div>
-                ) : jobs.length === 0 ? (
-                    <div className="text-center py-12">
-                        <p className="text-muted-foreground mb-4">{t('myJobs.noJobs')}</p>
-                        <Button asChild>
-                            <Link href="/post-job">{t('myJobs.postFirst')}</Link>
-                        </Button>
-                    </div>
-                ) : (
-                    <div>
-                        <p className="text-muted-foreground mb-6">
-                            {t('myJobs.activeJobs')} <span className="font-semibold">{jobs.length}</span> {jobs.length === 1 ? t('myJobs.jobSingular') : t('myJobs.jobPlural')}
-                        </p>
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {jobs.map((job) => (
-                                <div key={job.id} className="group">
-                                    <JobCard job={job} />
-                                    <div className="mt-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Button variant="outline" size="sm" asChild className="flex-1">
-                                            <Link href={`/jobs/${job.id}`}>{t('myJobs.view')}</Link>
-                                        </Button>
-                                        <Button variant="outline" size="sm" asChild className="flex-1">
-                                            <Link href={`/jobs/${job.id}/edit`}>{t('myJobs.edit')}</Link>
-                                        </Button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
+        <div className="mt-8">
+          {loading ? (
+            <div className="surface-panel p-10 text-center text-ink-muted">{t('myJobs.loading')}</div>
+          ) : error ? (
+            <div className="surface-panel p-10 text-center">
+              <p className="text-sm font-semibold text-red-600">{error}</p>
+              <button onClick={() => window.location.reload()} className="primary-cta mt-4">
+                {t('myJobs.tryAgain')}
+              </button>
             </div>
-
-            {/* Footer */}
-            <Footer />
+          ) : jobs.length === 0 ? (
+            <div className="surface-panel p-10 text-center">
+              <p className="text-base font-semibold text-ink">{t('myJobs.noJobs')}</p>
+              <p className="mt-2 text-sm text-ink-muted">Create your first posting to start receiving applicants.</p>
+              <Link href="/post-job" className="primary-cta mt-5 inline-flex">
+                {t('myJobs.postFirst')}
+              </Link>
+            </div>
+          ) : (
+            <div>
+              <p className="mb-5 text-sm text-ink-muted">
+                {t('myJobs.activeJobs')} <span className="font-bold text-ink">{jobs.length}</span>
+              </p>
+              <div className="grid gap-5">
+                {jobs.map((job) => (
+                  <div key={job.id} className="space-y-3">
+                    <JobCard job={job} />
+                    <div className="flex flex-wrap gap-3">
+                      <Link href={`/jobs/${job.id}`} className="secondary-cta">
+                        {t('myJobs.view')}
+                      </Link>
+                      <Link href={`/jobs/${job.id}/edit`} className="secondary-cta">
+                        {t('myJobs.edit')}
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-    );
+      </div>
+
+      <Footer />
+    </div>
+  );
 }

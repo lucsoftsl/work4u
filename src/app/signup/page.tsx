@@ -64,6 +64,31 @@ export default function SignUpPage() {
 
   const selectedShape = useMemo(() => (accountMode ? deriveProfileShape(accountMode) : null), [accountMode]);
   const getErrorMessage = (value: unknown): string => (value instanceof Error ? value.message : 'Unknown error');
+  const getFieldError = (
+    field:
+      | 'fullName'
+      | 'email'
+      | 'phoneNumber'
+      | 'password'
+      | 'acceptedTerms'
+      | 'accountMode'
+      | 'location'
+  ) => {
+    if (!error) return null;
+
+    const normalized = error.toLowerCase();
+    const lookup: Record<typeof field, string[]> = {
+      fullName: ['full name'],
+      email: ['email'],
+      phoneNumber: ['phone number'],
+      password: ['password'],
+      acceptedTerms: ['terms', 'privacy policy'],
+      accountMode: ['select one account mode'],
+      location: ['location'],
+    };
+
+    return lookup[field].some((token) => normalized.includes(token)) ? error : null;
+  };
   const isFirebaseEmailExistsError = (value: unknown): boolean => {
     if (!value || typeof value !== 'object') return false;
     const maybeCode = (value as { code?: unknown }).code;
@@ -303,9 +328,14 @@ export default function SignUpPage() {
             </p>
           </div>
 
-          {error ? <p className="mx-auto mb-5 max-w-5xl rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
+          {error && !getFieldError('accountMode') ? (
+            <p className="mx-auto mb-5 max-w-5xl rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>
+          ) : null}
 
           <div className="mx-auto max-w-5xl space-y-5">
+            {getFieldError('accountMode') ? (
+              <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{getFieldError('accountMode')}</p>
+            ) : null}
             {step2Options.map((option) => {
               const Icon = option.icon;
               const selected = accountMode === option.mode;
@@ -410,7 +440,15 @@ export default function SignUpPage() {
               </div>
             </div>
 
-            {error ? <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p> : null}
+            {error &&
+            !getFieldError('fullName') &&
+            !getFieldError('email') &&
+            !getFieldError('phoneNumber') &&
+            !getFieldError('password') &&
+            !getFieldError('acceptedTerms') &&
+            !getFieldError('location') ? (
+              <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>
+            ) : null}
 
             {step === 1 ? (
               <>
@@ -457,8 +495,15 @@ export default function SignUpPage() {
 
                 <div className="mt-4 space-y-4 lg:mt-6">
                   <label className="block">
+                    {getFieldError('fullName') ? (
+                      <span className="mb-2 ml-1 block text-sm font-semibold text-red-700">{getFieldError('fullName')}</span>
+                    ) : null}
                     <span className="mb-1.5 ml-1 block text-sm font-medium text-[#1d2d4f] lg:text-sm lg:font-bold">Full Name</span>
-                    <div className="relative flex items-center rounded-xl border border-[#d1dae9] bg-white shadow-sm lg:rounded-xl lg:border-[#d9e2ef]">
+                    <div
+                      className={`relative flex items-center rounded-xl border bg-white shadow-sm lg:rounded-xl ${
+                        getFieldError('fullName') ? 'border-red-300 bg-red-50/30' : 'border-[#d1dae9] lg:border-[#d9e2ef]'
+                      }`}
+                    >
                       <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8ea0bc]" />
                       <input
                         value={accountForm.fullName}
@@ -470,8 +515,15 @@ export default function SignUpPage() {
                   </label>
 
                   <label className="block">
+                    {getFieldError('email') ? (
+                      <span className="mb-2 ml-1 block text-sm font-semibold text-red-700">{getFieldError('email')}</span>
+                    ) : null}
                     <span className="mb-1.5 ml-1 block text-sm font-medium text-[#1d2d4f] lg:text-sm lg:font-bold">Email Address</span>
-                    <div className="relative flex items-center rounded-xl border border-[#d1dae9] bg-white shadow-sm lg:rounded-xl lg:border-[#d9e2ef]">
+                    <div
+                      className={`relative flex items-center rounded-xl border bg-white shadow-sm lg:rounded-xl ${
+                        getFieldError('email') ? 'border-red-300 bg-red-50/30' : 'border-[#d1dae9] lg:border-[#d9e2ef]'
+                      }`}
+                    >
                       <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8ea0bc]" />
                       <input
                         type="email"
@@ -484,8 +536,15 @@ export default function SignUpPage() {
                   </label>
 
                   <label className="block">
+                    {getFieldError('phoneNumber') ? (
+                      <span className="mb-2 ml-1 block text-sm font-semibold text-red-700">{getFieldError('phoneNumber')}</span>
+                    ) : null}
                     <span className="mb-1.5 ml-1 block text-sm font-medium text-[#1d2d4f] lg:text-sm lg:font-bold">Phone Number</span>
-                    <div className="relative flex items-center rounded-xl border border-[#d1dae9] bg-white shadow-sm lg:rounded-xl lg:border-[#d9e2ef]">
+                    <div
+                      className={`relative flex items-center rounded-xl border bg-white shadow-sm lg:rounded-xl ${
+                        getFieldError('phoneNumber') ? 'border-red-300 bg-red-50/30' : 'border-[#d1dae9] lg:border-[#d9e2ef]'
+                      }`}
+                    >
                       <Phone className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8ea0bc]" />
                       <input
                         value={accountForm.phoneNumber}
@@ -497,8 +556,15 @@ export default function SignUpPage() {
                   </label>
 
                   <label className="block">
+                    {getFieldError('password') ? (
+                      <span className="mb-2 ml-1 block text-sm font-semibold text-red-700">{getFieldError('password')}</span>
+                    ) : null}
                     <span className="mb-1.5 ml-1 block text-sm font-medium text-[#1d2d4f] lg:text-sm lg:font-bold">Password</span>
-                    <div className="relative flex items-center rounded-xl border border-[#d1dae9] bg-white shadow-sm lg:rounded-xl lg:border-[#d9e2ef]">
+                    <div
+                      className={`relative flex items-center rounded-xl border bg-white shadow-sm lg:rounded-xl ${
+                        getFieldError('password') ? 'border-red-300 bg-red-50/30' : 'border-[#d1dae9] lg:border-[#d9e2ef]'
+                      }`}
+                    >
                       <Shield className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8ea0bc]" />
                       <input
                         type={showPassword ? 'text' : 'password'}
@@ -514,7 +580,10 @@ export default function SignUpPage() {
                   </label>
                 </div>
 
-                <label className="mt-2 flex items-start gap-3 py-2 text-sm text-[#2f4368] lg:mt-5 lg:items-center lg:text-sm lg:text-[#445a81]">
+                <label className="relative mt-2 flex items-start gap-3 py-2 text-sm text-[#2f4368] lg:mt-5 lg:items-center lg:text-sm lg:text-[#445a81]">
+                  {getFieldError('acceptedTerms') ? (
+                    <span className="absolute -mt-7 ml-1 text-sm font-semibold text-red-700">{getFieldError('acceptedTerms')}</span>
+                  ) : null}
                   <input
                     type="checkbox"
                     checked={accountForm.acceptedTerms}
@@ -565,14 +634,19 @@ export default function SignUpPage() {
                     : 'Add your basic details and start requesting services.'}
                 </p>
 
-                <div className="mt-6 rounded-2xl border border-[#d9e2ef] bg-white p-4 lg:mt-7 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0">
+                  <div className="mt-6 rounded-2xl border border-[#d9e2ef] bg-white p-4 lg:mt-7 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0">
                   <div className="space-y-4">
                   <label className="block">
+                    {getFieldError('location') ? (
+                      <span className="mb-2 block text-sm font-semibold text-red-700">{getFieldError('location')}</span>
+                    ) : null}
                     <span className="mb-2 block text-sm font-bold text-[#1d2d4f]">Current Location</span>
                     <input
                       value={profileForm.location}
                       onChange={(e) => setProfileForm((prev) => ({ ...prev, location: e.target.value }))}
-                      className="w-full rounded-full border border-[#d9e2ef] px-4 py-3 text-sm text-[#10203f] outline-none lg:rounded-xl lg:text-base"
+                      className={`w-full rounded-full border px-4 py-3 text-sm text-[#10203f] outline-none lg:rounded-xl lg:text-base ${
+                        getFieldError('location') ? 'border-red-300 bg-red-50/30' : 'border-[#d9e2ef]'
+                      }`}
                       placeholder="City, State"
                     />
                   </label>

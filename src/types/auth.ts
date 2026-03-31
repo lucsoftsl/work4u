@@ -7,6 +7,7 @@ export interface AuthUser {
     status: 'ACTIVE' | 'PENDING_VERIFICATION' | 'PENDING_DELETION';
     userType: 'PERSONAL' | 'ENTERPRISE' | 'ADMIN';
     workerTypes: ('WORKER' | 'REQUESTOR')[];
+    authProvider?: 'PASSWORD' | 'GOOGLE';
     accountMode?: 'REQUESTOR' | 'WORKER' | 'BOTH' | null;
     profileTier?: 'BASIC' | 'EXTENDED' | null;
     onboardingStep?: number;

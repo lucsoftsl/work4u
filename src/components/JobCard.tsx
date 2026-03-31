@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { MapPin, Star, Users, Coins, Sparkles, Swords, Clock } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { BriefcaseBusiness, MapPin, Star, Users } from "lucide-react";
 
 interface JobCardProps {
   job: {
@@ -26,176 +26,84 @@ interface JobCardProps {
   };
 }
 
-// Determine quest difficulty based on budget
-const getQuestDifficulty = (budget: number): {
-  rarity: string;
-  color: string;
-  label: string;
-  xpReward: number;
-} => {
-  if (budget >= 5000) return {
-    rarity: 'rarity-legendary',
-    color: 'text-rarity-legendary',
-    label: 'LEGENDARY',
-    xpReward: 500
-  };
-  if (budget >= 2000) return {
-    rarity: 'rarity-epic',
-    color: 'text-rarity-epic',
-    label: 'EPIC',
-    xpReward: 300
-  };
-  if (budget >= 1000) return {
-    rarity: 'rarity-rare',
-    color: 'text-rarity-rare',
-    label: 'RARE',
-    xpReward: 200
-  };
-  if (budget >= 500) return {
-    rarity: 'rarity-uncommon',
-    color: 'text-rarity-uncommon',
-    label: 'UNCOMMON',
-    xpReward: 100
-  };
-  return {
-    rarity: 'rarity-common',
-    color: 'text-rarity-common',
-    label: 'COMMON',
-    xpReward: 50
-  };
-};
+function formatBudget(amount: number, currency: string, budgetType: "FIXED" | "HOURLY") {
+  const formatted = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(amount);
+
+  return budgetType === "HOURLY" ? `${formatted}/hr` : formatted;
+}
 
 export function JobCard({ job }: JobCardProps) {
-  const difficulty = getQuestDifficulty(job.budget);
-  const goldReward = Math.floor(job.budget / 10); // Convert currency to gold
-
   return (
-    <Link href={`/jobs/${job.id}`}>
-      <div className={`
-        bg-card border-2 rounded-lg p-6 
-        ${difficulty.rarity}
-        transition-all duration-300 
-        hover:scale-[1.02] hover:-translate-y-1
-        cursor-pointer h-full flex flex-col
-        relative overflow-hidden
-        ${difficulty.label === 'LEGENDARY' ? 'animate-pulse-glow' : ''}
-      `}>
-        {/* Decorative corner accent */}
-        <div className={`absolute top-0 right-0 w-20 h-20 ${difficulty.color} opacity-10`}>
-          <Swords className="w-full h-full transform rotate-45" />
+    <Link href={`/jobs/${job.id}`} className="block">
+      <article className="surface-panel h-full p-6 transition hover:-translate-y-0.5 hover:border-brand/35">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-brand">
+            {job.category}
+          </span>
+          <span className="rounded-full bg-[#fdf2d8] px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-[#c98100]">
+            {job.remote ? "Remote" : "On-site"}
+          </span>
         </div>
 
-        {/* Header */}
-        <div className="mb-4 relative z-10">
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`
-              inline-flex items-center gap-1 px-3 py-1 rounded-full 
-              text-xs font-bold uppercase
-              ${difficulty.color}
-              bg-gradient-to-r from-card to-muted
-              border-2 ${difficulty.rarity.replace('rarity-', 'border-rarity-')}
-            `}>
-              <Sparkles className="w-3 h-3" />
-              {difficulty.label}
-            </span>
-            <span className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground border border-border">
-              {job.category}
-            </span>
+        <div className="mt-5 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h3 className="text-xl font-black leading-tight text-ink">{job.title}</h3>
+            <p className="mt-3 line-clamp-3 text-sm leading-6 text-ink-muted">{job.description}</p>
           </div>
-          <h3 className="text-lg font-bold text-foreground line-clamp-2 flex items-start gap-2">
-            <Scroll className={`w-5 h-5 mt-0.5 flex-shrink-0 ${difficulty.color}`} />
-            {job.title}
-          </h3>
-        </div>
-
-        {/* Description - Quest text */}
-        <div className="mb-4 flex-1">
-          <p className="text-sm text-muted-foreground italic line-clamp-3">
-            "{job.description}"
-          </p>
-        </div>
-
-        {/* Quest Rewards */}
-        <div className="mb-4 p-3 bg-muted/30 rounded-lg border border-border">
-          <p className="text-xs text-muted-foreground mb-2 font-semibold">QUEST REWARDS:</p>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <Coins className="w-4 h-4 text-secondary" />
-                <span className="text-base font-bold text-secondary">
-                  {goldReward.toLocaleString()}
-                </span>
-                <span className="text-xs text-muted-foreground">Gold</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Star className="w-4 h-4 text-accent" />
-                <span className="text-base font-bold text-accent">
-                  +{difficulty.xpReward}
-                </span>
-                <span className="text-xs text-muted-foreground">XP</span>
-              </div>
-            </div>
-            {job.budgetType === "HOURLY" && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="w-3 h-3" />
-                <span>per hour</span>
-              </div>
-            )}
+          <div className="shrink-0 rounded-[22px] bg-[#eff7fa] px-4 py-3 text-right">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-ink-subtle">Budget</p>
+            <p className="mt-1 text-lg font-black text-brand">{formatBudget(job.budget, job.budgetCurrency, job.budgetType)}</p>
           </div>
         </div>
 
-        {/* Location & Remote */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-          <MapPin size={16} />
-          <span>{job.remote ? "🌍 Remote Quest" : job.location}</span>
+        <div className="mt-6 flex flex-wrap items-center gap-4 text-sm text-ink-muted">
+          <span className="inline-flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            {job.remote ? "Flexible location" : job.location}
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            {job.applicants} applicants
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <BriefcaseBusiness className="h-4 w-4" />
+            {job.budgetType === "HOURLY" ? "Hourly contract" : "Fixed scope"}
+          </span>
         </div>
 
-        {/* Quest Giver Info */}
-        <div className="flex items-center justify-between pt-4 border-t border-border">
-          <div className="flex items-center gap-2">
+        <div className="mt-6 flex items-center justify-between border-t border-outline pt-5">
+          <div className="flex items-center gap-3">
             {job.createdBy.image ? (
               <Image
                 src={job.createdBy.image}
                 alt={job.createdBy.name}
-                width={32}
-                height={32}
-                className="w-8 h-8 rounded-full border-2 border-primary"
+                width={44}
+                height={44}
+                className="h-11 w-11 rounded-full object-cover"
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center">
-                <span className="text-xs font-bold text-primary">
-                  {job.createdBy.name[0]}
-                </span>
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#dce9ef] text-sm font-black text-brand">
+                {job.createdBy.name.charAt(0)}
               </div>
             )}
             <div>
-              <p className="text-xs text-muted-foreground">Quest Giver</p>
-              <p className="text-sm font-medium text-foreground">{job.createdBy.name}</p>
-              <div className="flex items-center gap-1">
-                <Star size={12} className="text-secondary fill-secondary" />
-                <span className="text-xs text-muted-foreground">
-                  {job.createdBy.rating} ({job.createdBy.reviews})
-                </span>
-              </div>
+              <p className="text-sm font-bold text-ink">{job.createdBy.name}</p>
+              <p className="inline-flex items-center gap-1 text-xs text-ink-muted">
+                <Star className="h-3.5 w-3.5 fill-[#f5b33f] text-[#f5b33f]" />
+                {job.createdBy.rating.toFixed(1)} ({job.createdBy.reviews} reviews)
+              </p>
             </div>
           </div>
-          <div className="text-center">
-            <div className="flex items-center gap-1 text-muted-foreground mb-1">
-              <Users size={14} />
-              <span className="text-xs font-bold">{job.applicants}</span>
-            </div>
-            <p className="text-xs text-muted-foreground">Adventurers</p>
-          </div>
+
+          <span className="rounded-full border border-outline px-4 py-2 text-sm font-semibold text-ink">
+            View details
+          </span>
         </div>
-      </div>
+      </article>
     </Link>
   );
 }
-
-// Import Scroll icon
-const Scroll = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M8 3H16C17.1046 3 18 3.89543 18 5V19C18 20.1046 17.1046 21 16 21H8C6.89543 21 6 20.1046 6 19V5C6 3.89543 6.89543 3 8 3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M9 7H15M9 11H15M9 15H12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-  </svg>
-);

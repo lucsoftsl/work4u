@@ -1,300 +1,214 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
+import { useSearchParams } from "next/navigation";
+import { ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { JobCard } from "@/components/JobCard";
-import { Sliders, ChevronLeft, ChevronRight, Briefcase } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { getCategoriesWithTranslations } from "@/lib/category-utils";
 import { api } from "@/lib/api";
-import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import type { Job } from "@/api/types";
 
 const JOBS_PER_PAGE = 8;
 
 export default function JobsPageContent() {
-    const { t } = useTranslation();
-    const { user } = useAuth();
-    const searchParams = useSearchParams();
-    const [jobs, setJobs] = useState<Job[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-    const [sortBy, setSortBy] = useState<"newest" | "budget" | "applicants">("newest");
-    const [showFilters, setShowFilters] = useState(false);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [showAllCategories, setShowAllCategories] = useState(false);
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
 
-    useEffect(() => {
-        const loadJobs = async () => {
-            try {
-                const keywords = searchParams.get("keywords");
-                const location = searchParams.get("location");
-                const category = searchParams.get("category");
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<"newest" | "budget" | "applicants">("newest");
+  const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showAllCategories, setShowAllCategories] = useState(false);
 
-                if (keywords || location) {
-                    // Use search endpoint if search params exist
-                    const data = await api.searchJobs({
-                        keywords: keywords || undefined,
-                        location: location || undefined,
-                    });
-                    setJobs(data);
-                } else if (category) {
-                    // Use listJobs with category filter
-                    const data = await api.listJobs({
-                        category: category,
-                    });
-                    setJobs(data);
-                } else {
-                    // Otherwise list all jobs
-                    const data = await api.listJobs();
-                    setJobs(data);
-                }
-            } catch (error) {
-                console.error("Failed to load jobs:", error);
-                setJobs([]);
-            } finally {
-                setLoading(false);
-            }
-        };
+  useEffect(() => {
+    const loadJobs = async () => {
+      try {
+        setLoading(true);
 
-        loadJobs();
-    }, [searchParams]);
+        const keywords = searchParams.get("keywords");
+        const location = searchParams.get("location");
+        const category = searchParams.get("category");
 
-    const filteredJobs = selectedCategories.length > 0
-        ? jobs.filter((job) => selectedCategories.includes(job.category.toLowerCase()))
-        : jobs;
-
-    const sortedJobs = [...filteredJobs].sort((a, b) => {
-        if (sortBy === "budget") return b.budget - a.budget;
-        if (sortBy === "applicants") return b.applicants - a.applicants;
-        return 0;
-    });
-
-    // Pagination logic
-    const totalPages = Math.ceil(sortedJobs.length / JOBS_PER_PAGE);
-    const startIndex = (currentPage - 1) * JOBS_PER_PAGE;
-    const paginatedJobs = sortedJobs.slice(startIndex, startIndex + JOBS_PER_PAGE);
-
-    // Reset to page 1 when filters change
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [selectedCategories, sortBy]);
-
-    const handleCategoryChange = (categoryId: string) => {
-        setSelectedCategories((prev) =>
-            prev.includes(categoryId)
-                ? prev.filter((id) => id !== categoryId)
-                : [...prev, categoryId]
-        );
+        if (keywords || location) {
+          setJobs(await api.searchJobs({ keywords: keywords || undefined, location: location || undefined }));
+        } else if (category) {
+          setJobs(await api.listJobs({ category }));
+        } else {
+          setJobs(await api.listJobs());
+        }
+      } catch (error) {
+        console.error("Failed to load jobs:", error);
+        setJobs([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    const allCategories = getCategoriesWithTranslations(t);
-    const displayedCategories = showAllCategories
-        ? allCategories
-        : allCategories.slice(0, 5);
+    void loadJobs();
+  }, [searchParams]);
 
-    return (
-        <>
-            {/* Header */}
-            <div className="border-b border-border">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-3xl font-bold text-foreground mb-2">{t('jobs.title')}</h1>
-                            <p className="text-muted-foreground">{sortedJobs.length} {t('jobs.opportunitiesAvailable')}</p>
-                        </div>
-                        {user && (
-                            <Link href="/my-jobs">
-                                <Button variant="outline" className="flex items-center gap-2">
-                                    <Briefcase size={18} />
-                                    <span className="hidden sm:inline">{t('myJobs.title')}</span>
-                                </Button>
-                            </Link>
-                        )}
-                    </div>
-                </div>
-            </div>
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategories, sortBy]);
 
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-                <div className="grid lg:grid-cols-4 gap-8">
-                    {/* Sidebar Filters */}
-                    <aside className="lg:col-span-1">
-                        <div className="sticky top-20">
-                            <button
-                                onClick={() => setShowFilters(!showFilters)}
-                                className="lg:hidden flex items-center gap-2 w-full py-3 px-4 bg-muted rounded-lg mb-4"
-                            >
-                                <Sliders size={20} />
-                                {t('jobs.filters')}
-                            </button>
+  const filteredJobs = selectedCategories.length > 0
+    ? jobs.filter((job) => selectedCategories.includes(job.category.toLowerCase()))
+    : jobs;
 
-                            <div className={`${showFilters ? "block" : "hidden"} lg:block space-y-6`}>
-                                {/* Category Filter */}
-                                <div>
-                                    <h3 className="font-bold text-foreground mb-4">{t('jobs.category')}</h3>
-                                    <div className="space-y-2">
-                                        {displayedCategories.map((cat) => (
-                                            <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    name="category"
-                                                    value={cat.id}
-                                                    checked={selectedCategories.includes(cat.id)}
-                                                    onChange={() => handleCategoryChange(cat.id)}
-                                                    className="w-4 h-4 rounded"
-                                                />
-                                                <span className="text-foreground text-sm">{cat.name}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                    {allCategories.length > 5 && (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="w-full mt-3 text-xs"
-                                            onClick={() => setShowAllCategories(!showAllCategories)}
-                                        >
-                                            {showAllCategories ? "Show Less" : "Show More"}
-                                        </Button>
-                                    )}
-                                    {selectedCategories.length > 0 && (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="w-full mt-2 text-xs"
-                                            onClick={() => setSelectedCategories([])}
-                                        >
-                                            Clear Categories
-                                        </Button>
-                                    )}
-                                </div>
+  const sortedJobs = [...filteredJobs].sort((a, b) => {
+    if (sortBy === "budget") return b.budget - a.budget;
+    if (sortBy === "applicants") return b.applicants - a.applicants;
+    return String(b.dateTimeCreated).localeCompare(String(a.dateTimeCreated));
+  });
 
-                                {/* Budget Filter */}
-                                <div>
-                                    <h3 className="font-bold text-foreground mb-4">{t('jobs.budgetType')}</h3>
-                                    <div className="space-y-2">
-                                        {["Fixed Price", "Hourly", "Both"].map((type) => (
-                                            <label key={type} className="flex items-center gap-2 cursor-pointer">
-                                                <input type="checkbox" className="w-4 h-4" />
-                                                <span className="text-foreground">{type}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
+  const totalPages = Math.ceil(sortedJobs.length / JOBS_PER_PAGE);
+  const startIndex = (currentPage - 1) * JOBS_PER_PAGE;
+  const paginatedJobs = sortedJobs.slice(startIndex, startIndex + JOBS_PER_PAGE);
+  const allCategories = getCategoriesWithTranslations(t);
+  const displayedCategories = showAllCategories ? allCategories : allCategories.slice(0, 5);
 
-                                <Button
-                                    className="w-full"
-                                    variant="outline"
-                                    onClick={() => setSelectedCategories([])}
-                                >
-                                    {t('jobs.clearFilters')}
-                                </Button>
-                            </div>
-                        </div>
-                    </aside>
-
-                    {/* Main Content */}
-                    <div className="lg:col-span-3">
-                        {/* Sort Options */}
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground">{t('jobs.sortBy')}</span>
-                                <select
-                                    value={sortBy}
-                                    onChange={(e) => setSortBy(e.target.value as "newest" | "budget" | "applicants")}
-                                    className="px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                                >
-                                    <option value="newest">{t('jobs.sort.newest')}</option>
-                                    <option value="budget">{t('jobs.sort.budget')}</option>
-                                    <option value="applicants">{t('jobs.sort.applicants')}</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* Jobs Grid */}
-                        {loading ? (
-                            <div className="text-center py-12">
-                                <p className="text-muted-foreground">{t('jobs.title')}...</p>
-                            </div>
-                        ) : paginatedJobs.length > 0 ? (
-                            <>
-                                <div className="grid gap-6">
-                                    {paginatedJobs.map((job) => (
-                                        <JobCard key={job.id} job={job} />
-                                    ))}
-                                </div>
-
-                                {/* Pagination */}
-                                {totalPages > 1 && (
-                                    <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-                                        {/* Mobile-friendly page info */}
-                                        <div className="text-center text-sm text-muted-foreground">
-                                            {t('jobs.opportunitiesAvailable')}: {sortedJobs.length} | {t('jobs.title')}: {currentPage} / {totalPages}
-                                        </div>
-
-                                        {/* Pagination controls */}
-                                        <div className="flex items-center gap-2">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                                disabled={currentPage === 1}
-                                                className="flex items-center gap-1"
-                                            >
-                                                <ChevronLeft size={16} />
-                                                <span className="hidden sm:inline">Previous</span>
-                                            </Button>
-
-                                            {/* Page numbers */}
-                                            <div className="flex items-center gap-1">
-                                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                                                    // Show only relevant pages on mobile
-                                                    const showPage = totalPages <= 5 ||
-                                                        page === 1 ||
-                                                        page === totalPages ||
-                                                        Math.abs(page - currentPage) <= 1;
-
-                                                    if (!showPage && page !== 2 && page !== totalPages - 1) return null;
-
-                                                    return (
-                                                        <Button
-                                                            key={page}
-                                                            variant={page === currentPage ? "default" : "outline"}
-                                                            size="sm"
-                                                            onClick={() => setCurrentPage(page)}
-                                                            className="w-8 h-8 p-0 text-xs sm:text-sm"
-                                                        >
-                                                            {page}
-                                                        </Button>
-                                                    );
-                                                })}
-                                            </div>
-
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                                disabled={currentPage === totalPages}
-                                                className="flex items-center gap-1"
-                                            >
-                                                <span className="hidden sm:inline">Next</span>
-                                                <ChevronRight size={16} />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-                            </>
-                        ) : (
-                            <div className="text-center py-12">
-                                <p className="text-muted-foreground mb-4">{t('jobs.noJobs')}</p>
-                                <Button onClick={() => setSelectedCategories([])}>{t('jobs.clearFilters')}</Button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </>
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId]
     );
+  };
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <section className="surface-card overflow-hidden">
+        <div className="grid gap-6 p-6 md:grid-cols-[1fr_auto] md:items-end md:p-8">
+          <div>
+            <span className="eyebrow">Marketplace</span>
+            <h1 className="mt-5 section-heading">{t('jobs.title')}</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted">
+              Browse available opportunities with a cleaner layout built around the refined Work4U marketplace direction.
+            </p>
+          </div>
+          {user ? (
+            <div className="flex flex-wrap gap-3">
+              <Link href="/my-jobs" className="secondary-cta">My jobs</Link>
+              <Link href="/post-job" className="primary-cta">Post a job</Link>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <div className="mt-8 grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside>
+          <button
+            onClick={() => setShowFilters((prev) => !prev)}
+            className="secondary-cta w-full justify-center gap-2 lg:hidden"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {t('jobs.filters')}
+          </button>
+
+          <div className={`${showFilters ? "mt-4 block" : "hidden"} surface-panel p-5 lg:mt-0 lg:block`}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-black uppercase tracking-[0.18em] text-ink">Filters</h2>
+              {selectedCategories.length > 0 ? (
+                <button className="text-xs font-bold text-brand" onClick={() => setSelectedCategories([])}>
+                  Clear
+                </button>
+              ) : null}
+            </div>
+
+            <div className="mt-5">
+              <h3 className="text-sm font-bold text-ink">{t('jobs.category')}</h3>
+              <div className="mt-4 space-y-3">
+                {displayedCategories.map((cat) => (
+                  <label key={cat.id} className="flex items-center gap-3 text-sm text-ink">
+                    <input
+                      type="checkbox"
+                      value={cat.id}
+                      checked={selectedCategories.includes(cat.id)}
+                      onChange={() => handleCategoryChange(cat.id)}
+                      className="h-4 w-4 rounded border-outline text-brand"
+                    />
+                    <span>{cat.name}</span>
+                  </label>
+                ))}
+              </div>
+
+              {allCategories.length > 5 ? (
+                <button
+                  onClick={() => setShowAllCategories((prev) => !prev)}
+                  className="mt-4 text-sm font-semibold text-brand"
+                >
+                  {showAllCategories ? "Show less" : "Show more"}
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </aside>
+
+        <section>
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-ink-muted">
+              {sortedJobs.length} {t('jobs.opportunitiesAvailable')}
+            </p>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-ink-muted">{t('jobs.sortBy')}</span>
+              <select
+                value={sortBy}
+                onChange={(event) => setSortBy(event.target.value as "newest" | "budget" | "applicants")}
+                className="field-shell py-2"
+              >
+                <option value="newest">{t('jobs.sort.newest')}</option>
+                <option value="budget">{t('jobs.sort.budget')}</option>
+                <option value="applicants">{t('jobs.sort.applicants')}</option>
+              </select>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="surface-panel p-10 text-center text-ink-muted">Loading jobs...</div>
+          ) : paginatedJobs.length > 0 ? (
+            <>
+              <div className="grid gap-5">
+                {paginatedJobs.map((job) => (
+                  <JobCard key={job.id} job={job} />
+                ))}
+              </div>
+
+              {totalPages > 1 ? (
+                <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
+                  <p className="text-sm text-ink-muted">Page {currentPage} of {totalPages}</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="secondary-cta gap-2 disabled:opacity-50"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="secondary-cta gap-2 disabled:opacity-50"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="surface-panel p-10 text-center">
+              <p className="text-base font-semibold text-ink">No matching jobs yet.</p>
+              <p className="mt-2 text-sm text-ink-muted">Try clearing filters or broadening the search.</p>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
 }
