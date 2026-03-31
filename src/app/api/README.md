@@ -1,8 +1,9 @@
 # API Routes
 
-Backend REST API will be proxied here when ready. Currently the frontend uses axios with in-memory mocks (`src/api`).
+Frontend route handlers proxy backend REST API here when needed.
 
 Planned routes:
+- GET `/api/landing`
 - GET `/api/jobs`
 - GET `/api/jobs/:id`
 - POST `/api/jobs`

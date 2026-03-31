@@ -1,9 +1,7 @@
 import { landingResponseSchema, type LandingResponse } from "@/types/landing";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
 export async function fetchLandingContent(signal?: AbortSignal): Promise<LandingResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/landing`, {
+  const response = await fetch(`/api/landing`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
