@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { BriefcaseBusiness, MapPin, Star, Users } from "lucide-react";
+import { BriefcaseBusiness, MapPin, Star, TrendingUp, Users } from "lucide-react";
 
 interface JobCardProps {
   job: {
@@ -16,6 +16,8 @@ interface JobCardProps {
     location: string;
     remote: boolean;
     applicants: number;
+    boosted?: boolean;
+    expiresAt?: string | null;
     createdBy: {
       userId: string;
       name: string;
@@ -47,6 +49,12 @@ export function JobCard({ job }: JobCardProps) {
           <span className="rounded-full bg-[#fdf2d8] px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-[#c98100]">
             {job.remote ? "Remote" : "On-site"}
           </span>
+          {job.boosted && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-amber-700">
+              <TrendingUp className="h-3 w-3" />
+              Boosted
+            </span>
+          )}
         </div>
 
         <div className="mt-5 flex items-start justify-between gap-4">

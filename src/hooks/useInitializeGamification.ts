@@ -25,7 +25,7 @@ export function useInitializeGamification() {
             id: `daily-quest-${index}`,
             status: 'available',
             progress: 0,
-            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours from now
         }));
 
         dispatch(setQuests([...initialQuests, ...dailies]));

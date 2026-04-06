@@ -130,4 +130,20 @@ export const api = {
 
         return response.json();
     },
+
+    async boostJob(jobId: string, token: string): Promise<Job> {
+        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/boost`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || `Failed to boost job: ${response.statusText}`);
+        }
+
+        return response.json();
+    },
 };

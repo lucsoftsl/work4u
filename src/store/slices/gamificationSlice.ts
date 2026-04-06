@@ -60,7 +60,7 @@ const gamificationSlice = createSlice({
                     type: 'level_up',
                     title: 'Level Up!',
                     message: `Congratulations! You reached level ${state.player.level}!`,
-                    timestamp: new Date(),
+                    timestamp: new Date().toISOString(),
                     read: false,
                 });
 
@@ -100,7 +100,7 @@ const gamificationSlice = createSlice({
                 // Auto-complete quest when progress reaches max
                 if (quest.progress >= quest.maxProgress && quest.status === 'active') {
                     quest.status = 'completed';
-                    quest.completedAt = new Date();
+                    quest.completedAt = new Date().toISOString();
                     state.player.activeQuests -= 1;
                     state.player.completedQuests += 1;
 
@@ -110,7 +110,7 @@ const gamificationSlice = createSlice({
                         type: 'quest_complete',
                         title: 'Quest Completed!',
                         message: `${quest.title} has been completed!`,
-                        timestamp: new Date(),
+                        timestamp: new Date().toISOString(),
                         read: false,
                     });
                 }
@@ -121,7 +121,7 @@ const gamificationSlice = createSlice({
             const quest = state.quests.find(q => q.id === action.payload);
             if (quest && quest.status === 'available') {
                 quest.status = 'active';
-                quest.acceptedAt = new Date();
+                quest.acceptedAt = new Date().toISOString();
                 state.player.activeQuests += 1;
             }
         },
@@ -130,7 +130,7 @@ const gamificationSlice = createSlice({
             const quest = state.quests.find(q => q.id === action.payload);
             if (quest && quest.status === 'active') {
                 quest.status = 'completed';
-                quest.completedAt = new Date();
+                quest.completedAt = new Date().toISOString();
                 state.player.activeQuests -= 1;
                 state.player.completedQuests += 1;
 
@@ -153,7 +153,7 @@ const gamificationSlice = createSlice({
             const achievement = state.achievements.find(a => a.id === action.payload);
             if (achievement && !achievement.unlocked) {
                 achievement.unlocked = true;
-                achievement.unlockedAt = new Date();
+                achievement.unlockedAt = new Date().toISOString();
                 state.player.achievements += 1;
 
                 // Award rewards
@@ -168,7 +168,7 @@ const gamificationSlice = createSlice({
                     title: 'Achievement Unlocked!',
                     message: `${achievement.name} - ${achievement.description}`,
                     icon: achievement.icon,
-                    timestamp: new Date(),
+                    timestamp: new Date().toISOString(),
                     read: false,
                 });
             }
@@ -182,7 +182,7 @@ const gamificationSlice = createSlice({
                 // Auto-unlock when progress is complete
                 if (achievement.progress >= achievement.maxProgress && !achievement.unlocked) {
                     achievement.unlocked = true;
-                    achievement.unlockedAt = new Date();
+                    achievement.unlockedAt = new Date().toISOString();
                     state.player.achievements += 1;
                 }
             }

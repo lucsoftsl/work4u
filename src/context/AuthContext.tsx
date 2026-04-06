@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import { getCurrentUser, signOut as authServiceSignOut } from '../lib/auth-service';
+import { getAuthUserFromFirebaseUser, signOut as authServiceSignOut } from '../lib/auth-service';
 import { useDispatch } from 'react-redux';
 import { setUser } from '@/store/slices/authSlice';
 import type { AuthUser } from '../types/auth';
@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setFirebaseToken(token);
 
           // User is logged in, get their full profile
-          const authUser = await getCurrentUser();
+          const authUser = await getAuthUserFromFirebaseUser(firebaseUser);
           setAuthUser(authUser);
           dispatch(setUser(authUser));
           try {
@@ -59,12 +59,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [dispatch]);
 
   const handleSignOut = async () => {
     try {
       await authServiceSignOut();
       setAuthUser(null);
+      setFirebaseToken(null);
       dispatch(setUser(null));
       try {
         document.cookie = `work4u_auth=; Max-Age=0; Path=/; SameSite=Lax`;
@@ -80,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         loading,
-        isAuthenticated: !!user,
+        isAuthenticated: !!firebaseToken || !!user,
         firebaseToken,
         signOut: handleSignOut,
       }}

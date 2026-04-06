@@ -191,9 +191,6 @@ export default function SignInComponent() {
                 <h2 className="mt-4 text-4xl font-black tracking-tight text-[#10243a]">{t('auth.signIn.title')}</h2>
                 <p className="mt-3 text-sm leading-6 text-[#60758f]">{t('auth.signIn.subtitle')}</p>
               </div>
-              <Link href="/" className="hidden rounded-full border border-outline px-4 py-2 text-sm font-semibold text-[#284760] transition-colors hover:bg-[#f6f9fb] sm:inline-flex">
-                Back home
-              </Link>
             </div>
 
             <form className="space-y-5" onSubmit={handleSubmit}>

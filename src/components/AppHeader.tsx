@@ -5,11 +5,12 @@ import { ChatHeaderIcon } from "@/components/ChatHeaderIcon";
 import { XPBar } from '@/components/gamification/XPBar';
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, LayoutDashboard, Settings, Shield, User } from 'lucide-react';
+import { Briefcase, LayoutDashboard, Settings, Shield, User, Zap } from 'lucide-react';
 
 export function AppHeader() {
     const pathname = usePathname();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
+    const isPro = user?.profileTier === 'EXTENDED';
 
     // Don't show header on public marketing and auth onboarding screens
     if (pathname === '/' || pathname.startsWith('/signup') || pathname.startsWith('/signin')) {
@@ -46,6 +47,23 @@ export function AppHeader() {
                                 <Briefcase className="h-4 w-4 text-brand" />
                                 My Jobs
                             </Link>
+                            {isPro ? (
+                                <Link
+                                    href="/pricing"
+                                    className="hidden items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700 transition-colors hover:bg-amber-100 md:inline-flex"
+                                >
+                                    <Zap className="h-4 w-4" />
+                                    Pro
+                                </Link>
+                            ) : (
+                                <Link
+                                    href="/pricing"
+                                    className="hidden items-center gap-1.5 rounded-full border border-brand/30 bg-brand/5 px-4 py-2 text-sm font-bold text-brand transition-colors hover:bg-brand/10 md:inline-flex"
+                                >
+                                    <Zap className="h-4 w-4" />
+                                    Upgrade
+                                </Link>
+                            )}
                             <Link
                                 href="/profile"
                                 className="inline-flex items-center gap-2 rounded-full border border-outline bg-white px-4 py-2 text-sm font-semibold text-[#26445e] transition-colors hover:bg-[#f7fafc]"

@@ -14,6 +14,9 @@ export type Job = {
   applicants: number;
   createdByUserId: string;
   status: JobStatus;
+  boosted: boolean;
+  boostedAt: string | null;
+  expiresAt: string | null;
   dateTimeCreated: string;
   dateTimeUpdated: string;
   createdBy: {

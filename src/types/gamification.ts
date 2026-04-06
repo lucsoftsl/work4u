@@ -29,9 +29,9 @@ export interface Quest {
     rewards: QuestReward;
     type: 'daily' | 'weekly' | 'main' | 'side';
     requirements?: string[];
-    expiresAt?: Date;
-    acceptedAt?: Date;
-    completedAt?: Date;
+    expiresAt?: string;
+    acceptedAt?: string;
+    completedAt?: string;
 }
 
 export interface QuestReward {
@@ -50,7 +50,7 @@ export interface Achievement {
     rarity: QuestDifficulty;
     icon: string;
     unlocked: boolean;
-    unlockedAt?: Date;
+    unlockedAt?: string;
     progress: number;
     maxProgress: number;
     rewards: QuestReward;
@@ -70,7 +70,7 @@ export interface InventoryItem {
         duration?: number; // in hours
     };
     equipped?: boolean;
-    obtainedAt: Date;
+    obtainedAt: string;
 }
 
 export interface PlayerTitle {
@@ -83,7 +83,7 @@ export interface PlayerTitle {
 }
 
 export interface DailyChallenge extends Quest {
-    resetTime: Date;
+    resetTime: string;
 }
 
 export interface LevelReward {
@@ -98,7 +98,7 @@ export interface Notification {
     title: string;
     message: string;
     icon?: string;
-    timestamp: Date;
+    timestamp: string;
     read: boolean;
 }
 

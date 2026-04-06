@@ -8,6 +8,7 @@ import {
     GoogleAuthProvider,
     signOut as firebaseSignOut,
     onAuthStateChanged,
+    type User,
 } from 'firebase/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -78,6 +79,55 @@ async function clearLoggedInStateApi(userId: string, token: string): Promise<voi
     } catch (error) {
         console.warn('Failed to clear logged-in state:', error);
     }
+}
+
+async function buildAuthUser(firebaseUser: User, token: string): Promise<AuthUser | null> {
+    const response = await fetch(`${API_URL}/api/users/${firebaseUser.uid}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        return null;
+    }
+
+    const apiUser: ApiUser = await response.json();
+    const parsedAddress = parseAddress(apiUser.address as any);
+
+    let workerTypes: string[] = [];
+    if (Array.isArray(apiUser.workerTypes)) {
+        workerTypes = apiUser.workerTypes as string[];
+    } else if (typeof apiUser.workerTypes === 'string') {
+        workerTypes = apiUser.workerTypes
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean);
+    }
+
+    return {
+        id: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: apiUser.displayName || firebaseUser.displayName,
+        photoUrl: apiUser.photoUrl || firebaseUser.photoURL,
+        phoneNumber: apiUser.phoneNumber || firebaseUser.phoneNumber,
+        status: apiUser.status as any,
+        userType: apiUser.userType as any,
+        workerTypes: workerTypes as any,
+        accountMode: apiUser.accountMode ?? null,
+        profileTier: apiUser.profileTier ?? null,
+        onboardingStep: Number(apiUser.onboardingStep ?? 1),
+        onboardingCompleted: Boolean(apiUser.onboardingCompleted),
+        emailVerified: Boolean(apiUser.emailVerified),
+        phoneVerified: Boolean(apiUser.phoneVerified),
+        country: parsedAddress.country,
+        state: parsedAddress.state,
+        address: apiUser.address ?? null,
+        city: parsedAddress.city,
+        postcode: parsedAddress.postcode,
+        number: parsedAddress.number,
+        token,
+    };
 }
 
 function buildLoggedInData(loginMethod: string, extraData?: Record<string, any>) {
@@ -472,63 +522,18 @@ export function getCurrentUser(): Promise<AuthUser | null> {
 
             try {
                 const token = await firebaseUser.getIdToken();
-
-                // Get user profile from backend
-                const response = await fetch(`${API_URL}/api/users/${firebaseUser.uid}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                    },
-                });
-
-                if (!response.ok) {
-                    resolve(null);
-                    return;
-                }
-
-                const apiUser: ApiUser = await response.json();
-
-                const parsedAddress = parseAddress(apiUser.address as any);
-
-                // Get worker types from profile; handle array or CSV string
-                let workerTypes: string[] = [];
-                if (Array.isArray(apiUser.workerTypes)) {
-                    workerTypes = apiUser.workerTypes as string[];
-                } else if (typeof apiUser.workerTypes === 'string') {
-                    workerTypes = apiUser.workerTypes
-                        .split(',')
-                        .map(s => s.trim())
-                        .filter(Boolean);
-                }
-
-                resolve({
-                    id: firebaseUser.uid,
-                    email: firebaseUser.email,
-                    displayName: apiUser.displayName || firebaseUser.displayName,
-                    photoUrl: apiUser.photoUrl || firebaseUser.photoURL,
-                    phoneNumber: apiUser.phoneNumber || firebaseUser.phoneNumber,
-                    status: apiUser.status as any,
-                    userType: apiUser.userType as any,
-                    workerTypes: workerTypes as any,
-                    accountMode: apiUser.accountMode ?? null,
-                    profileTier: apiUser.profileTier ?? null,
-                    onboardingStep: Number(apiUser.onboardingStep ?? 1),
-                    onboardingCompleted: Boolean(apiUser.onboardingCompleted),
-                    emailVerified: Boolean(apiUser.emailVerified),
-                    phoneVerified: Boolean(apiUser.phoneVerified),
-                    country: parsedAddress.country,
-                    state: parsedAddress.state,
-                    address: apiUser.address ?? null,
-                    city: parsedAddress.city,
-                    postcode: parsedAddress.postcode,
-                    number: parsedAddress.number,
-                    token,
-                });
+                resolve(await buildAuthUser(firebaseUser, token));
             } catch (error) {
                 console.error('Failed to get current user:', error);
                 resolve(null);
             }
         }, reject);
     });
+}
+
+export async function getAuthUserFromFirebaseUser(firebaseUser: User): Promise<AuthUser | null> {
+    const token = await firebaseUser.getIdToken();
+    return buildAuthUser(firebaseUser, token);
 }
 
 /**
