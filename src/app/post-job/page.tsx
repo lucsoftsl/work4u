@@ -4,11 +4,12 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CurrencyInput from "react-currency-input-field";
-import { ArrowLeft, ArrowRight, CheckCircle2, Circle, MapPin } from "lucide-react";
-import Footer from "@/components/Footer";
+import { ArrowLeft, ArrowRight, CheckCircle2, Circle } from "lucide-react";
 import { CurrencySelector } from "@/components/CurrencySelector";
+import { CategorySelector } from "@/components/CategorySelector";
+import { LocationPicker } from "@/components/ui/LocationPicker";
 import { BUDGET_TYPES, DURATIONS, EXPERIENCE_LEVELS } from "@/data/categories";
-import { getCategoriesWithTranslations } from "@/lib/category-utils";
+import { getCategoriesWithTranslations, getCategoryName, getExperienceLevelLabel, getBudgetTypeLabel, getDurationLabel } from "@/lib/category-utils";
 import { useTranslation } from "@/lib/i18n";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -24,6 +25,8 @@ type JobFormState = {
   skillsRequired: string;
   experienceLevel: string;
   location: string;
+  latitude: number | null;
+  longitude: number | null;
   remote: boolean;
 };
 
@@ -38,14 +41,10 @@ const INITIAL_FORM: JobFormState = {
   skillsRequired: "",
   experienceLevel: "BEGINNER",
   location: "",
+  latitude: null,
+  longitude: null,
   remote: true,
 };
-
-const STEPS = [
-  { title: "Job basics", description: "Define the role and the category." },
-  { title: "Scope and budget", description: "Set budget, duration, and experience level." },
-  { title: "Delivery details", description: "Add location details and review before posting." },
-] as const;
 
 export default function PostJobPage() {
   const { t } = useTranslation();
@@ -58,6 +57,14 @@ export default function PostJobPage() {
   const [formData, setFormData] = useState<JobFormState>(INITIAL_FORM);
 
   const categories = useMemo(() => getCategoriesWithTranslations(t), [t]);
+  const STEPS = useMemo(
+    () => [
+      { title: t('post.step1Title'), description: t('post.step1Desc') },
+      { title: t('post.step2Title'), description: t('post.step2Desc') },
+      { title: t('post.step3Title'), description: t('post.step3Desc') },
+    ],
+    [t]
+  );
 
   const updateField = <K extends keyof JobFormState>(key: K, value: JobFormState[K]) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -66,21 +73,21 @@ export default function PostJobPage() {
   const validateStep = () => {
     if (step === 1) {
       if (!formData.title.trim() || !formData.category.trim() || !formData.description.trim()) {
-        setError("Please complete the title, category, and description before continuing.");
+        setError(t('post.validationStep1'));
         return false;
       }
     }
 
     if (step === 2) {
       if (!formData.budget || !formData.duration || !formData.experienceLevel) {
-        setError("Please add budget, duration, and experience level.");
+        setError(t('post.validationStep2'));
         return false;
       }
     }
 
     if (step === 3) {
       if (!formData.remote && !formData.location.trim()) {
-        setError("Please provide a location for on-site work.");
+        setError(t('post.validationStep3'));
         return false;
       }
     }
@@ -104,7 +111,9 @@ export default function PostJobPage() {
 
     setSubmitting(true);
     try {
-      await api.createJob(
+      const location = formData.remote ? "Remote" : formData.location.trim();
+
+      const created = await api.createJob(
         {
           title: formData.title.trim(),
           description: formData.description.trim(),
@@ -115,16 +124,20 @@ export default function PostJobPage() {
           duration: formData.duration,
           experienceLevel: formData.experienceLevel,
           skillsRequired: formData.skillsRequired,
-          location: formData.remote ? "Remote" : formData.location.trim(),
+          location,
+          latitude: formData.remote ? null : formData.latitude,
+          longitude: formData.remote ? null : formData.longitude,
           remote: formData.remote,
         },
         firebaseToken
       );
 
-      router.push("/my-jobs");
+      // Remote jobs have no location to search "nearby" against — the
+      // discovery map only makes sense for on-site work.
+      router.push(formData.remote ? "/my-jobs" : `/jobs/${created.id}/nearby-pros`);
     } catch (err) {
       console.error("Error creating job:", err);
-      setError(err instanceof Error ? err.message : "Failed to create job. Please try again.");
+      setError(err instanceof Error ? err.message : t('post.createError'));
     } finally {
       setSubmitting(false);
     }
@@ -138,16 +151,16 @@ export default function PostJobPage() {
             <div>
               <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-semibold text-brand">
                 <ArrowLeft className="h-4 w-4" />
-                Back to dashboard
+                {t("nav.backToDashboard")}
               </Link>
-              <span className="eyebrow mt-4">Post a job</span>
-              <h1 className="mt-4 section-heading">Create a polished job listing</h1>
+              <span className="eyebrow mt-4">{t('post.eyebrow')}</span>
+              <h1 className="mt-4 section-heading">{t('post.heading')}</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted">
-                This flow is aligned to the refined Stitch direction: lighter surfaces, clearer hierarchy, and a tighter review step before publishing.
+                {t('post.subtitle')}
               </p>
             </div>
             <div className="rounded-[24px] bg-[#eff7fa] px-5 py-4 text-sm text-ink">
-              <p className="font-semibold text-ink-subtle">Current step</p>
+              <p className="font-semibold text-ink-subtle">{t('post.currentStep')}</p>
               <p className="mt-1 text-lg font-black">{step} / {STEPS.length}</p>
             </div>
           </div>
@@ -174,7 +187,7 @@ export default function PostJobPage() {
                         )}
                       </span>
                       <div>
-                        <p className="text-sm font-black uppercase tracking-[0.16em] text-ink-subtle">Step {currentStep}</p>
+                        <p className="text-sm font-black uppercase tracking-[0.16em] text-ink-subtle">{t('dashboard.step')} {currentStep}</p>
                         <h2 className="mt-1 text-base font-bold text-ink">{item.title}</h2>
                         <p className="mt-1 text-sm leading-6 text-ink-muted">{item.description}</p>
                       </div>
@@ -199,23 +212,18 @@ export default function PostJobPage() {
                   <input
                     value={formData.title}
                     onChange={(event) => updateField("title", event.target.value)}
-                    placeholder="e.g. Mobile app QA support for a launch"
+                    placeholder={t('post.titlePlaceholder')}
                     className="field-shell w-full"
                   />
                 </div>
 
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-ink">{t('post.labels.category')}</label>
-                  <select
+                  <CategorySelector
                     value={formData.category}
-                    onChange={(event) => updateField("category", event.target.value)}
-                    className="field-shell w-full"
-                  >
-                    <option value="">Select a category</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
+                    onChange={(categoryId) => updateField("category", categoryId)}
+                    categories={categories}
+                  />
                 </div>
 
                 <div>
@@ -224,7 +232,7 @@ export default function PostJobPage() {
                     value={formData.description}
                     onChange={(event) => updateField("description", event.target.value)}
                     rows={8}
-                    placeholder="Describe the work, outcomes, timeline, and any context a candidate should understand."
+                    placeholder={t('post.descPlaceholder')}
                     className="field-shell min-h-[220px] w-full resize-y"
                   />
                 </div>
@@ -242,7 +250,7 @@ export default function PostJobPage() {
                       className="field-shell w-full"
                     >
                       {BUDGET_TYPES.map((type) => (
-                        <option key={type.value} value={type.value}>{type.label}</option>
+                        <option key={type.value} value={type.value}>{getBudgetTypeLabel(type.value, t)}</option>
                       ))}
                     </select>
                   </div>
@@ -254,9 +262,9 @@ export default function PostJobPage() {
                       onChange={(event) => updateField("duration", event.target.value)}
                       className="field-shell w-full"
                     >
-                      <option value="">Select duration</option>
+                      <option value="">{t('post.selectDuration')}</option>
                       {DURATIONS.map((duration) => (
-                        <option key={duration.value} value={duration.value}>{duration.label}</option>
+                        <option key={duration.value} value={duration.value}>{getDurationLabel(duration.value, t)}</option>
                       ))}
                     </select>
                   </div>
@@ -288,7 +296,7 @@ export default function PostJobPage() {
                       className="field-shell w-full"
                     >
                       {EXPERIENCE_LEVELS.map((level) => (
-                        <option key={level.value} value={level.value}>{level.label}</option>
+                        <option key={level.value} value={level.value}>{getExperienceLevelLabel(level.value, t)}</option>
                       ))}
                     </select>
                   </div>
@@ -298,7 +306,7 @@ export default function PostJobPage() {
                     <input
                       value={formData.skillsRequired}
                       onChange={(event) => updateField("skillsRequired", event.target.value)}
-                      placeholder="React, Node.js, UI QA"
+                      placeholder={t('post.skillsPlaceholder')}
                       className="field-shell w-full"
                     />
                   </div>
@@ -311,60 +319,58 @@ export default function PostJobPage() {
                 <div className="rounded-[24px] bg-[#f7fbfc] p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-sm font-black uppercase tracking-[0.16em] text-ink-subtle">Work setting</p>
-                      <h2 className="mt-2 text-xl font-black text-ink">{formData.remote ? "Remote-first" : "On-site delivery"}</h2>
+                      <p className="text-sm font-black uppercase tracking-[0.16em] text-ink-subtle">{t('post.workSetting')}</p>
+                      <h2 className="mt-2 text-xl font-black text-ink">{formData.remote ? t('post.remoteFirst') : t('post.onSiteDelivery')}</h2>
                     </div>
                     <button
                       type="button"
                       onClick={() => updateField("remote", !formData.remote)}
                       className="secondary-cta"
                     >
-                      Switch to {formData.remote ? "on-site" : "remote"}
+                      {t('post.switchTo')} {formData.remote ? t('jobs.onSite') : t('jobDetail.remote')}
                     </button>
                   </div>
                 </div>
 
                 {!formData.remote ? (
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-ink">Location</label>
-                    <div className="field-shell flex items-center gap-3">
-                      <MapPin className="h-4 w-4 text-ink-subtle" />
-                      <input
-                        value={formData.location}
-                        onChange={(event) => updateField("location", event.target.value)}
-                        placeholder="Madrid, Spain"
-                        className="w-full border-none bg-transparent outline-none"
-                      />
-                    </div>
+                    <label className="mb-2 block text-sm font-semibold text-ink">{t('jobDetail.location')}</label>
+                    <LocationPicker
+                      value={{ lat: formData.latitude ?? 0, lng: formData.longitude ?? 0, address: formData.location }}
+                      onChange={({ lat, lng, address }) => {
+                        setFormData((prev) => ({ ...prev, location: address, latitude: lat, longitude: lng }));
+                      }}
+                      addressPlaceholder={t('common.searchAddress')}
+                    />
                   </div>
                 ) : null}
 
                 <div className="rounded-[28px] border border-outline bg-white p-6">
-                  <p className="text-sm font-black uppercase tracking-[0.18em] text-ink-subtle">Review</p>
+                  <p className="text-sm font-black uppercase tracking-[0.18em] text-ink-subtle">{t('common.review')}</p>
                   <dl className="mt-5 grid gap-4 md:grid-cols-2">
                     <div>
-                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">Title</dt>
-                      <dd className="mt-1 text-base font-semibold text-ink">{formData.title || "Not set"}</dd>
+                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">{t('common.title')}</dt>
+                      <dd className="mt-1 text-base font-semibold text-ink">{formData.title || t('dashboard.notSet')}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">Category</dt>
-                      <dd className="mt-1 text-base font-semibold text-ink">{formData.category || "Not set"}</dd>
+                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">{t('jobs.category')}</dt>
+                      <dd className="mt-1 text-base font-semibold text-ink">{formData.category ? getCategoryName(formData.category, t) : t('dashboard.notSet')}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">Budget</dt>
+                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">{t('jobDetail.budget')}</dt>
                       <dd className="mt-1 text-base font-semibold text-ink">{formData.budget || "0"} {formData.budgetCurrency}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">Duration</dt>
-                      <dd className="mt-1 text-base font-semibold text-ink">{formData.duration || "Not set"}</dd>
+                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">{t('common.duration')}</dt>
+                      <dd className="mt-1 text-base font-semibold text-ink">{formData.duration ? getDurationLabel(formData.duration, t) : t('dashboard.notSet')}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">Experience level</dt>
-                      <dd className="mt-1 text-base font-semibold text-ink">{formData.experienceLevel}</dd>
+                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">{t('post.experienceLevelLabel')}</dt>
+                      <dd className="mt-1 text-base font-semibold text-ink">{getExperienceLevelLabel(formData.experienceLevel, t)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">Delivery</dt>
-                      <dd className="mt-1 text-base font-semibold text-ink">{formData.remote ? "Remote" : formData.location || "Location pending"}</dd>
+                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">{t('post.deliveryLabel')}</dt>
+                      <dd className="mt-1 text-base font-semibold text-ink">{formData.remote ? t('jobDetail.remote') : formData.location || t('post.locationPending')}</dd>
                     </div>
                   </dl>
                 </div>
@@ -378,7 +384,7 @@ export default function PostJobPage() {
                 disabled={step === 1}
                 className="secondary-cta disabled:opacity-50"
               >
-                Previous
+                {t('common.previous')}
               </button>
               <button
                 type="button"
@@ -386,7 +392,7 @@ export default function PostJobPage() {
                 disabled={submitting}
                 className="primary-cta disabled:opacity-60"
               >
-                {step === STEPS.length ? (submitting ? "Publishing..." : "Publish job") : "Continue"}
+                {step === STEPS.length ? (submitting ? t('post.publishing') : t('post.publishJob')) : t('common.continue')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </button>
             </div>
@@ -394,7 +400,6 @@ export default function PostJobPage() {
         </div>
       </div>
 
-      <Footer />
     </div>
   );
 }

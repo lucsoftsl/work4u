@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
 import { ActionCodeSettings, sendPasswordResetEmail } from 'firebase/auth';
 import { signIn, signInWithGoogle } from '@/lib/auth-service';
@@ -11,6 +11,7 @@ import type { SignInData } from '@/types/auth';
 import { useTranslation } from '@/lib/i18n';
 import { useAuth } from '@/context/AuthContext';
 import { auth } from '@/lib/firebase';
+import { BrandMark } from '@/components/BrandMark';
 
 interface SignInError {
   field?: string;
@@ -102,7 +103,7 @@ export default function SignInComponent() {
       const resolvedError = resolveSignInError(err);
 
       if (resolvedError.message === 'USER_NOT_FOUND') {
-        setError({ message: 'No account found. Please sign up first.' });
+        setError({ message: t('auth.signIn.noAccountFound') });
       } else if (!(resolvedError instanceof FirebaseError && resolvedError.code === 'auth/popup-closed-by-user')) {
         setError({ message: resolvedError.message || t('auth.signIn.error.generic') });
       }
@@ -145,33 +146,25 @@ export default function SignInComponent() {
     <div className="min-h-screen bg-[#edf2f7]">
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[1.08fr_0.92fr]">
         <aside className="hidden bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_rgba(219,233,240,0.9)_35%,_rgba(193,214,226,0.95)_100%)] p-12 lg:flex lg:flex-col lg:justify-between">
-          <Link href="/" className="inline-flex items-center gap-3 text-[#11324a]">
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1e6d8a] text-white shadow-[0_14px_28px_rgba(30,109,138,0.22)]">
-              <ShieldCheck className="h-6 w-6" />
-            </span>
-            <span>
-              <span className="block text-3xl font-black tracking-tight">Work4U</span>
-              <span className="block text-xs font-bold uppercase tracking-[0.24em] text-[#6b7f96]">Trusted local work</span>
-            </span>
-          </Link>
+          <BrandMark subtitle={t('auth.signUp.trustedLocalWork')} size="lg" />
 
           <div className="mx-auto max-w-xl">
             <span className="inline-flex rounded-full bg-white/80 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-[#1e6d8a]">
-              Return to your workspace
+              {t('auth.signIn.asideEyebrow')}
             </span>
             <h1 className="mt-6 text-5xl font-black leading-[1.02] tracking-tight text-[#10243a]">
-              Pick up where you left off and keep work moving.
+              {t('auth.signIn.asideTitle')}
             </h1>
             <p className="mt-6 text-lg leading-8 text-[#556a84]">
-              Review new applicants, manage active jobs, and stay close to the opportunities that matter most.
+              {t('auth.signIn.asideSubtitle')}
             </p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
             {[
-              ['Secure sign-in', 'Protected sessions with your Work4U account.'],
-              ['Faster follow-up', 'Jump straight back into your dashboard and jobs.'],
-              ['Clear next steps', 'Keep onboarding and profile actions in one place.'],
+              [t('auth.signIn.feature1Title'), t('auth.signIn.feature1Desc')],
+              [t('auth.signIn.feature2Title'), t('auth.signIn.feature2Desc')],
+              [t('auth.signIn.feature3Title'), t('auth.signIn.feature3Desc')],
             ].map(([title, body]) => (
               <div key={title} className="rounded-[1.75rem] border border-white/70 bg-white/75 p-5 shadow-soft backdrop-blur">
                 <p className="text-sm font-black uppercase tracking-[0.18em] text-[#1e6d8a]">{title}</p>
@@ -183,10 +176,13 @@ export default function SignInComponent() {
 
         <main className="flex items-center justify-center px-4 py-10 sm:px-6 lg:px-10">
           <div className="w-full max-w-xl rounded-[2rem] border border-[#d8e3ea] bg-white p-6 shadow-soft sm:p-8 lg:p-10">
+            <div className="mb-6 lg:hidden">
+              <BrandMark size="sm" />
+            </div>
             <div className="mb-8 flex items-start justify-between gap-4">
               <div>
                 <span className="inline-flex rounded-full bg-[#e8f3f7] px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[#1e6d8a]">
-                  Sign in
+                  {t('auth.signIn.badge')}
                 </span>
                 <h2 className="mt-4 text-4xl font-black tracking-tight text-[#10243a]">{t('auth.signIn.title')}</h2>
                 <p className="mt-3 text-sm leading-6 text-[#60758f]">{t('auth.signIn.subtitle')}</p>
@@ -287,7 +283,7 @@ export default function SignInComponent() {
                     disabled={resetLoading}
                     className="font-bold text-[#1e6d8a] disabled:opacity-60"
                   >
-                    {resetLoading ? t('auth.resetPassword.sending') : 'Send reset link'}
+                    {resetLoading ? t('auth.resetPassword.sending') : t('auth.signIn.sendResetLink')}
                   </button>
                 </div>
                 {resetMessage ? <p className="mt-2 text-xs text-[#7187a0]">{resetMessage}</p> : null}

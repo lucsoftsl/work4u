@@ -1,4 +1,4 @@
-import { CATEGORIES } from "@/data/categories";
+import { CATEGORIES, EXPERIENCE_LEVELS, BUDGET_TYPES, DURATIONS } from "@/data/categories";
 import type { TranslationKey } from "./i18n";
 
 /**
@@ -9,7 +9,7 @@ import type { TranslationKey } from "./i18n";
  */
 export function getCategoryName(
     categoryId: string,
-    t: (key: TranslationKey | string) => string
+    t: (key: TranslationKey | string, fallback?: string) => string
 ): string {
     const category = CATEGORIES.find((cat) => cat.id === categoryId);
     if (!category) return categoryId;
@@ -37,4 +37,36 @@ export function getCategoriesWithTranslations(
         ...category,
         name: t(category.nameKey),
     }));
+}
+
+/**
+ * Get the translated label for an experience level, budget type, or
+ * duration option value. Falls back to the raw English label if a value
+ * doesn't have a matching translation key.
+ */
+export function getExperienceLevelLabel(
+    value: string,
+    t: (key: TranslationKey | string, fallback?: string) => string
+): string {
+    const level = EXPERIENCE_LEVELS.find((l) => l.value === value);
+    if (!level) return value;
+    return t(`postOptions.experience.${value}`, level.label);
+}
+
+export function getBudgetTypeLabel(
+    value: string,
+    t: (key: TranslationKey | string, fallback?: string) => string
+): string {
+    const type = BUDGET_TYPES.find((b) => b.value === value);
+    if (!type) return value;
+    return t(`postOptions.budgetType.${value}`, type.label);
+}
+
+export function getDurationLabel(
+    value: string,
+    t: (key: TranslationKey | string, fallback?: string) => string
+): string {
+    const duration = DURATIONS.find((d) => d.value === value);
+    if (!duration) return value;
+    return t(`postOptions.duration.${value}`, duration.label);
 }

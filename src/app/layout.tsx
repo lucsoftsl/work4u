@@ -5,6 +5,7 @@ import { ChatNotifications } from '@/components/ChatNotifications';
 import { AchievementToast } from '@/components/gamification/AchievementToast';
 import { LevelUpModal } from '@/components/gamification/LevelUpModal';
 import { AppHeader } from '@/components/AppHeader';
+import Footer from '@/components/Footer';
 
 export default function RootLayout({
   children,
@@ -13,12 +14,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen h-screen flex flex-col">
+      <body className="antialiased min-h-screen flex flex-col">
         <Providers>
           <AppHeader />
-          <main className="flex-1 min-h-0">
+          <main className="flex-1">
             {children}
           </main>
+          <Footer />
           <ChatNotifications />
           <AchievementToast />
           <LevelUpModal />

@@ -84,16 +84,16 @@ export default function JobsPageContent() {
       <section className="surface-card overflow-hidden">
         <div className="grid gap-6 p-6 md:grid-cols-[1fr_auto] md:items-end md:p-8">
           <div>
-            <span className="eyebrow">Marketplace</span>
+            <span className="eyebrow">{t('common.marketplace')}</span>
             <h1 className="mt-5 section-heading">{t('jobs.title')}</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted">
-              Browse available opportunities with a cleaner layout built around the refined Work4U marketplace direction.
+              {t('jobs.subtitle')}
             </p>
           </div>
           {user ? (
             <div className="flex flex-wrap gap-3">
-              <Link href="/my-jobs" className="secondary-cta">My jobs</Link>
-              <Link href="/post-job" className="primary-cta">Post a job</Link>
+              <Link href="/my-jobs" className="secondary-cta">{t('jobs.myJobs')}</Link>
+              <Link href="/post-job" className="primary-cta">{t('nav.postJob')}</Link>
             </div>
           ) : null}
         </div>
@@ -111,10 +111,10 @@ export default function JobsPageContent() {
 
           <div className={`${showFilters ? "mt-4 block" : "hidden"} surface-panel p-5 lg:mt-0 lg:block`}>
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-black uppercase tracking-[0.18em] text-ink">Filters</h2>
+              <h2 className="text-sm font-black uppercase tracking-[0.18em] text-ink">{t('jobs.filters')}</h2>
               {selectedCategories.length > 0 ? (
                 <button className="text-xs font-bold text-brand" onClick={() => setSelectedCategories([])}>
-                  Clear
+                  {t('common.clear')}
                 </button>
               ) : null}
             </div>
@@ -141,7 +141,7 @@ export default function JobsPageContent() {
                   onClick={() => setShowAllCategories((prev) => !prev)}
                   className="mt-4 text-sm font-semibold text-brand"
                 >
-                  {showAllCategories ? "Show less" : "Show more"}
+                  {showAllCategories ? t('common.showLess') : t('common.showMore')}
                 </button>
               ) : null}
             </div>
@@ -168,7 +168,7 @@ export default function JobsPageContent() {
           </div>
 
           {loading ? (
-            <div className="surface-panel p-10 text-center text-ink-muted">Loading jobs...</div>
+            <div className="surface-panel p-10 text-center text-ink-muted">{t('jobs.loading')}</div>
           ) : paginatedJobs.length > 0 ? (
             <>
               <div className="grid gap-5">
@@ -179,7 +179,7 @@ export default function JobsPageContent() {
 
               {totalPages > 1 ? (
                 <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
-                  <p className="text-sm text-ink-muted">Page {currentPage} of {totalPages}</p>
+                  <p className="text-sm text-ink-muted">{t('common.page')} {currentPage} {t('common.of')} {totalPages}</p>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
@@ -187,14 +187,14 @@ export default function JobsPageContent() {
                       className="secondary-cta gap-2 disabled:opacity-50"
                     >
                       <ChevronLeft className="h-4 w-4" />
-                      Previous
+                      {t('common.previous')}
                     </button>
                     <button
                       onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                       disabled={currentPage === totalPages}
                       className="secondary-cta gap-2 disabled:opacity-50"
                     >
-                      Next
+                      {t('common.next')}
                       <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
@@ -203,8 +203,8 @@ export default function JobsPageContent() {
             </>
           ) : (
             <div className="surface-panel p-10 text-center">
-              <p className="text-base font-semibold text-ink">No matching jobs yet.</p>
-              <p className="mt-2 text-sm text-ink-muted">Try clearing filters or broadening the search.</p>
+              <p className="text-base font-semibold text-ink">{t('jobs.noMatching')}</p>
+              <p className="mt-2 text-sm text-ink-muted">{t('jobs.tryBroaden')}</p>
             </div>
           )}
         </section>

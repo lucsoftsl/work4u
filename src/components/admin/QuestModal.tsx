@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { QuestForm } from '@/types/admin';
+import { useTranslation } from '@/lib/i18n';
 
 interface QuestModalProps {
     isOpen: boolean;
@@ -24,6 +25,7 @@ export function QuestModal({
     onSave,
     isLoading = false,
 }: QuestModalProps) {
+    const { t } = useTranslation();
     const [formData, setFormData] = useState<QuestForm>(
         quest || {
             id: '',
@@ -74,7 +76,7 @@ export function QuestModal({
             <div className="bg-card border border-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="sticky top-0 flex items-center justify-between bg-card border-b border-border p-6">
                     <h2 className="text-2xl font-bold text-foreground">
-                        {quest ? 'Edit Quest' : 'Create Quest'}
+                        {quest ? t('admin.editQuest') : t('admin.createQuest')}
                     </h2>
                     <button
                         onClick={onClose}
@@ -88,7 +90,7 @@ export function QuestModal({
                     {/* ID */}
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-2">
-                            Quest ID *
+                            {t('admin.questId')} *
                         </label>
                         <input
                             type="text"
@@ -96,14 +98,14 @@ export function QuestModal({
                             onChange={(e) => handleChange('id', e.target.value)}
                             disabled={!!quest}
                             className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                            placeholder="e.g., daily-grind"
+                            placeholder={t('admin.questIdPlaceholder')}
                         />
                     </div>
 
                     {/* Titles by Language */}
                     <div className="space-y-3">
                         <label className="block text-sm font-medium text-foreground">
-                            Quest Title *
+                            {t('admin.questTitle')} *
                         </label>
                         {Object.entries(LANGUAGES).map(([lang, langName]) => (
                             <div key={lang}>
@@ -111,7 +113,7 @@ export function QuestModal({
                                     type="text"
                                     value={formData.title[lang] || ''}
                                     onChange={(e) => handleTitleChange(lang, e.target.value)}
-                                    placeholder={`Title (${langName})`}
+                                    placeholder={`${t('common.title')} (${langName})`}
                                     className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                                 />
                             </div>
@@ -121,14 +123,14 @@ export function QuestModal({
                     {/* Descriptions by Language */}
                     <div className="space-y-3">
                         <label className="block text-sm font-medium text-foreground">
-                            Description *
+                            {t('admin.description')} *
                         </label>
                         {Object.entries(LANGUAGES).map(([lang, langName]) => (
                             <div key={lang}>
                                 <textarea
                                     value={formData.description[lang] || ''}
                                     onChange={(e) => handleDescriptionChange(lang, e.target.value)}
-                                    placeholder={`Description (${langName})`}
+                                    placeholder={`${t('admin.description')} (${langName})`}
                                     className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                                     rows={2}
                                 />
@@ -140,7 +142,7 @@ export function QuestModal({
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-2">
-                                Type *
+                                {t('admin.type')} *
                             </label>
                             <select
                                 value={formData.type}
@@ -156,7 +158,7 @@ export function QuestModal({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-2">
-                                Difficulty *
+                                {t('admin.difficulty')} *
                             </label>
                             <select
                                 value={formData.difficulty}
@@ -176,7 +178,7 @@ export function QuestModal({
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-2">
-                                Max Progress
+                                {t('admin.maxProgress')}
                             </label>
                             <input
                                 type="number"
@@ -188,7 +190,7 @@ export function QuestModal({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-2">
-                                Duration (e.g., 24h, 7d)
+                                {t('admin.durationLabel')}
                             </label>
                             <input
                                 type="text"
@@ -202,10 +204,10 @@ export function QuestModal({
 
                     {/* Rewards */}
                     <div className="space-y-3">
-                        <label className="block text-sm font-medium text-foreground">Rewards</label>
+                        <label className="block text-sm font-medium text-foreground">{t('admin.rewards')}</label>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs text-muted-foreground mb-1">XP</label>
+                                <label className="block text-xs text-muted-foreground mb-1">{t('admin.xp')}</label>
                                 <input
                                     type="number"
                                     value={formData.rewards.xp}
@@ -215,7 +217,7 @@ export function QuestModal({
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs text-muted-foreground mb-1">Gold</label>
+                                <label className="block text-xs text-muted-foreground mb-1">{t('admin.gold')}</label>
                                 <input
                                     type="number"
                                     value={formData.rewards.gold}
@@ -236,21 +238,21 @@ export function QuestModal({
                                 onChange={(e) => handleChange('enabled', e.target.checked)}
                                 className="w-4 h-4 rounded border border-border bg-card"
                             />
-                            <span className="text-sm text-foreground">Enabled</span>
+                            <span className="text-sm text-foreground">{t('admin.enabled')}</span>
                         </label>
                     </div>
 
                     {/* Actions */}
                     <div className="flex gap-3 pt-4 border-t border-border">
                         <Button variant="outline" onClick={onClose} disabled={isLoading}>
-                            Cancel
+                            {t('admin.cancel')}
                         </Button>
                         <Button
                             type="submit"
                             disabled={isLoading || !formData.id || !formData.title.en}
                             className="flex-1"
                         >
-                            {isLoading ? 'Saving...' : 'Save Quest'}
+                            {isLoading ? t('admin.saving') : t('admin.saveQuest')}
                         </Button>
                     </div>
                 </form>

@@ -3,9 +3,11 @@
 import { MessageCircle, X } from "lucide-react";
 import { useChat } from "@/context/ChatContext";
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n";
 
 export function ChatNotifications() {
     const { notifications, removeNotification } = useChat();
+    const { t } = useTranslation();
 
     return (
         <div className="fixed bottom-4 right-4 z-50 space-y-2 max-w-sm">
@@ -22,14 +24,14 @@ export function ChatNotifications() {
                                     {notification.senderName}
                                 </p>
                                 <p className="text-muted-foreground text-sm line-clamp-2">
-                                    {notification.message.text || "Sent an image"}
+                                    {notification.message.text || t('chat.sentImage')}
                                 </p>
                                 {notification.jobId && (
                                     <Link
                                         href={`/jobs/${notification.jobId}`}
                                         className="text-xs text-blue-600 hover:underline mt-2 inline-block"
                                     >
-                                        View job
+                                        {t('chat.viewJob')}
                                     </Link>
                                 )}
                             </div>

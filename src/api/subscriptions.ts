@@ -1,7 +1,9 @@
 import { api } from './index';
 
+export type Plan = 'free' | 'starter' | 'pro' | 'business';
+
 export interface SubscriptionStatus {
-  plan: 'free' | 'pro';
+  plan: Plan;
   status: 'active' | 'inactive' | 'canceled' | 'past_due' | 'trialing';
   billingInterval?: 'month' | 'year';
   currentPeriodEnd?: string;
@@ -17,11 +19,12 @@ export async function getSubscriptionStatus(token: string): Promise<Subscription
 
 export async function createCheckoutSession(
   token: string,
+  plan: 'starter' | 'pro' | 'business',
   interval: 'month' | 'year'
 ): Promise<{ url: string }> {
   const { data } = await api.post(
     '/api/subscriptions/checkout',
-    { interval },
+    { plan, interval },
     { headers: { Authorization: `Bearer ${token}` } }
   );
   return data;

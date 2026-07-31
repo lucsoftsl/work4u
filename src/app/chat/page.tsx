@@ -3,12 +3,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Send, AlertCircle, CornerDownRight } from "lucide-react";
+import { ArrowLeft, Send, AlertCircle, CornerDownRight, Check, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/context/AuthContext";
 import { useChatWebSocket } from "@/hooks/useChatWebSocket";
-import { fetchConversations, fetchMessagesWithUser } from "@/api";
+import { fetchConversations, fetchMessagesWithUser, markMessageRead } from "@/api";
 import { useTranslation } from "@/lib/i18n";
+import { ReportButton } from "@/components/ReportButton";
 
 type JobKey = string; // jobId or "nojob"
 
@@ -97,8 +98,20 @@ function getMessageText(msg: any) {
   return msg?.message?.text ?? msg?.text ?? msg?.content?.text ?? msg?.payload?.text ?? "";
 }
 
+function getTranslatedText(msg: any): string | undefined {
+  return msg?.message?.translatedText ?? undefined;
+}
+
+function getSourceLang(msg: any): string | undefined {
+  return msg?.message?.sourceLang ?? undefined;
+}
+
 function getMessageTime(msg: any) {
   return msg?.dateTimeCreated ?? msg?.createdAt ?? msg?.timestamp ?? null;
+}
+
+function getIsRead(msg: any) {
+  return !!(msg?.isRead ?? msg?.message?.isRead);
 }
 
 function dedupeById(messages: any[]) {
@@ -107,17 +120,34 @@ function dedupeById(messages: any[]) {
 
 export default function ChatPage() {
   const { t } = useTranslation();
+  const QUICK_REPLIES = [
+    t('chat.quickReply1'),
+    t('chat.quickReply2'),
+    t('chat.quickReply3'),
+    t('chat.quickReply4'),
+    t('chat.quickReply5'),
+    t('chat.quickReply6'),
+  ];
   const { firebaseToken, user } = useAuth();
-  const { isConnected, messages: wsMessages, sendMessage } = useChatWebSocket(firebaseToken, "");
+  const { isConnected, messages: wsMessages, sendMessage, error: wsError } = useChatWebSocket(firebaseToken, "");
+  const pendingSendRef = useRef<{ tempId: string; otherUserId: string } | null>(null);
 
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
 
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedJobKey, setSelectedJobKey] = useState<JobKey | null>(null);
+  // Job context passed in via a deep link (e.g. "Invite" from the nearby-pros
+  // map) for a thread that has no message history yet — jobsForSelectedUser
+  // can't derive it from past messages, so this is the fallback used when
+  // sending the very first message. Once that message round-trips, the real
+  // derived entry takes over and this is no longer consulted for this job.
+  const [pendingJobContext, setPendingJobContext] = useState<{ id: string; title?: string } | null>(null);
 
   const [threadsByUser, setThreadsByUser] = useState<Map<string, UserThread>>(new Map());
   const loadedUsersRef = useRef<Set<string>>(new Set());
+  const markedReadRef = useRef<Set<string>>(new Set());
+  const inputRef = useRef<HTMLInputElement>(null);
 
   /**
    * 1) Load conversation list (users you have chats with)
@@ -141,7 +171,7 @@ export default function ChatPage() {
           next.set(other.id, {
             otherUser: {
               id: other.id,
-              name: other.name || other.email || "Unknown",
+              name: other.name || other.email || t('chat.unknownUser'),
               email: other.email,
               image: other.image,
             },
@@ -161,7 +191,41 @@ export default function ChatPage() {
     };
 
     loadConversations();
-  }, [firebaseToken]);
+  }, [firebaseToken, t]);
+
+  /**
+   * 1b) Deep link support: ?userId=&jobId=&jobTitle=&userName= (used by the
+   * "Invite" button on the nearby-pros map). Runs once conversations have
+   * loaded so it can merge in rather than race the wholesale setThreadsByUser
+   * above. If the user already has a real thread, this just selects it —
+   * jobsForSelectedUser then derives the job list from actual history.
+   */
+  useEffect(() => {
+    if (loadingConversations) return;
+
+    const searchParams = new URLSearchParams(window.location.search);
+    const userId = searchParams.get("userId");
+    if (!userId) return;
+
+    const jobId = searchParams.get("jobId") || undefined;
+    const jobTitle = searchParams.get("jobTitle") || undefined;
+    const userName = searchParams.get("userName") || undefined;
+
+    setThreadsByUser((prev) => {
+      if (prev.has(userId)) return prev;
+      const next = new Map(prev);
+      next.set(userId, {
+        otherUser: { id: userId, name: userName || t('common.worker') },
+        messages: [],
+        unreadCount: 0,
+      });
+      return next;
+    });
+
+    if (jobId) setPendingJobContext({ id: jobId, title: jobTitle });
+    setSelectedJobKey(jobId ?? null);
+    setSelectedUserId(userId);
+  }, [loadingConversations, t]);
 
   /**
    * 2) Merge websocket messages into threadsByUser (user-level only)
@@ -191,7 +255,7 @@ export default function ChatPage() {
 
             const last = merged[merged.length - 1];
             next.set(otherId, {
-              otherUser: existing?.otherUser ?? { id: otherId, name: "Unknown" },
+              otherUser: existing?.otherUser ?? { id: otherId, name: t('chat.unknownUser') },
               messages: merged,
               lastMessageTime: getMessageTime(last) ?? existing?.lastMessageTime,
               lastMessageText: getMessageText(last) || existing?.lastMessageText || "",
@@ -227,11 +291,17 @@ export default function ChatPage() {
         const msgTime = getMessageTime(enrichedMsg);
 
         const existingMessages = existingThread?.messages ?? [];
-        const existsById = existingMessages.some((m: any) => m?.id === msgId);
+        const existingIndex = existingMessages.findIndex((m: any) => m?.id === msgId);
 
         let mergedMessages = existingMessages;
 
-        if (!existsById) {
+        if (existingIndex >= 0) {
+          // Already known — patch in any updated fields (e.g. isRead flipping via a "messageRead" event)
+          // rather than silently dropping the update.
+          const copy = [...existingMessages];
+          copy[existingIndex] = { ...copy[existingIndex], ...enrichedMsg };
+          mergedMessages = copy;
+        } else {
           // If server echoes a real message after we inserted tmp_ optimistic message, replace it.
           const from = getFromUserId(enrichedMsg);
           const to = getToUserId(enrichedMsg);
@@ -276,7 +346,7 @@ export default function ChatPage() {
 
         // ✅ IMPORTANT: create a NEW thread object each time
         next.set(otherUserId, {
-          otherUser: existingThread?.otherUser ?? { id: otherUserId, name: "Unknown" },
+          otherUser: existingThread?.otherUser ?? { id: otherUserId, name: t('chat.unknownUser') },
           messages: mergedMessages,
           lastMessageTime: lastTime ?? undefined,
           lastMessageText: lastText ?? "",
@@ -306,14 +376,14 @@ export default function ChatPage() {
               if (!item) continue;
 
               const other = item.otherUserData;
-              const needsName = !thread.otherUser?.name || thread.otherUser.name === "Unknown";
+              const needsName = !thread.otherUser?.name || thread.otherUser.name === t('chat.unknownUser');
 
               if (needsName) {
                 next.set(id, {
                   ...thread,
                   otherUser: {
                     id: other.id,
-                    name: other.name || other.email || thread.otherUser.name || "Unknown",
+                    name: other.name || other.email || thread.otherUser.name || t('chat.unknownUser'),
                     email: other.email,
                     image: other.image,
                   },
@@ -328,7 +398,7 @@ export default function ChatPage() {
         }
       })();
     }
-  }, [wsMessages, user?.id, firebaseToken]);
+  }, [wsMessages, user?.id, firebaseToken, t]);
 
   /**
    * 3) When a user is selected, fetch full message history with that user (once)
@@ -436,6 +506,11 @@ export default function ChatPage() {
     return list;
   }, [selectedThread]);
 
+  const selectedJob = useMemo(() => {
+    if (!selectedJobKey || selectedJobKey === "nojob") return undefined;
+    return jobsForSelectedUser.find((j) => j.jobKey === selectedJobKey);
+  }, [jobsForSelectedUser, selectedJobKey]);
+
   /**
    * Derived: messages for selected job
    */
@@ -452,7 +527,56 @@ export default function ChatPage() {
     return filtered;
   }, [selectedThread, selectedJobKey]);
 
+  /**
+   * Mark incoming unread messages as read once they're viewed
+   */
+  useEffect(() => {
+    if (!firebaseToken || !user?.id || !selectedUserId) return;
+
+    const unread = messagesForSelectedJob.filter((msg) => {
+      const id = msg?.id;
+      if (!id || String(id).startsWith("tmp_")) return false;
+      if (getFromUserId(msg) === user.id) return false;
+      if (getIsRead(msg)) return false;
+      if (markedReadRef.current.has(id)) return false;
+      return true;
+    });
+
+    if (!unread.length) return;
+
+    for (const msg of unread) {
+      markedReadRef.current.add(msg.id);
+      markMessageRead(firebaseToken, msg.id).catch((e) => {
+        console.error("Failed to mark message as read:", e);
+        markedReadRef.current.delete(msg.id);
+      });
+    }
+
+    const unreadIds = new Set(unread.map((msg) => msg.id));
+    setThreadsByUser((prev) => {
+      const existing = prev.get(selectedUserId);
+      if (!existing) return prev;
+
+      const next = new Map(prev);
+      next.set(selectedUserId, {
+        ...existing,
+        messages: existing.messages.map((m) => (unreadIds.has(m.id) ? { ...m, isRead: true } : m)),
+      });
+      return next;
+    });
+  }, [messagesForSelectedJob, firebaseToken, user?.id, selectedUserId]);
+
   const [input, setInput] = useState("");
+  const [showOriginalIds, setShowOriginalIds] = useState<Set<string>>(new Set());
+
+  const toggleShowOriginal = (id: string) => {
+    setShowOriginalIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   /**
    * Optimistic send so message appears immediately
@@ -465,7 +589,10 @@ export default function ChatPage() {
 
     const job =
       selectedJobKey && selectedJobKey !== "nojob"
-        ? jobsForSelectedUser.find((j) => j.jobKey === selectedJobKey)
+        ? (jobsForSelectedUser.find((j) => j.jobKey === selectedJobKey) ??
+          (pendingJobContext && pendingJobContext.id === selectedJobKey
+            ? { jobId: pendingJobContext.id, jobTitle: pendingJobContext.title }
+            : null))
         : null;
 
     const optimisticMsg = {
@@ -486,7 +613,7 @@ export default function ChatPage() {
       const baseThread: UserThread =
         existing ??
         ({
-          otherUser: { id: selectedUserId, name: "Unknown" },
+          otherUser: { id: selectedUserId, name: t('chat.unknownUser') },
           messages: [],
           unreadCount: 0,
         } as UserThread);
@@ -505,6 +632,8 @@ export default function ChatPage() {
       return next;
     });
 
+    pendingSendRef.current = { tempId, otherUserId: selectedUserId };
+
     sendMessage({
       toUserId: selectedUserId,
       text: input.trim(),
@@ -513,6 +642,29 @@ export default function ChatPage() {
 
     setInput("");
   };
+
+  /**
+   * If the server rejects the last-sent message (e.g. a WS "error" event), surface it
+   * instead of leaving the optimistic bubble looking like it sent successfully.
+   */
+  useEffect(() => {
+    if (!wsError || !pendingSendRef.current) return;
+
+    const { tempId, otherUserId } = pendingSendRef.current;
+    pendingSendRef.current = null;
+
+    setThreadsByUser((prev) => {
+      const existing = prev.get(otherUserId);
+      if (!existing) return prev;
+
+      const next = new Map(prev);
+      next.set(otherUserId, {
+        ...existing,
+        messages: existing.messages.map((m) => (m.id === tempId ? { ...m, failed: true } : m)),
+      });
+      return next;
+    });
+  }, [wsError]);
 
   // UX: when selecting a new user, pick most recent job if none selected yet
   useEffect(() => {
@@ -540,10 +692,10 @@ export default function ChatPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted px-4">
         <div className="bg-card rounded-2xl shadow-lg p-8 text-center space-y-4 max-w-md w-full">
-          <p className="text-lg font-semibold text-foreground">Sign in to chat</p>
-          <p className="text-muted-foreground">You need to be signed in to view and send messages.</p>
+          <p className="text-lg font-semibold text-foreground">{t('chat.signInToChat')}</p>
+          <p className="text-muted-foreground">{t('chat.signInToChatDesc')}</p>
           <Button asChild className="w-full">
-            <Link href="/signin">Sign In</Link>
+            <Link href="/signin">{t('nav.signIn')}</Link>
           </Button>
         </div>
       </div>
@@ -559,8 +711,8 @@ export default function ChatPage() {
             }`}
         >
           <div className="border-b border-border p-4">
-            <h1 className="text-2xl font-bold text-foreground">Messages</h1>
-            <p className="text-xs text-muted-foreground mt-1">Users</p>
+            <h1 className="text-2xl font-bold text-foreground">{t('chat.messagesAria')}</h1>
+            <p className="text-xs text-muted-foreground mt-1">{t('chat.usersLabel')}</p>
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -572,18 +724,18 @@ export default function ChatPage() {
               </div>
             ) : usersList.length === 0 ? (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                <p>No conversations yet</p>
+                <p>{t('chat.noConversations')}</p>
               </div>
             ) : (
-              usersList.map((t) => {
-                const active = selectedUserId === t.otherUser.id;
+              usersList.map((thread) => {
+                const active = selectedUserId === thread.otherUser.id;
                 const isSelectedUser = active;
 
                 return (
-                  <div key={t.otherUser.id} className="border-b border-gray-100">
+                  <div key={thread.otherUser.id} className="border-b border-gray-100">
                     <button
                       onClick={() => {
-                        setSelectedUserId(t.otherUser.id);
+                        setSelectedUserId(thread.otherUser.id);
                         setSelectedJobKey(null);
                       }}
                       className={`w-full p-4 hover:bg-muted transition-colors text-left ${active ? "bg-primary/10" : ""
@@ -591,21 +743,21 @@ export default function ChatPage() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-semibold text-foreground truncate">{t.otherUser.name}</p>
-                          <p className="text-sm text-muted-foreground truncate">{t.lastMessageText || "—"}</p>
+                          <p className="font-semibold text-foreground truncate">{thread.otherUser.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">{thread.lastMessageText || "—"}</p>
                         </div>
                         <div className="flex flex-col items-end gap-1">
                           <span className="text-xs text-muted-foreground">
-                            {t.lastMessageTime
-                              ? new Date(t.lastMessageTime).toLocaleTimeString([], {
+                            {thread.lastMessageTime
+                              ? new Date(thread.lastMessageTime).toLocaleTimeString([], {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })
                               : ""}
                           </span>
-                          {!!t.unreadCount && t.unreadCount > 0 && (
+                          {!!thread.unreadCount && thread.unreadCount > 0 && (
                             <span className="inline-flex items-center justify-center text-[11px] font-semibold rounded-full bg-blue-600 text-white min-w-5 h-5 px-2">
-                              {t.unreadCount}
+                              {thread.unreadCount}
                             </span>
                           )}
                         </div>
@@ -615,7 +767,7 @@ export default function ChatPage() {
                     {/* Nested jobs list for selected user (desktop only) */}
                     {isSelectedUser && !loadingMessages && jobsForSelectedUser.length > 0 && (
                       <div className="hidden md:block px-4 pb-3">
-                        <p className="text-xs text-muted-foreground mb-2">Jobs</p>
+                        <p className="text-xs text-muted-foreground mb-2">{t('chat.jobsLabel')}</p>
                         <div className="space-y-1">
                           {jobsForSelectedUser.map((j) => {
                             const jobActive = selectedJobKey === j.jobKey;
@@ -634,10 +786,10 @@ export default function ChatPage() {
                                       onClick={(e) => e.stopPropagation()}
                                       className="text-sm font-medium text-blue-600 hover:underline truncate block"
                                     >
-                                      {j.jobTitle || `Job ${j.jobId}`}
+                                      {j.jobTitle || `${t('chat.jobFallback')} ${j.jobId}`}
                                     </Link>
                                   ) : (
-                                    <p className="text-sm font-medium text-foreground truncate">General</p>
+                                    <p className="text-sm font-medium text-foreground truncate">{t('chat.general')}</p>
                                   )}
                                   <p className="text-xs text-muted-foreground truncate">{j.lastText || "—"}</p>
                                 </div>
@@ -680,21 +832,21 @@ export default function ChatPage() {
               <ArrowLeft size={18} />
             </Button>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Jobs with</p>
+              <p className="text-xs text-muted-foreground">{t('chat.jobsWith')}</p>
               <p className="font-semibold text-foreground truncate">
                 {selectedThread?.otherUser.name ?? "—"}
               </p>
             </div>
             <div className="ml-auto flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`} />
-              <span className="text-xs text-muted-foreground">{isConnected ? "Online" : "Offline"}</span>
+              <span className="text-xs text-muted-foreground">{isConnected ? t('common.online') : t('common.offline')}</span>
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto">
             {!selectedUserId ? (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                <p>Select a user</p>
+                <p>{t('chat.selectUser')}</p>
               </div>
             ) : loadingMessages ? (
               <div className="flex items-center justify-center h-full">
@@ -704,7 +856,7 @@ export default function ChatPage() {
               </div>
             ) : jobsForSelectedUser.length === 0 ? (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                <p>No job threads yet</p>
+                <p>{t('chat.noJobThreads')}</p>
               </div>
             ) : (
               jobsForSelectedUser.map((j) => {
@@ -724,10 +876,10 @@ export default function ChatPage() {
                             onClick={(e) => e.stopPropagation()}
                             className="text-sm font-semibold text-blue-600 hover:underline truncate block"
                           >
-                            {j.jobTitle || `Job ${j.jobId}`}
+                            {j.jobTitle || `${t('chat.jobFallback')} ${j.jobId}`}
                           </Link>
                         ) : (
-                          <p className="text-sm font-semibold text-foreground truncate">General</p>
+                          <p className="text-sm font-semibold text-foreground truncate">{t('chat.general')}</p>
                         )}
                         <p className="text-sm text-muted-foreground truncate">{j.lastText || "—"}</p>
                       </div>
@@ -752,7 +904,7 @@ export default function ChatPage() {
         <main className={`flex-1 flex flex-col ${selectedJobKey ? "" : "hidden md:flex"}`}>
           {!selectedUserId || !selectedJobKey ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
-              <p>Select a user and a job to start messaging</p>
+              <p>{t('chat.selectUserAndJob')}</p>
             </div>
           ) : (
             <>
@@ -774,30 +926,40 @@ export default function ChatPage() {
                     </p>
 
                     {selectedJobKey !== "nojob" ? (
-                      (() => {
-                        const job = jobsForSelectedUser.find((j) => j.jobKey === selectedJobKey);
-                        return job?.jobId ? (
-                          <Link
-                            href={`/jobs/${job.jobId}`}
-                            className="text-xs text-blue-600 hover:underline truncate block"
-                          >
-                            {job.jobTitle || `Job ${job.jobId}`}
-                          </Link>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">Job</p>
-                        );
-                      })()
+                      selectedJob?.jobId ? (
+                        <Link
+                          href={`/jobs/${selectedJob.jobId}`}
+                          className="text-xs text-blue-600 hover:underline truncate block"
+                        >
+                          {selectedJob.jobTitle || `${t('chat.jobFallback')} ${selectedJob.jobId}`}
+                        </Link>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">{t('chat.jobFallback')}</p>
+                      )
                     ) : (
-                      <p className="text-xs text-muted-foreground">General</p>
+                      <p className="text-xs text-muted-foreground">{t('chat.general')}</p>
                     )}
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`} />
-                  <span className="text-xs text-muted-foreground">{isConnected ? "Online" : "Offline"}</span>
+                  <span className="text-xs text-muted-foreground">{isConnected ? t('common.online') : t('common.offline')}</span>
                 </div>
               </div>
+
+              {/* Report / dispute */}
+              {selectedThread && (
+                <div className="border-b border-border bg-card px-4 py-2 flex justify-end">
+                  <ReportButton
+                    reportedUserId={selectedThread.otherUser.id}
+                    reportedUserName={selectedThread.otherUser.name}
+                    jobId={selectedJob?.jobId}
+                    firebaseToken={firebaseToken}
+                    className="text-xs"
+                  />
+                </div>
+              )}
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-card">
@@ -809,25 +971,62 @@ export default function ChatPage() {
                   </div>
                 ) : messagesForSelectedJob.length === 0 ? (
                   <p className="text-center text-muted-foreground text-sm py-4">
-                    No messages yet for this job. Start the conversation!
+                    {t('chat.noMessagesYet')}
                   </p>
                 ) : (
                   messagesForSelectedJob.map((msg) => {
                     const mine = getFromUserId(msg) === user?.id;
+                    const failed = mine && !!(msg as any)?.failed;
+                    const originalText = getMessageText(msg);
+                    const translatedText = getTranslatedText(msg);
+                    const sourceLang = getSourceLang(msg);
+                    const showingOriginal = showOriginalIds.has(msg.id);
+                    const hasTranslation = !mine && !!translatedText && translatedText !== originalText;
+                    const displayText = hasTranslation && !showingOriginal ? translatedText : originalText;
                     return (
                       <div key={msg.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                         <div
                           className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${mine ? "bg-primary text-white" : "bg-muted text-foreground"
                             }`}
                         >
-                          <p className="whitespace-pre-wrap">{getMessageText(msg) || "Sent an image"}</p>
-                          <div className={`mt-1 text-[10px] ${mine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                            {getMessageTime(msg)
-                              ? new Date(getMessageTime(msg) as string).toLocaleTimeString([], {
-                                hour: "numeric",
-                                minute: "2-digit",
-                              })
-                              : ""}
+                          <p className="whitespace-pre-wrap">{displayText || t('chat.sentImage')}</p>
+                          {hasTranslation && (
+                            <button
+                              type="button"
+                              onClick={() => toggleShowOriginal(msg.id)}
+                              className="mt-1 text-[10px] font-medium text-muted-foreground underline decoration-dotted hover:text-foreground"
+                            >
+                              {showingOriginal
+                                ? t('chat.showTranslation')
+                                : `${t('chat.translatedFrom')} ${sourceLang?.toUpperCase() ?? "original"} · ${t('chat.seeOriginal')}`}
+                            </button>
+                          )}
+                          <div
+                            className={`mt-1 flex items-center gap-1 text-[10px] ${mine ? "text-primary-foreground/70" : "text-muted-foreground"
+                              }`}
+                          >
+                            <span>
+                              {getMessageTime(msg)
+                                ? new Date(getMessageTime(msg) as string).toLocaleTimeString([], {
+                                  hour: "numeric",
+                                  minute: "2-digit",
+                                })
+                                : ""}
+                            </span>
+                            {mine && failed && (
+                              <span className="inline-flex items-center gap-1 text-red-200" title={t('chat.failedToSend')}>
+                                <AlertCircle size={12} />
+                                {t('chat.failedToSend')}
+                              </span>
+                            )}
+                            {mine &&
+                              !failed &&
+                              !String(msg.id).startsWith("tmp_") &&
+                              (getIsRead(msg) ? (
+                                <CheckCheck size={12} className="text-sky-300" aria-label={t('chat.readAria')} />
+                              ) : (
+                                <Check size={12} aria-label={t('chat.sentAria')} />
+                              ))}
                           </div>
                         </div>
                       </div>
@@ -842,13 +1041,30 @@ export default function ChatPage() {
                   <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
                     <AlertCircle size={16} className="text-yellow-700 flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-yellow-800">
-                      Connection lost. Messages will be sent when reconnected.
+                      {t('chat.connectionLost')}
                     </p>
                   </div>
                 )}
 
+                <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
+                  {QUICK_REPLIES.map((reply) => (
+                    <button
+                      key={reply}
+                      type="button"
+                      onClick={() => {
+                        setInput(reply);
+                        inputRef.current?.focus();
+                      }}
+                      className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-primary hover:bg-primary/10"
+                    >
+                      {reply}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="flex items-center gap-2">
                   <input
+                    ref={inputRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -857,10 +1073,10 @@ export default function ChatPage() {
                         handleSend();
                       }
                     }}
-                    placeholder="Write a message."
+                    placeholder={t('jobDetail.writeMessage')}
                     className="flex-1 rounded-full border border-border px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
-                  <Button size="icon" onClick={handleSend} disabled={!isConnected} aria-label="Send message">
+                  <Button size="icon" onClick={handleSend} disabled={!isConnected} aria-label={t('chat.sendMessageAria')}>
                     <Send size={16} />
                   </Button>
                 </div>

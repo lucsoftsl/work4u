@@ -12,20 +12,24 @@ import {
 import en from '@/locales/en.json';
 import fr from '@/locales/fr.json';
 import es from '@/locales/es.json';
+import hu from '@/locales/hu.json';
+import ro from '@/locales/ro.json';
 
 type Dictionaries = {
   en: typeof en;
   fr: typeof fr;
   es: typeof es;
+  hu: typeof hu;
+  ro: typeof ro;
 };
 
-const dictionaries: Dictionaries = { en, fr, es };
+const dictionaries: Dictionaries = { en, fr, es, hu, ro };
 
 export type Locale = keyof Dictionaries;
 export type TranslationKey = keyof typeof en;
 
 const isLocale = (value?: string | null): value is Locale =>
-  value === 'en' || value === 'fr' || value === 'es';
+  value === 'en' || value === 'fr' || value === 'es' || value === 'hu' || value === 'ro';
 
 const dictForLocale = (locale: Locale) =>
   dictionaries[locale] as Record<string, string>;
@@ -67,11 +71,27 @@ interface LocaleContextType {
 const LocaleContext = createContext<LocaleContextType | undefined>(undefined);
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(() => getInitialLocale());
+  // Always start at 'en' so the client's first render matches the server's
+  // (which has no access to localStorage/navigator.language) — reading the
+  // real saved locale here instead caused a hydration mismatch on every
+  // page that renders translated text (e.g. the footer). The real locale
+  // is applied a moment later, client-only, via the effect below.
+  const [locale, setLocaleState] = useState<Locale>('en');
 
   const setLocale = (newLocale: Locale) => {
     setLocaleState(newLocale);
   };
+
+  // One-time, client-only: adopt the saved/browser locale after mount.
+  // This reads an external system (localStorage/navigator.language) that's
+  // unavailable during SSR, so syncing it into state here — rather than in
+  // the initializer above — is the deliberate fix for the hydration
+  // mismatch, not an anti-pattern the lint rule below is meant to catch.
+  useEffect(() => {
+    const initial = getInitialLocale();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLocaleState((current) => (current === initial ? current : initial));
+  }, []);
 
   // Side-effect: persist locale when it changes
   useEffect(() => {

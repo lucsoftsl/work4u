@@ -3,9 +3,12 @@
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
 import { Trophy, Sparkles } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
+import { getPlayerTitleKey } from '@/lib/gamification-utils';
 
 export function XPBar() {
     const { player } = useSelector((state: RootState) => state.gamification);
+    const { t } = useTranslation();
     const xpPercentage = (player.currentXP / player.xpToNextLevel) * 100;
 
     return (
@@ -14,9 +17,9 @@ export function XPBar() {
                 <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-secondary" />
                     <span className="text-sm font-medium text-foreground">
-                        Level {player.level}
+                        {t('gamification.level')} {player.level}
                     </span>
-                    <span className="text-xs text-muted-foreground">{player.title}</span>
+                    <span className="text-xs text-muted-foreground">{t(getPlayerTitleKey(player.title))}</span>
                 </div>
                 <span className="text-xs text-muted-foreground">
                     {player.currentXP} / {player.xpToNextLevel} XP

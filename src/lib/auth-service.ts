@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { auth } from './firebase';
 import type { SignUpData, SignInData, AuthUser, ApiUser } from '../types/auth';
+import { getStoredReferralCode, clearStoredReferralCode } from './referral';
 import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
@@ -180,6 +181,8 @@ export async function signUp(data: SignUpData): Promise<AuthUser> {
                 authProvider: 'PASSWORD',
                 emailVerified: false,
                 phoneVerified: false,
+                referredByCode: getStoredReferralCode() ?? undefined,
+                termsAccepted: true,
             }),
         });
 
@@ -188,6 +191,7 @@ export async function signUp(data: SignUpData): Promise<AuthUser> {
         }
 
         await response.json();
+        clearStoredReferralCode();
 
         // 4. Patch full workerTypes as array of strings
         if (Array.isArray(data.workerTypes)) {
@@ -347,6 +351,8 @@ export async function signUpWithGoogle(userType: 'PERSONAL' | 'ENTERPRISE', work
                 authProvider: 'GOOGLE',
                 emailVerified: true,
                 phoneVerified: false,
+                referredByCode: getStoredReferralCode() ?? undefined,
+                termsAccepted: true,
             }),
         });
 
@@ -355,6 +361,7 @@ export async function signUpWithGoogle(userType: 'PERSONAL' | 'ENTERPRISE', work
         }
 
         await response.json();
+        clearStoredReferralCode();
 
         // Patch full workerTypes as array of strings
         try {
@@ -555,6 +562,7 @@ export async function updateUserProfile(
         emailVerified?: boolean;
         phoneVerified?: boolean;
         status?: 'ACTIVE' | 'PENDING_DELETION' | 'PENDING_VERIFICATION';
+        preferredLanguage?: string;
     }>
 ): Promise<ApiUser> {
     const token = await getIdToken();
@@ -600,9 +608,12 @@ export async function completeSignupStep3(data: {
     displayName?: string;
     phoneNumber?: string;
     location: string;
+    latitude?: number;
+    longitude?: number;
     bio?: string;
     primarySkill?: string;
     hourlyRate?: string;
+    hourlyRateCurrency?: string;
     serviceRadiusKm?: string;
 }): Promise<ApiUser> {
     const token = await getIdToken();

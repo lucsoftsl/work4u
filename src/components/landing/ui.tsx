@@ -51,8 +51,8 @@ export function ProfessionalCard({
 }) {
   return (
     <article className="overflow-hidden rounded-2xl border border-outline bg-white shadow-soft">
-      <div className="relative h-40 bg-gradient-to-r from-orange-400 to-orange-300">
-        <span className="absolute right-3 top-3 rounded-md bg-white px-2 py-1 text-[10px] font-bold text-orange-500">{verified}</span>
+      <div className="relative h-40 bg-gradient-to-r from-brand to-brand-strong">
+        <span className="absolute right-3 top-3 rounded-md bg-white px-2 py-1 text-[10px] font-bold text-brand">{verified}</span>
       </div>
 
       <div className="p-5">

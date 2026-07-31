@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import Footer from "@/components/Footer";
 import { ChevronRight } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 
@@ -11,40 +10,47 @@ export default function HowItWorksPage() {
   const steps = [
     {
       number: 1,
-      title: "Create Your Account",
-      description: "Sign up as a worker or employer in seconds",
+      title: t('how.step1Title'),
+      description: t('how.step1Desc'),
       image: "🚀",
     },
     {
       number: 2,
-      title: "Find or Post Work",
-      description: "Browse available jobs or post your own work",
+      title: t('how.step2Title'),
+      description: t('how.step2Desc'),
       image: "🔍",
     },
     {
       number: 3,
-      title: "Apply or Hire",
-      description: "Apply to jobs or review applications from talented workers",
+      title: t('how.step3Title'),
+      description: t('how.step3Desc'),
       image: "📋",
     },
     {
       number: 4,
-      title: "Collaborate & Complete",
-      description: "Work together, communicate, and deliver great results",
+      title: t('how.step4Title'),
+      description: t('how.step4Desc'),
       image: "💬",
     },
     {
       number: 5,
-      title: "Get Paid",
-      description: "Secure payments and instant transfers",
+      title: t('how.step5Title'),
+      description: t('how.step5Desc'),
       image: "💰",
     },
     {
       number: 6,
-      title: "Rate & Review",
-      description: "Build your reputation with reviews and ratings",
+      title: t('how.step6Title'),
+      description: t('how.step6Desc'),
       image: "⭐",
     },
+  ];
+
+  const features = [
+    { icon: "🔒", title: t('how.feature1Title'), desc: t('how.feature1Desc') },
+    { icon: "💬", title: t('how.feature2Title'), desc: t('how.feature2Desc') },
+    { icon: "⭐", title: t('how.feature3Title'), desc: t('how.feature3Desc') },
+    { icon: "🌍", title: t('how.feature4Title'), desc: t('how.feature4Desc') },
   ];
 
   return (
@@ -53,7 +59,7 @@ export default function HowItWorksPage() {
       <section className="bg-gradient-to-br from-primary/20 to-primary/5 py-16 border-b border-border">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl font-bold text-foreground mb-4">{t('how.title')}</h1>
-          <p className="text-xl text-muted-foreground">Simple, secure, and straightforward</p>
+          <p className="text-xl text-muted-foreground">{t('how.subtitle')}</p>
         </div>
       </section>
 
@@ -78,14 +84,9 @@ export default function HowItWorksPage() {
       {/* Features */}
       <section className="bg-muted py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-foreground mb-12 text-center">Why Choose work4u?</h2>
+          <h2 className="text-3xl font-bold text-foreground mb-12 text-center">{t('how.whyChoose')}</h2>
           <div className="grid md:grid-cols-2 gap-8">
-            {[
-              { icon: "🔒", title: "Safe & Secure", desc: "Protected payments and verified users" },
-              { icon: "💬", title: "Easy Communication", desc: "Built-in messaging for collaboration" },
-              { icon: "⭐", title: "Ratings & Reviews", desc: "Build trust through feedback" },
-              { icon: "🌍", title: "Global Marketplace", desc: "Find work from anywhere" },
-            ].map((feature, i) => (
+            {features.map((feature, i) => (
               <div key={i} className="flex gap-4 p-6 bg-card rounded-lg border border-border">
                 <span className="text-4xl">{feature.icon}</span>
                 <div>
@@ -110,8 +111,6 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <Footer />
     </div>
   );
 }

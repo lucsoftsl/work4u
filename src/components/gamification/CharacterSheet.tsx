@@ -3,9 +3,11 @@
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
 import { PlayerStats } from '@/components/gamification/PlayerStats';
+import { GoldEarningGuide } from '@/components/gamification/GoldEarningGuide';
 import { QuestTracker } from '@/components/gamification/QuestTracker';
 import { Trophy, Shield, Sparkles, Star, Award, Lock, Crown, Swords } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
+import { getPlayerTitleKey } from '@/lib/gamification-utils';
 
 export function CharacterSheet() {
     const { t } = useTranslation();
@@ -61,24 +63,24 @@ export function CharacterSheet() {
     return (
         <div className="space-y-6">
             {/* Character Header */}
-            <div className="bg-card border-2 border-primary rounded-lg p-6 relative overflow-hidden">
+            <div className="bg-card border-2 border-primary rounded-2xl p-6 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full blur-3xl" />
                 <div className="absolute bottom-0 left-0 w-40 h-40 bg-secondary/5 rounded-full blur-3xl" />
 
-                <div className="relative z-10 flex items-center gap-6">
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center border-4 border-card shadow-lg shadow-primary/50">
+                <div className="relative z-10 flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:gap-6 sm:text-left">
+                    <div className="w-24 h-24 shrink-0 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center border-4 border-card shadow-[0_16px_36px_-8px_rgba(30,109,138,0.4)]">
                         <Shield className="w-12 h-12 text-white" />
                     </div>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
+                    <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center justify-center gap-3 mb-2 sm:justify-start">
                             <h1 className="text-3xl font-bold text-foreground">{t('gamification.yourCharacter')}</h1>
                             {player.title && (
-                                <span className="px-3 py-1 bg-secondary/20 border-2 border-secondary rounded-full text-sm font-bold text-secondary">
-                                    {player.title}
+                                <span className="px-3 py-1 bg-secondary border-2 border-secondary-foreground/20 rounded-full text-sm font-bold text-secondary-foreground">
+                                    {t(getPlayerTitleKey(player.title))}
                                 </span>
                             )}
                         </div>
-                        <div className="flex items-center gap-6 text-muted-foreground">
+                        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-muted-foreground sm:justify-start">
                             <div className="flex items-center gap-2">
                                 <Sparkles className="w-4 h-4 text-primary" />
                                 <span>{t('gamification.level')} {player.level}</span>
@@ -103,6 +105,9 @@ export function CharacterSheet() {
                     {t('gamification.characterStats')}
                 </h2>
                 <PlayerStats />
+                <div className="mt-3">
+                    <GoldEarningGuide />
+                </div>
             </div>
 
             {/* Active Quests */}
@@ -133,7 +138,7 @@ export function CharacterSheet() {
                                         <div
                                             key={achievement.id}
                                             className={`
-                        bg-card border-2 rounded-lg p-4
+                        bg-card border-2 rounded-2xl p-4
                         ${getRarityClass(achievement.rarity)}
                         ${achievement.rarity === 'legendary' ? 'animate-pulse-glow' : ''}
                         transition-all hover:scale-105
@@ -177,7 +182,7 @@ export function CharacterSheet() {
                                     return (
                                         <div
                                             key={achievement.id}
-                                            className="bg-card border-2 border-border rounded-lg p-4 opacity-60 hover:opacity-80 transition-opacity"
+                                            className="bg-card border-2 border-border rounded-2xl p-4 opacity-60 hover:opacity-80 transition-opacity"
                                         >
                                             <div className="flex items-start gap-3">
                                                 <div className="p-2 rounded-full bg-muted text-2xl relative">
@@ -229,7 +234,7 @@ export function CharacterSheet() {
                             <div
                                 key={item.id}
                                 className={`
-                  bg-card border-2 rounded-lg p-3 text-center
+                  bg-card border-2 rounded-2xl p-3 text-center
                   ${getRarityClass(item.rarity)}
                   ${item.equipped ? 'ring-2 ring-primary' : ''}
                   transition-all hover:scale-105 cursor-pointer

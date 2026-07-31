@@ -5,13 +5,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import Footer from "@/components/Footer";
 import { BUDGET_TYPES, DURATIONS, EXPERIENCE_LEVELS } from "@/data/categories";
 import { ChevronLeft, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
-import { getCategoriesWithTranslations } from "@/lib/category-utils";
+import { getCategoriesWithTranslations, getBudgetTypeLabel, getDurationLabel, getExperienceLevelLabel } from "@/lib/category-utils";
 import CurrencyInput from 'react-currency-input-field';
 import { CurrencySelector } from "@/components/CurrencySelector";
+import { CategorySelector } from "@/components/CategorySelector";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import type { Job } from "@/api/types";
@@ -179,7 +179,7 @@ export default function EditJobPage() {
                                     name="title"
                                     value={formData.title}
                                     onChange={handleChange}
-                                    placeholder="e.g., Website Design for E-commerce"
+                                    placeholder={t('post.titlePlaceholder')}
                                     className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
                                     required
                                 />
@@ -187,20 +187,11 @@ export default function EditJobPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-foreground mb-2">{t('post.labels.category')}</label>
-                                <select
-                                    name="category"
+                                <CategorySelector
                                     value={formData.category}
-                                    onChange={handleChange}
-                                    className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
-                                    required
-                                >
-                                    <option value="">Select a category</option>
-                                    {getCategoriesWithTranslations(t).map((cat) => (
-                                        <option key={cat.id} value={cat.id}>
-                                            {cat.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                    onChange={(categoryId) => setFormData((prev) => ({ ...prev, category: categoryId }))}
+                                    categories={getCategoriesWithTranslations(t)}
+                                />
                             </div>
 
                             <div>
@@ -209,7 +200,7 @@ export default function EditJobPage() {
                                     name="description"
                                     value={formData.description}
                                     onChange={handleChange}
-                                    placeholder="Describe the work in detail..."
+                                    placeholder={t('post.descPlaceholder')}
                                     rows={6}
                                     className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
                                     required
@@ -234,7 +225,7 @@ export default function EditJobPage() {
                                     >
                                         {BUDGET_TYPES.map((type) => (
                                             <option key={type.value} value={type.value}>
-                                                {type.label}
+                                                {getBudgetTypeLabel(type.value, t)}
                                             </option>
                                         ))}
                                     </select>
@@ -275,10 +266,10 @@ export default function EditJobPage() {
                                     className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
                                     required
                                 >
-                                    <option value="">Select duration</option>
+                                    <option value="">{t('post.selectDuration')}</option>
                                     {DURATIONS.map((dur) => (
                                         <option key={dur.value} value={dur.value}>
-                                            {dur.label}
+                                            {getDurationLabel(dur.value, t)}
                                         </option>
                                     ))}
                                 </select>
@@ -294,7 +285,7 @@ export default function EditJobPage() {
                                 >
                                     {EXPERIENCE_LEVELS.map((level) => (
                                         <option key={level.value} value={level.value}>
-                                            {level.label}
+                                            {getExperienceLevelLabel(level.value, t)}
                                         </option>
                                     ))}
                                 </select>
@@ -307,7 +298,7 @@ export default function EditJobPage() {
                                     name="skillsRequired"
                                     value={formData.skillsRequired}
                                     onChange={handleChange}
-                                    placeholder="e.g., React, Node.js, MongoDB (comma separated)"
+                                    placeholder={t('post.skillsPlaceholder')}
                                     className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground"
                                 />
                             </div>
@@ -368,7 +359,7 @@ export default function EditJobPage() {
                                 <div>
                                     <p className="text-sm text-muted-foreground">{t('post.review.budget')}</p>
                                     <p className="font-bold text-foreground">
-                                        {formData.budgetCurrency} {formData.budget} ({formData.budgetType})
+                                        {formData.budgetCurrency} {formData.budget} ({getBudgetTypeLabel(formData.budgetType, t)})
                                     </p>
                                 </div>
                                 <div>
@@ -412,8 +403,6 @@ export default function EditJobPage() {
                 </form>
             </div>
 
-            {/* Footer */}
-            <Footer />
         </div>
     );
 }

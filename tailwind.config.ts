@@ -53,6 +53,16 @@ const config: Config = {
           bar: "hsl(var(--xp-bar))",
           bg: "hsl(var(--xp-bar-bg))",
         },
+        // Registered as real Tailwind theme colors (not just the hand-authored
+        // bare classes in globals.css) so opacity modifiers like `bg-brand/10`
+        // actually generate CSS instead of silently compiling to nothing.
+        brand: {
+          DEFAULT: "hsl(var(--brand))",
+          strong: "hsl(var(--brand-strong))",
+          soft: "hsl(var(--brand-soft))",
+        },
+        outline: "hsl(var(--outline))",
+        success: "hsl(var(--success))",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -111,7 +121,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [require("@tailwindcss/typography")],
 };
 
 export default config;

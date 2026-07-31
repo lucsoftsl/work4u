@@ -2,8 +2,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Coins } from "lucide-react";
 import currenciesData from "@/data/currencies.json";
+import { useTranslation } from "@/lib/i18n";
 
 interface CurrencySelectorProps {
     value: string;
@@ -18,7 +19,10 @@ interface Currency {
     flag?: string;
 }
 
-const CURRENCIES: Currency[] = currenciesData; export function CurrencySelector({ value, onChange }: CurrencySelectorProps) {
+const CURRENCIES: Currency[] = currenciesData;
+
+export function CurrencySelector({ value, onChange }: CurrencySelectorProps) {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -66,13 +70,17 @@ const CURRENCIES: Currency[] = currenciesData; export function CurrencySelector(
             >
                 <span className="text-foreground font-medium flex items-center gap-2">
                     {selectedCurrency && (
-                        <img
-                            src={selectedCurrency.flag}
-                            alt={selectedCurrency.code}
-                            className="w-5 h-4 rounded-sm object-cover"
-                        />
+                        selectedCurrency.flag ? (
+                            <img
+                                src={selectedCurrency.flag}
+                                alt={selectedCurrency.code}
+                                className="w-5 h-4 rounded-sm object-cover"
+                            />
+                        ) : (
+                            <Coins size={16} className="text-muted-foreground" />
+                        )
                     )}
-                    {selectedCurrency ? selectedCurrency.code : "Select currency"}
+                    {selectedCurrency ? selectedCurrency.code : t('currencySelector.placeholder')}
                 </span>
                 <ChevronDown
                     size={18}
@@ -87,7 +95,7 @@ const CURRENCIES: Currency[] = currenciesData; export function CurrencySelector(
                         <input
                             ref={inputRef}
                             type="text"
-                            placeholder="Search currency..."
+                            placeholder={t('currencySelector.searchPlaceholder')}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground placeholder:text-muted-foreground text-sm"
@@ -104,11 +112,17 @@ const CURRENCIES: Currency[] = currenciesData; export function CurrencySelector(
                                         }`}
                                 >
                                     <div className="flex items-center gap-3 flex-1">
-                                        <img
-                                            src={currency.flag}
-                                            alt={currency.code}
-                                            className="w-6 h-4 rounded-sm object-cover"
-                                        />
+                                        {currency.flag ? (
+                                            <img
+                                                src={currency.flag}
+                                                alt={currency.code}
+                                                className="w-6 h-4 rounded-sm object-cover"
+                                            />
+                                        ) : (
+                                            <span className="flex h-4 w-6 shrink-0 items-center justify-center rounded-sm bg-muted">
+                                                <Coins size={12} className="text-muted-foreground" />
+                                            </span>
+                                        )}
                                         <div>
                                             <p className="font-medium text-foreground">{currency.code}</p>
                                             <p className="text-sm text-muted-foreground">{currency.name}</p>
@@ -118,7 +132,7 @@ const CURRENCIES: Currency[] = currenciesData; export function CurrencySelector(
                             ))
                         ) : (
                             <div className="px-4 py-3 text-center text-muted-foreground text-sm">
-                                No currencies found
+                                {t('currencySelector.noResults')}
                             </div>
                         )}
                     </div>

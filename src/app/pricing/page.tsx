@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/Button";
 import {
   getSubscriptionStatus,
   createCheckoutSession,
   createPortalSession,
   type SubscriptionStatus,
+  type Plan,
 } from "@/api/subscriptions";
 import {
   Check,
@@ -16,182 +18,180 @@ import {
   Lock,
   Zap,
   TrendingUp,
-  ShieldCheck,
-  BarChart3,
-  MessageCircle,
-  Globe,
-  EyeOff,
-  Star,
   Clock,
-  Award,
-  Gift,
-  Headphones,
+  Building2,
 } from "lucide-react";
-import Footer from "@/components/Footer";
 import { cn } from "@/lib/utils";
 
-const FREE_FEATURES = [
-  "Post up to 3 active job listings",
-  "Browse and apply to all listings",
-  "Standard profile visibility",
-  "Community support",
-];
+type PayablePlan = Exclude<Plan, "free">;
 
-const PRO_FEATURES = [
-  "Unlimited active job posts",
-  "Boost posts to the top of search results",
-  "Extended post visibility — 90 days vs 14 days",
-  "Priority profile visibility across the platform",
-  "Verified Pro badge & gold crown on your profile",
-  "Analytics — track views, saves & applications",
-  "Direct message candidates and employers",
-  "Custom public profile URL slug",
-  "Ad-free browsing experience",
-  "Access to exclusive passive talent pool",
-  "Referral rewards — earn credits for every Pro invite",
-  "Priority support from the work4u team",
-  "Early access to new features",
-];
+interface Tier {
+  id: Plan;
+  name: string;
+  tagline: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  badge?: string;
+  features: string[];
+}
 
-const BENEFITS = [
-  {
-    icon: TrendingUp,
-    title: "Boost to the Top",
-    desc: "Pin your post to the top of search results and get seen first by every job seeker and employer on the platform.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Verified Pro Badge",
-    desc: "Stand out with a gold verified crown on your profile — instantly signal trust to employers and candidates.",
-  },
-  {
-    icon: BarChart3,
-    title: "Analytics Dashboard",
-    desc: "See how many people viewed, saved, or applied to your posts. Make data-driven hiring decisions.",
-  },
-  {
-    icon: MessageCircle,
-    title: "Direct Messaging",
-    desc: "Reach out to candidates or employers directly without waiting for applications to come to you.",
-  },
-  {
-    icon: Zap,
-    title: "Unlimited Posts",
-    desc: "Post as many job listings as you need with no cap. Free users are limited to 3 active posts at a time.",
-  },
-  {
-    icon: Clock,
-    title: "Extended Visibility",
-    desc: "Pro posts stay live for 90 days vs 14 days on free — 6x more time to find the right match.",
-  },
-  {
-    icon: Globe,
-    title: "Custom Profile URL",
-    desc: "Claim your own slug like work4u.ph/yourname instead of a random ID. Perfect for resumes and socials.",
-  },
-  {
-    icon: Star,
-    title: "Exclusive Talent Pool",
-    desc: "Get access to passive job seekers who only appear to Pro members — high-quality candidates not visible to others.",
-  },
-  {
-    icon: EyeOff,
-    title: "Ad-Free Experience",
-    desc: "Browse and manage listings without any ads or interruptions. A cleaner, faster experience end to end.",
-  },
-  {
-    icon: Award,
-    title: "Featured Employer Spotlight",
-    desc: "Your company logo appears in the featured employers section on the homepage, building brand recognition.",
-  },
-  {
-    icon: Gift,
-    title: "Referral Rewards",
-    desc: "Invite friends to go Pro and earn subscription credits. The more you share, the more you save.",
-  },
-  {
-    icon: Headphones,
-    title: "Dev Team Support",
-    desc: "Direct access to the work4u development team. Got a feature request or bug? Pro members get prioritized.",
-  },
-];
-
-const FAQS = [
-  {
-    q: "Can I cancel anytime?",
-    a: "Yes — cancel with one click from your billing portal. Your Pro access stays active until the end of the current billing period, no questions asked.",
-  },
-  {
-    q: "Is there a free trial?",
-    a: "New Pro subscribers get a 7-day free trial. Cancel before it ends and you won't be charged a thing.",
-  },
-  {
-    q: "What payment methods are accepted?",
-    a: "Payments are handled by Stripe. We accept Visa, Mastercard, and GCash-linked cards. We never store your card details.",
-  },
-  {
-    q: "Will my boosted posts reset each month?",
-    a: "Yes. Boost credits refresh at the start of every billing cycle (monthly or yearly), so your posts stay competitive.",
-  },
-  {
-    q: "What happens to my posts if I cancel?",
-    a: "Your boosted posts return to standard visibility at the end of your billing period. All your posts and data stay intact — nothing gets deleted.",
-  },
-  {
-    q: "Can I switch from monthly to yearly?",
-    a: "Yes. Head to the billing portal anytime to switch plans. We'll prorate the difference so you only pay for what you use.",
-  },
-];
-
-const STATS = [
-  { value: "500+", label: "Pro members" },
-  { value: "10k+", label: "jobs posted" },
-  { value: "3×", label: "faster hire rate" },
-  { value: "90 days", label: "post visibility" },
-];
+function formatEuro(amount: number) {
+  return amount.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
 
 export default function PricingPage() {
   const router = useRouter();
-  const { user, isAuthenticated, firebaseToken, loading: authLoading } = useAuth();
+  const { isAuthenticated, firebaseToken, loading: authLoading } = useAuth();
+  const { t } = useTranslation();
+
+  const TIERS: Tier[] = [
+    {
+      id: "free",
+      name: t('pricing.freeTierName'),
+      tagline: t('pricing.freeTierTagline'),
+      monthlyPrice: 0,
+      yearlyPrice: 0,
+      features: [
+        t('pricing.freeFeature1'),
+        t('pricing.freeFeature2'),
+        t('pricing.freeFeature3'),
+        t('pricing.freeFeature4'),
+        t('pricing.freeFeature5'),
+      ],
+    },
+    {
+      id: "starter",
+      name: t('pricing.starterTierName'),
+      tagline: t('pricing.starterTierTagline'),
+      monthlyPrice: 9,
+      yearlyPrice: 75,
+      features: [
+        t('pricing.starterFeature1'),
+        t('pricing.starterFeature2'),
+        t('pricing.starterFeature3'),
+      ],
+    },
+    {
+      id: "pro",
+      name: t('pricing.proTierName'),
+      tagline: t('pricing.proTierTagline'),
+      monthlyPrice: 29,
+      yearlyPrice: 240,
+      badge: t('pricing.mostPopularBadge'),
+      features: [
+        t('pricing.proFeature1'),
+        t('pricing.proFeature2'),
+        t('pricing.proFeature3'),
+        t('pricing.proFeature4'),
+      ],
+    },
+    {
+      id: "business",
+      name: t('pricing.businessTierName'),
+      tagline: t('pricing.businessTierTagline'),
+      monthlyPrice: 59,
+      yearlyPrice: 480,
+      features: [
+        t('pricing.businessFeature1'),
+        t('pricing.businessFeature2'),
+        t('pricing.businessFeature3'),
+      ],
+    },
+  ];
+
+  const BENEFITS = [
+    {
+      icon: TrendingUp,
+      title: t('pricing.benefit1Title'),
+      desc: t('pricing.benefit1Desc'),
+    },
+    {
+      icon: Zap,
+      title: t('pricing.benefit2Title'),
+      desc: t('pricing.benefit2Desc'),
+    },
+    {
+      icon: Clock,
+      title: t('pricing.benefit3Title'),
+      desc: t('pricing.benefit3Desc'),
+    },
+    {
+      icon: Building2,
+      title: t('pricing.benefit4Title'),
+      desc: t('pricing.benefit4Desc'),
+    },
+  ];
+
+  const FAQS = [
+    {
+      q: t('pricing.faq1Question'),
+      a: t('pricing.faq1Answer'),
+    },
+    {
+      q: t('pricing.faq2Question'),
+      a: t('pricing.faq2Answer'),
+    },
+    {
+      q: t('pricing.faq3Question'),
+      a: t('pricing.faq3Answer'),
+    },
+    {
+      q: t('pricing.faq4Question'),
+      a: t('pricing.faq4Answer'),
+    },
+  ];
 
   const [billing, setBilling] = useState<"month" | "year">("month");
   const [status, setStatus] = useState<SubscriptionStatus | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState<PayablePlan | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [businessIntent, setBusinessIntent] = useState(false);
 
   const [feedback, setFeedback] = useState<"success" | "canceled" | null>(null);
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("success")) setFeedback("success");
-    else if (params.get("canceled")) setFeedback("canceled");
+    const read = () => {
+      if (typeof window === "undefined") return;
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("success")) setFeedback("success");
+      else if (params.get("canceled")) setFeedback("canceled");
+      if (params.get("intent") === "business") setBusinessIntent(true);
+    };
+    read();
   }, []);
 
   useEffect(() => {
     if (!isAuthenticated || !firebaseToken) return;
-    setLoadingStatus(true);
-    getSubscriptionStatus(firebaseToken)
-      .then(setStatus)
-      .catch(() => setStatus(null))
-      .finally(() => setLoadingStatus(false));
+
+    const load = async () => {
+      try {
+        setLoadingStatus(true);
+        const result = await getSubscriptionStatus(firebaseToken);
+        setStatus(result);
+      } catch {
+        setStatus(null);
+      } finally {
+        setLoadingStatus(false);
+      }
+    };
+    void load();
   }, [isAuthenticated, firebaseToken]);
 
-  const isPro = status?.plan === "pro" && status.status === "active";
+  const currentPlan = status?.status === "active" || status?.status === "trialing" ? status.plan : "free";
 
-  async function handleUpgrade() {
+  async function handleUpgrade(planId: PayablePlan) {
     if (!isAuthenticated) {
       router.push("/signin?redirect=/pricing");
       return;
     }
     if (!firebaseToken) return;
-    setCheckoutLoading(true);
+    setCheckoutLoadingPlan(planId);
     try {
-      const { url } = await createCheckoutSession(firebaseToken, billing);
-      window.location.href = url;
+      const { url } = await createCheckoutSession(firebaseToken, planId, billing);
+      window.location.assign(url);
     } catch {
-      setCheckoutLoading(false);
+      setCheckoutLoadingPlan(null);
     }
   }
 
@@ -206,23 +206,27 @@ export default function PricingPage() {
     }
   }
 
-  const monthlyPrice = 299;
-  const yearlyPrice = 2499;
-  const yearlySaving = Math.round(100 - (yearlyPrice / (monthlyPrice * 12)) * 100);
-
   return (
     <div className="min-h-screen bg-background">
-      <main className="max-w-5xl mx-auto px-4 py-16">
+      <main className="max-w-6xl mx-auto px-4 py-16">
         {/* Feedback banner */}
         {feedback === "success" && (
           <div className="mb-8 rounded-2xl bg-green-50 border border-green-200 px-5 py-4 text-green-800 text-sm font-medium flex items-center gap-2">
             <Check size={16} className="shrink-0" />
-            Payment successful — welcome to work4u Pro!
+            {t('pricing.paymentSuccessBanner')}
           </div>
         )}
         {feedback === "canceled" && (
           <div className="mb-8 rounded-2xl bg-amber-50 border border-amber-200 px-5 py-4 text-amber-800 text-sm">
-            Checkout was canceled. You can upgrade anytime.
+            {t('pricing.paymentCanceledBanner')}
+          </div>
+        )}
+        {businessIntent && (
+          <div className="mb-8 rounded-2xl bg-brand/10 border border-brand/30 px-5 py-4 text-sm text-ink flex items-center gap-2.5">
+            <Building2 size={16} className="shrink-0 text-brand" />
+            {t('pricing.businessIntentBannerPrefix')}{" "}
+            <span className="font-semibold">{t('pricing.businessTierName')}</span>{" "}
+            {t('pricing.businessIntentBannerSuffix')}
           </div>
         )}
 
@@ -230,34 +234,21 @@ export default function PricingPage() {
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 bg-brand/10 text-brand rounded-full px-4 py-1.5 text-sm font-medium mb-4">
             <Zap size={14} />
-            work4u Pro
+            {t('pricing.heroBadge')}
           </div>
-          <h1 className="text-4xl font-bold text-ink mb-3">Unlock Premium Features</h1>
+          <h1 className="text-4xl font-bold text-ink mb-3">{t('pricing.heroTitle')}</h1>
           <p className="text-ink-muted text-lg max-w-md mx-auto">
-            Supercharge your work4u experience and get ahead of the competition.
+            {t('pricing.heroSubtitle')}
           </p>
-        </div>
-
-        {/* Stats bar */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-14">
-          {STATS.map((s) => (
-            <div
-              key={s.label}
-              className="flex flex-col items-center justify-center rounded-2xl border border-outline bg-card py-5 px-3"
-            >
-              <span className="text-2xl font-bold text-brand">{s.value}</span>
-              <span className="text-xs text-ink-subtle mt-0.5">{s.label}</span>
-            </div>
-          ))}
         </div>
 
         {/* Benefits grid */}
         <div className="mb-16">
-          <h2 className="text-xl font-bold text-ink mb-2 text-center">Everything you unlock with Pro</h2>
+          <h2 className="text-xl font-bold text-ink mb-2 text-center">{t('pricing.benefitsTitle')}</h2>
           <p className="text-sm text-ink-muted text-center mb-8">
-            One plan. No hidden limits. Every feature, all at once.
+            {t('pricing.benefitsSubtitle')}
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {BENEFITS.map(({ icon: Icon, title, desc }) => (
               <div
                 key={title}
@@ -286,7 +277,7 @@ export default function PricingPage() {
                 : "text-ink-muted hover:text-ink"
             )}
           >
-            Monthly
+            {t('pricing.billingMonthly')}
           </button>
           <button
             onClick={() => setBilling("year")}
@@ -297,7 +288,7 @@ export default function PricingPage() {
                 : "text-ink-muted hover:text-ink"
             )}
           >
-            Yearly
+            {t('pricing.billingYearly')}
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-xs font-semibold",
@@ -306,112 +297,117 @@ export default function PricingPage() {
                   : "bg-accent/20 text-accent-foreground"
               )}
             >
-              Save {yearlySaving}%
+              {t('pricing.billingSavePercent')}
             </span>
           </button>
         </div>
 
         {/* Plan cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
-          {/* Free */}
-          <div className="rounded-2xl border border-outline bg-card p-8 flex flex-col">
-            <div className="mb-6">
-              <p className="text-sm font-semibold text-ink-muted uppercase tracking-wider mb-2">Free</p>
-              <p className="text-4xl font-bold text-ink">₱0</p>
-              <p className="text-sm text-ink-subtle mt-1">Free forever</p>
-            </div>
-            <ul className="space-y-3 flex-1 mb-8">
-              {FREE_FEATURES.map((f) => (
-                <li key={f} className="flex items-start gap-2.5 text-sm text-ink-muted">
-                  <Check size={15} className="shrink-0 mt-0.5 text-success" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <Button variant="outline" disabled className="w-full">
-              {isAuthenticated ? "Current Plan" : "Get Started Free"}
-            </Button>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+          {TIERS.map((tier) => {
+            const isCurrent = currentPlan === tier.id;
+            const isFree = tier.id === "free";
+            const isBusiness = tier.id === "business";
+            const displayPrice = billing === "month" ? tier.monthlyPrice : Math.round(tier.yearlyPrice / 12);
 
-          {/* Pro */}
-          <div className="rounded-2xl border-2 border-brand bg-card p-8 flex flex-col relative shadow-soft">
-            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-              <span className="bg-brand text-white text-xs font-bold px-4 py-1 rounded-full shadow">
-                Most Popular
-              </span>
-            </div>
-
-            <div className="mb-6">
-              <p className="text-sm font-semibold text-brand uppercase tracking-wider mb-2">Pro</p>
-              {billing === "month" ? (
-                <>
-                  <p className="text-4xl font-bold text-ink">
-                    ₱{monthlyPrice.toLocaleString()}
-                    <span className="text-base font-normal text-ink-muted"> / mo</span>
-                  </p>
-                  <p className="text-sm text-ink-subtle mt-1">Billed monthly · 7-day free trial</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-4xl font-bold text-ink">
-                    ₱{Math.round(yearlyPrice / 12).toLocaleString()}
-                    <span className="text-base font-normal text-ink-muted"> / mo</span>
-                  </p>
-                  <p className="text-sm text-ink-subtle mt-1">
-                    ₱{yearlyPrice.toLocaleString()} billed annually · 7-day free trial
-                  </p>
-                </>
-              )}
-            </div>
-
-            <ul className="space-y-3 flex-1 mb-8">
-              {PRO_FEATURES.map((f) => (
-                <li key={f} className="flex items-start gap-2.5 text-sm text-ink">
-                  <Check size={15} className="shrink-0 mt-0.5 text-brand" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-
-            {loadingStatus || authLoading ? (
-              <div className="h-12 rounded-2xl bg-muted animate-pulse w-full" />
-            ) : isPro ? (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handlePortal}
-                disabled={portalLoading}
+            return (
+              <div
+                key={tier.id}
+                className={cn(
+                  "rounded-2xl bg-card p-6 flex flex-col relative",
+                  tier.badge
+                    ? "border-2 border-brand shadow-soft"
+                    : isBusiness && businessIntent
+                      ? "border-2 border-brand shadow-soft"
+                      : "border border-outline"
+                )}
               >
-                {portalLoading ? "Opening portal…" : "Manage Subscription"}
-              </Button>
-            ) : (
-              <Button
-                className="w-full"
-                size="lg"
-                onClick={handleUpgrade}
-                disabled={checkoutLoading}
-              >
-                {checkoutLoading ? "Redirecting…" : "Start Free Trial"}
-              </Button>
-            )}
+                {tier.badge && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className="whitespace-nowrap bg-brand text-white text-xs font-bold px-4 py-1 rounded-full shadow">
+                      {tier.badge}
+                    </span>
+                  </div>
+                )}
+                {!tier.badge && isBusiness && businessIntent && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className="whitespace-nowrap bg-brand text-white text-xs font-bold px-4 py-1 rounded-full shadow">
+                      {t('pricing.recommendedForYouBadge')}
+                    </span>
+                  </div>
+                )}
 
-            {isPro && status?.cancelAtPeriodEnd && (
-              <p className="text-xs text-center text-ink-subtle mt-2">
-                Cancels at end of billing period
-              </p>
-            )}
+                <div className="mb-6">
+                  <p className="text-sm font-semibold text-ink-muted uppercase tracking-wider mb-2">{tier.name}</p>
+                  {isFree ? (
+                    <>
+                      <p className="text-4xl font-bold text-ink">€0</p>
+                      <p className="text-sm text-ink-subtle mt-1">{tier.tagline}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-4xl font-bold text-ink">
+                        €{formatEuro(displayPrice)}
+                        <span className="text-base font-normal text-ink-muted"> {t('pricing.perMonthSuffix')}</span>
+                      </p>
+                      <p className="text-sm text-ink-subtle mt-1">
+                        {billing === "month" ? tier.tagline : `€${formatEuro(tier.yearlyPrice)} ${t('pricing.billedAnnually')}`}
+                      </p>
+                    </>
+                  )}
+                </div>
 
-            {!isPro && (
-              <p className="text-xs text-center text-ink-subtle mt-2">
-                7-day free trial · Cancel anytime
-              </p>
-            )}
-          </div>
+                <ul className="space-y-3 flex-1 mb-8">
+                  {tier.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2.5 text-sm text-ink-muted">
+                      <Check size={15} className="shrink-0 mt-0.5 text-success" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                {loadingStatus || authLoading ? (
+                  <div className="h-12 rounded-2xl bg-muted animate-pulse w-full" />
+                ) : isFree ? (
+                  <Button variant="outline" disabled className="w-full">
+                    {isAuthenticated ? t('pricing.currentPlanLabel') : t('pricing.getStartedFreeLabel')}
+                  </Button>
+                ) : isCurrent ? (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handlePortal}
+                    disabled={portalLoading}
+                  >
+                    {portalLoading ? t('pricing.openingPortalLabel') : t('pricing.manageSubscriptionLabel')}
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={() => handleUpgrade(tier.id as PayablePlan)}
+                    disabled={checkoutLoadingPlan !== null}
+                  >
+                    {checkoutLoadingPlan === tier.id ? t('pricing.redirectingLabel') : `${t('pricing.upgradeToPrefix')} ${tier.name}`}
+                  </Button>
+                )}
+
+                {isCurrent && status?.cancelAtPeriodEnd && (
+                  <p className="text-xs text-center text-ink-subtle mt-2">
+                    {t('pricing.cancelsAtPeriodEnd')}
+                  </p>
+                )}
+                {!isCurrent && !isFree && (
+                  <p className="text-xs text-center text-ink-subtle mt-2">{t('pricing.cancelAnytimeNote')}</p>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* FAQ */}
         <div className="mb-16">
-          <h2 className="text-xl font-bold text-ink mb-6 text-center">Frequently Asked Questions</h2>
+          <h2 className="text-xl font-bold text-ink mb-6 text-center">{t('pricing.faqTitle')}</h2>
           <div className="divide-y divide-outline rounded-2xl border border-outline overflow-hidden">
             {FAQS.map((faq, i) => (
               <div key={i}>
@@ -440,14 +436,11 @@ export default function PricingPage() {
         <div className="flex items-center justify-center gap-2.5 text-sm text-ink-subtle">
           <Lock size={14} className="shrink-0" />
           <span>
-            Payments are securely processed by{" "}
-            <span className="font-semibold text-ink-muted">Stripe</span>. We never store your card
-            details.
+            {t('pricing.trustBarPrefix')}{" "}
+            <span className="font-semibold text-ink-muted">Stripe</span>. {t('pricing.trustBarSuffix')}
           </span>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

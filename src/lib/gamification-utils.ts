@@ -185,3 +185,19 @@ export const checkLevelAchievements = () => {
     store.dispatch(updateAchievementProgress({ achievementId: 'level-10', progress: level }));
     store.dispatch(updateAchievementProgress({ achievementId: 'level-50', progress: level }));
 };
+
+// player.title is stored as a literal English string in Redux state (see
+// gamificationSlice.ts) rather than a translation key, so it's mapped here
+// at the display layer instead of changing the persisted state shape.
+const PLAYER_TITLE_KEYS: Record<string, string> = {
+    'Novice Worker': 'gamification.rank.noviceWorker',
+    'Apprentice': 'gamification.rank.apprentice',
+    'Skilled Worker': 'gamification.rank.skilledWorker',
+    'Expert Freelancer': 'gamification.rank.expertFreelancer',
+    'Master Professional': 'gamification.rank.masterProfessional',
+    'Legendary Freelancer': 'gamification.rank.legendaryFreelancer',
+};
+
+export function getPlayerTitleKey(title: string): string {
+    return PLAYER_TITLE_KEYS[title] ?? title;
+}

@@ -2,17 +2,21 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { createSelector } from '@reduxjs/toolkit';
 import { RootState } from '@/store';
 import { markNotificationRead } from '@/store/slices/gamificationSlice';
 import { Trophy, Star, Gift, CheckCircle, Flame, X } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 
+const selectUnreadNotifications = createSelector(
+    (state: RootState) => state.gamification.notifications,
+    (notifications) => notifications.filter(n => !n.read)
+);
+
 export function AchievementToast() {
     const { t } = useTranslation();
     const dispatch = useDispatch();
-    const notifications = useSelector((state: RootState) =>
-        state.gamification.notifications.filter(n => !n.read)
-    );
+    const notifications = useSelector(selectUnreadNotifications);
     const [visible, setVisible] = useState<string[]>([]);
 
     const handleDismiss = useCallback((id: string) => {

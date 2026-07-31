@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Clock, Plus, TrendingUp, Zap } from "lucide-react";
-import Footer from "@/components/Footer";
 import { JobCard } from "@/components/JobCard";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -21,7 +20,7 @@ function daysUntil(isoDate: string | null | undefined): number | null {
 export default function MyJobsPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { user, firebaseToken } = useAuth();
+  const { user, firebaseToken, loading: authLoading } = useAuth();
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +35,7 @@ export default function MyJobsPage() {
   }).length;
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user?.id || !firebaseToken) {
       router.push("/signin");
       return;
@@ -53,14 +53,14 @@ export default function MyJobsPage() {
         setSubscription(sub);
       } catch (err) {
         console.error("Failed to load jobs:", err);
-        setError("Failed to load your jobs. Please try again.");
+        setError(t("myJobs.loadError"));
       } finally {
         setLoading(false);
       }
     };
 
     void load();
-  }, [user?.id, firebaseToken, router]);
+  }, [user?.id, firebaseToken, authLoading, router, t]);
 
   async function handleBoost(jobId: string) {
     if (!firebaseToken) return;
@@ -83,22 +83,22 @@ export default function MyJobsPage() {
             <div>
               <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-semibold text-brand">
                 <ArrowLeft className="h-4 w-4" />
-                Back to dashboard
+                {t("nav.backToDashboard")}
               </Link>
               <h1 className="mt-4 section-heading">{t("myJobs.title")}</h1>
               <p className="mt-3 text-sm leading-6 text-ink-muted">
-                Review the jobs you have published and jump back into any active posting.
+                {t("myJobs.subtitle")}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               {isPro ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs font-bold text-amber-700">
                   <Zap className="h-3.5 w-3.5" />
-                  Pro — Unlimited Posts
+                  {t("myJobs.proUnlimited")}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-muted border border-outline px-3 py-1.5 text-xs font-semibold text-ink-muted">
-                  {activeCount}/3 free posts used
+                  {activeCount}/3 {t("myJobs.freePostsUsed")}
                 </span>
               )}
               <Link href="/post-job" className="primary-cta">
@@ -113,11 +113,11 @@ export default function MyJobsPage() {
         {!isPro && activeCount >= 3 && (
           <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-amber-800">You've reached the 3-post free limit.</p>
-              <p className="text-sm text-amber-700 mt-0.5">Upgrade to Pro for unlimited active listings, 90-day visibility, and post boosting.</p>
+              <p className="text-sm font-semibold text-amber-800">{t("myJobs.limitReachedTitle")}</p>
+              <p className="text-sm text-amber-700 mt-0.5">{t("myJobs.limitReachedBody")}</p>
             </div>
             <Link href="/pricing" className="shrink-0 rounded-xl bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700 transition-colors">
-              Upgrade to Pro
+              {t("pricing.upgradeToPrefix")} {t("pricing.proTierName")}
             </Link>
           </div>
         )}
@@ -135,7 +135,7 @@ export default function MyJobsPage() {
           ) : jobs.length === 0 ? (
             <div className="surface-panel p-10 text-center">
               <p className="text-base font-semibold text-ink">{t("myJobs.noJobs")}</p>
-              <p className="mt-2 text-sm text-ink-muted">Create your first posting to start receiving applicants.</p>
+              <p className="mt-2 text-sm text-ink-muted">{t("myJobs.noJobsSubtitle")}</p>
               <Link href="/post-job" className="primary-cta mt-5 inline-flex">
                 {t("myJobs.postFirst")}
               </Link>
@@ -143,7 +143,8 @@ export default function MyJobsPage() {
           ) : (
             <div>
               <p className="mb-5 text-sm text-ink-muted">
-                {t("myJobs.activeJobs")} <span className="font-bold text-ink">{jobs.length}</span>
+                {t("myJobs.activeJobs")} <span className="font-bold text-ink">{jobs.length}</span>{" "}
+                {jobs.length === 1 ? t("myJobs.jobSingular") : t("myJobs.jobPlural")}
               </p>
               <div className="grid gap-5">
                 {jobs.map((job) => {
@@ -164,6 +165,9 @@ export default function MyJobsPage() {
                           <Link href={`/jobs/${job.id}/edit`} className="secondary-cta">
                             {t("myJobs.edit")}
                           </Link>
+                          <Link href={`/my-jobs/${job.id}/applicants`} className="secondary-cta">
+                            {t("myJobs.applicants")}{job.applicants > 0 ? ` (${job.applicants})` : ""}
+                          </Link>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-3">
@@ -177,7 +181,7 @@ export default function MyJobsPage() {
                                 : "text-ink-subtle"
                             }`}>
                               <Clock className="h-3.5 w-3.5" />
-                              {isExpired ? "Expired" : `Expires in ${days}d`}
+                              {isExpired ? t("myJobs.expired") : `${t("myJobs.expiresIn")} ${days}${t("myJobs.daysAbbrev")}`}
                             </span>
                           )}
 
@@ -186,7 +190,7 @@ export default function MyJobsPage() {
                             job.boosted ? (
                               <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs font-bold text-amber-700">
                                 <TrendingUp className="h-3.5 w-3.5" />
-                                Boosted
+                                {t("myJobs.boosted")}
                               </span>
                             ) : (
                               <button
@@ -195,7 +199,7 @@ export default function MyJobsPage() {
                                 className="inline-flex items-center gap-1.5 rounded-xl border border-brand/40 bg-brand/5 px-3 py-1.5 text-xs font-bold text-brand hover:bg-brand/10 transition-colors disabled:opacity-50"
                               >
                                 <TrendingUp className="h-3.5 w-3.5" />
-                                {boostingJobId === job.id ? "Boosting…" : "Boost Post"}
+                                {boostingJobId === job.id ? t("myJobs.boosting") : t("myJobs.boostPost")}
                               </button>
                             )
                           ) : (
@@ -204,7 +208,7 @@ export default function MyJobsPage() {
                               className="inline-flex items-center gap-1.5 rounded-xl border border-outline px-3 py-1.5 text-xs font-semibold text-ink-muted hover:text-ink transition-colors"
                             >
                               <TrendingUp className="h-3.5 w-3.5" />
-                              Boost (Pro)
+                              {t("myJobs.boostPro")}
                             </Link>
                           )}
                         </div>
@@ -218,7 +222,6 @@ export default function MyJobsPage() {
         </div>
       </div>
 
-      <Footer />
     </div>
   );
 }

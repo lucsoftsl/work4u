@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Plus, Edit2, Trash2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { QuestModal } from '@/components/admin/QuestModal';
+import { useTranslation } from '@/lib/i18n';
 import {
     fetchQuests,
     createQuest,
@@ -18,7 +19,8 @@ const TYPES = ['daily', 'weekly', 'main', 'side'];
 const DIFFICULTIES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
 export default function AdminQuestsPage() {
-    const { user } = useAuth();
+    const { t } = useTranslation();
+    const { user, firebaseToken } = useAuth();
     const router = useRouter();
 
     const [quests, setQuests] = useState<Quest[]>([]);
@@ -43,14 +45,14 @@ export default function AdminQuestsPage() {
     }, [user?.id, filters]);
 
     const loadQuests = async () => {
-        if (!user?.id) return;
+        if (!user?.id || !firebaseToken) return;
         setIsLoading(true);
         try {
             const filterParams: Record<string, string> = {};
             if (filters.type) filterParams.type = filters.type;
             if (filters.difficulty) filterParams.difficulty = filters.difficulty;
 
-            const data = await fetchQuests(user.id, filterParams);
+            const data = await fetchQuests(user.id, firebaseToken, filterParams);
             setQuests(data);
         } catch (error) {
             console.error('Failed to load quests:', error);
@@ -65,13 +67,13 @@ export default function AdminQuestsPage() {
     };
 
     const handleSave = async (quest: QuestForm) => {
-        if (!user?.id) return;
+        if (!user?.id || !firebaseToken) return;
         try {
             setIsLoading(true);
             if (selectedQuest) {
-                await updateQuest(user.id, quest.id, quest);
+                await updateQuest(user.id, firebaseToken, quest.id, quest);
             } else {
-                await createQuest(user.id, quest);
+                await createQuest(user.id, firebaseToken, quest);
             }
             await loadQuests();
             setModalOpen(false);
@@ -83,10 +85,10 @@ export default function AdminQuestsPage() {
     };
 
     const handleDelete = async (questId: string) => {
-        if (!user?.id || !confirm('Are you sure you want to delete this quest?')) return;
+        if (!user?.id || !firebaseToken || !confirm(t('admin.deleteConfirm'))) return;
         try {
             setIsLoading(true);
-            await deleteQuest(user.id, questId);
+            await deleteQuest(user.id, firebaseToken, questId);
             await loadQuests();
         } catch (error) {
             console.error('Failed to delete quest:', error);
@@ -111,15 +113,15 @@ export default function AdminQuestsPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h1 className="text-4xl font-bold text-foreground mb-2">Manage Quests</h1>
-                        <p className="text-muted-foreground">Create and manage gamification quests</p>
+                        <h1 className="text-4xl font-bold text-foreground mb-2">{t('admin.quests')}</h1>
+                        <p className="text-muted-foreground">{t('admin.questsDesc')}</p>
                     </div>
                     <Button
                         onClick={() => handleOpenModal()}
                         className="gap-2"
                     >
                         <Plus className="w-5 h-5" />
-                        New Quest
+                        {t('admin.newQuest')}
                     </Button>
                 </div>
 
@@ -131,7 +133,7 @@ export default function AdminQuestsPage() {
                                 <Search className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
                                 <input
                                     type="text"
-                                    placeholder="Search quests..."
+                                    placeholder={t('admin.searchQuests')}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
@@ -146,7 +148,7 @@ export default function AdminQuestsPage() {
                             onChange={(e) => setFilters({ ...filters, type: e.target.value })}
                             className="px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                         >
-                            <option value="">All Types</option>
+                            <option value="">{t('admin.allTypes')}</option>
                             {TYPES.map((type) => (
                                 <option key={type} value={type}>
                                     {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -159,7 +161,7 @@ export default function AdminQuestsPage() {
                             onChange={(e) => setFilters({ ...filters, difficulty: e.target.value })}
                             className="px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                         >
-                            <option value="">All Difficulties</option>
+                            <option value="">{t('admin.allDifficulties')}</option>
                             {DIFFICULTIES.map((difficulty) => (
                                 <option key={difficulty} value={difficulty}>
                                     {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
@@ -172,12 +174,12 @@ export default function AdminQuestsPage() {
                 {/* Quests Table */}
                 {isLoading ? (
                     <div className="text-center py-12">
-                        <p className="text-muted-foreground">Loading quests...</p>
+                        <p className="text-muted-foreground">{t('admin.loadingQuests')}</p>
                     </div>
                 ) : filteredQuests.length === 0 ? (
                     <div className="text-center py-12 bg-background border border-border rounded-lg">
-                        <p className="text-muted-foreground mb-4">No quests found</p>
-                        <Button onClick={() => handleOpenModal()}>Create First Quest</Button>
+                        <p className="text-muted-foreground mb-4">{t('admin.noQuests')}</p>
+                        <Button onClick={() => handleOpenModal()}>{t('admin.createFirstQuest')}</Button>
                     </div>
                 ) : (
                     <div className="space-y-3">
@@ -197,14 +199,14 @@ export default function AdminQuestsPage() {
                                             {quest.difficulty}
                                         </span>
                                         <span className="text-muted-foreground">
-                                            {quest.maxProgress} Progress • {quest.rewards.xp} XP • {quest.rewards.gold} Gold
+                                            {quest.maxProgress} {t('admin.progress')} • {quest.rewards.xp} {t('admin.xp')} • {quest.rewards.gold} {t('admin.gold')}
                                         </span>
                                         {quest.duration && (
-                                            <span className="text-muted-foreground">Duration: {quest.duration}</span>
+                                            <span className="text-muted-foreground">{t('admin.durationPrefix')} {quest.duration}</span>
                                         )}
                                         {!quest.enabled && (
                                             <span className="px-2 py-1 bg-red-900/20 text-red-400 rounded">
-                                                Disabled
+                                                {t('admin.disabled')}
                                             </span>
                                         )}
                                     </div>

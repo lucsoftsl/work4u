@@ -9,6 +9,9 @@ export interface ChatMessage {
     message: {
         text?: string;
         imageUrl?: string;
+        translatedText?: string;
+        translatedLang?: string;
+        sourceLang?: string;
     };
     jobData?: {
         id?: string;
@@ -55,6 +58,9 @@ export function useChatWebSocket(firebaseToken: string | null, otherUserId?: str
             message: {
                 text: msg?.message?.text ?? msg?.text ?? undefined,
                 imageUrl: msg?.message?.imageUrl ?? msg?.imageUrl ?? undefined,
+                translatedText: msg?.message?.translatedText ?? undefined,
+                translatedLang: msg?.message?.translatedLang ?? undefined,
+                sourceLang: msg?.message?.sourceLang ?? undefined,
             },
             jobData: msg?.jobData ?? msg?.message?.jobData ?? undefined,
             dateTimeCreated: msg?.dateTimeCreated ?? new Date().toISOString(),

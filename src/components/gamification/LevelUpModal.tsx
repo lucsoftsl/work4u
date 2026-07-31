@@ -6,6 +6,7 @@ import { RootState } from '@/store';
 import { Star, Sparkles, Gift, TrendingUp, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useTranslation } from '@/lib/i18n';
+import { getPlayerTitleKey } from '@/lib/gamification-utils';
 
 interface LevelUpModalProps {
     onClose?: () => void;
@@ -33,9 +34,9 @@ export function LevelUpModal({ onClose }: LevelUpModalProps) {
     if (!isOpen) return null;
 
     const rewards = [
-        { icon: Star, label: 'New abilities unlocked', color: 'text-primary' },
-        { icon: Gift, label: 'Bonus rewards available', color: 'text-secondary' },
-        { icon: TrendingUp, label: 'Increased earning potential', color: 'text-accent' },
+        { icon: Star, label: t('gamification.newAbilities'), color: 'text-primary' },
+        { icon: Gift, label: t('gamification.bonusRewards'), color: 'text-secondary' },
+        { icon: TrendingUp, label: t('gamification.increasedEarning'), color: 'text-accent' },
     ];
 
     return (
@@ -71,7 +72,7 @@ export function LevelUpModal({ onClose }: LevelUpModalProps) {
                         </div>
 
                         <p className="text-xl font-bold text-secondary mb-6">
-                            {player.title}
+                            {t(getPlayerTitleKey(player.title))}
                         </p>
 
                         <div className="space-y-3 mb-6">
@@ -93,7 +94,7 @@ export function LevelUpModal({ onClose }: LevelUpModalProps) {
                             onClick={handleClose}
                             className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
                         >
-                            Continue Adventure
+                            {t('gamification.continueAdventure')}
                         </Button>
                     </div>
                 </div>

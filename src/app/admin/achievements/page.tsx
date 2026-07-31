@@ -20,7 +20,7 @@ const RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
 export default function AdminAchievementsPage() {
     const { t } = useTranslation();
-    const { user } = useAuth();
+    const { user, firebaseToken } = useAuth();
     const router = useRouter();
 
     const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -45,14 +45,14 @@ export default function AdminAchievementsPage() {
     }, [user?.id, filters]);
 
     const loadAchievements = async () => {
-        if (!user?.id) return;
+        if (!user?.id || !firebaseToken) return;
         setIsLoading(true);
         try {
             const filterParams: Record<string, string> = {};
             if (filters.category) filterParams.category = filters.category;
             if (filters.rarity) filterParams.rarity = filters.rarity;
 
-            const data = await fetchAchievements(user.id, filterParams);
+            const data = await fetchAchievements(user.id, firebaseToken, filterParams);
             setAchievements(data);
         } catch (error) {
             console.error('Failed to load achievements:', error);
@@ -67,13 +67,13 @@ export default function AdminAchievementsPage() {
     };
 
     const handleSave = async (achievement: AchievementForm) => {
-        if (!user?.id) return;
+        if (!user?.id || !firebaseToken) return;
         try {
             setIsLoading(true);
             if (selectedAchievement) {
-                await updateAchievement(user.id, achievement.id, achievement);
+                await updateAchievement(user.id, firebaseToken, achievement.id, achievement);
             } else {
-                await createAchievement(user.id, achievement);
+                await createAchievement(user.id, firebaseToken, achievement);
             }
             await loadAchievements();
             setModalOpen(false);
@@ -85,10 +85,10 @@ export default function AdminAchievementsPage() {
     };
 
     const handleDelete = async (achievementId: string) => {
-        if (!user?.id || !confirm('Are you sure you want to delete this achievement?')) return;
+        if (!user?.id || !firebaseToken || !confirm(t('admin.deleteConfirm'))) return;
         try {
             setIsLoading(true);
-            await deleteAchievement(user.id, achievementId);
+            await deleteAchievement(user.id, firebaseToken, achievementId);
             await loadAchievements();
         } catch (error) {
             console.error('Failed to delete achievement:', error);
@@ -113,15 +113,15 @@ export default function AdminAchievementsPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h1 className="text-4xl font-bold text-foreground mb-2">Manage Achievements</h1>
-                        <p className="text-muted-foreground">Create and manage gamification achievements</p>
+                        <h1 className="text-4xl font-bold text-foreground mb-2">{t('admin.achievements')}</h1>
+                        <p className="text-muted-foreground">{t('admin.achievementsDesc')}</p>
                     </div>
                     <Button
                         onClick={() => handleOpenModal()}
                         className="gap-2"
                     >
                         <Plus className="w-5 h-5" />
-                        New Achievement
+                        {t('admin.newAchievement')}
                     </Button>
                 </div>
 
@@ -133,7 +133,7 @@ export default function AdminAchievementsPage() {
                                 <Search className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
                                 <input
                                     type="text"
-                                    placeholder="Search achievements..."
+                                    placeholder={t('admin.searchAchievements')}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
@@ -148,7 +148,7 @@ export default function AdminAchievementsPage() {
                             onChange={(e) => setFilters({ ...filters, category: e.target.value })}
                             className="px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                         >
-                            <option value="">All Categories</option>
+                            <option value="">{t('admin.allCategories')}</option>
                             {CATEGORIES.map((cat) => (
                                 <option key={cat} value={cat}>
                                     {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -161,7 +161,7 @@ export default function AdminAchievementsPage() {
                             onChange={(e) => setFilters({ ...filters, rarity: e.target.value })}
                             className="px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                         >
-                            <option value="">All Rarities</option>
+                            <option value="">{t('admin.allRarities')}</option>
                             {RARITIES.map((rarity) => (
                                 <option key={rarity} value={rarity}>
                                     {rarity.charAt(0).toUpperCase() + rarity.slice(1)}
@@ -174,12 +174,12 @@ export default function AdminAchievementsPage() {
                 {/* Achievements Table */}
                 {isLoading ? (
                     <div className="text-center py-12">
-                        <p className="text-muted-foreground">Loading achievements...</p>
+                        <p className="text-muted-foreground">{t('admin.loadingAchievements')}</p>
                     </div>
                 ) : filteredAchievements.length === 0 ? (
                     <div className="text-center py-12 bg-background border border-border rounded-lg">
-                        <p className="text-muted-foreground mb-4">No achievements found</p>
-                        <Button onClick={() => handleOpenModal()}>Create First Achievement</Button>
+                        <p className="text-muted-foreground mb-4">{t('admin.noAchievements')}</p>
+                        <Button onClick={() => handleOpenModal()}>{t('admin.createFirst')}</Button>
                     </div>
                 ) : (
                     <div className="space-y-3">
@@ -201,16 +201,16 @@ export default function AdminAchievementsPage() {
                                                 {achievement.rarity}
                                             </span>
                                             <span className="text-muted-foreground">
-                                                {achievement.rewards.xp} XP • {achievement.rewards.gold} Gold
+                                                {achievement.rewards.xp} {t('admin.xp')} • {achievement.rewards.gold} {t('admin.gold')}
                                             </span>
                                             {!achievement.enabled && (
                                                 <span className="px-2 py-1 bg-red-900/20 text-red-400 rounded">
-                                                    Disabled
+                                                    {t('admin.disabled')}
                                                 </span>
                                             )}
                                             {achievement.hidden && (
                                                 <span className="px-2 py-1 bg-yellow-900/20 text-yellow-400 rounded">
-                                                    Hidden
+                                                    {t('admin.hidden')}
                                                 </span>
                                             )}
                                         </div>

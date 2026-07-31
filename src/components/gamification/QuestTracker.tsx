@@ -46,8 +46,8 @@ export function QuestTracker() {
         return (
             <div className="bg-card border border-border rounded-lg p-6 text-center">
                 <ScrollText className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-muted-foreground">No active quests</p>
-                <p className="text-xs text-muted-foreground mt-1">Accept quests to track your progress</p>
+                <p className="text-muted-foreground">{t('gamification.noActiveQuests')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('gamification.acceptQuestsHint')}</p>
             </div>
         );
     }
@@ -124,7 +124,7 @@ export function QuestTracker() {
                             {quest.progress >= quest.maxProgress && (
                                 <div className="flex items-center gap-1 text-accent ml-auto">
                                     <CheckCircle2 className="w-3 h-3" />
-                                    <span className="font-bold">Ready to claim!</span>
+                                    <span className="font-bold">{t('gamification.readyToClaim')}</span>
                                 </div>
                             )}
                         </div>

@@ -3,15 +3,17 @@
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 import { useChat } from "@/context/ChatContext";
+import { useTranslation } from "@/lib/i18n";
 
 export function ChatHeaderIcon() {
     const { unreadCount } = useChat();
+    const { t } = useTranslation();
 
     return (
         <Link
             href="/chat"
             className="relative p-2 rounded-full hover:bg-muted transition-colors text-foreground hover:text-foreground"
-            aria-label="Messages"
+            aria-label={t('chat.messagesAria')}
         >
             <MessageCircle size={24} />
             {unreadCount > 0 && (

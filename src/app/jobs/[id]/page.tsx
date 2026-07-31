@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  CheckCircle2,
   Clock,
   DollarSign,
   MapPin,
@@ -19,13 +20,23 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { JobApplySidebar } from "@/components/JobApplySidebar";
+import { JobChecklist } from "@/components/JobChecklist";
+import { QuestStageTracker } from "@/components/QuestStageTracker";
+import { JobWorkPhotos } from "@/components/JobWorkPhotos";
+import { JobPaymentCard } from "@/components/JobPaymentCard";
+import { ReportButton } from "@/components/ReportButton";
+import { ReviewForm } from "@/components/ReviewForm";
 import { api } from "@/lib/api";
 import { fetchMessagesWithUser } from "@/api";
+import { reviewsApi } from "@/lib/reviews-api";
 import { useChatWebSocket } from "@/hooks/useChatWebSocket";
 import { useAuth } from "@/context/AuthContext";
 import { useChat } from "@/context/ChatContext";
 import { useTranslation } from "@/lib/i18n";
-import type { Job } from "@/api/types";
+import { getCategoryName } from "@/lib/category-utils";
+import { handleJobCompletion } from "@/lib/gamification-utils";
+import type { Job, Review } from "@/api/types";
 
 export default function JobDetailPage() {
   const params = useParams();
@@ -41,7 +52,11 @@ export default function JobDetailPage() {
   const [input, setInput] = useState("");
   const [httpMessages, setHttpMessages] = useState<[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [completingJob, setCompletingJob] = useState(false);
+  const [myReview, setMyReview] = useState<Review | null | undefined>(undefined);
   const isPoster = job && user?.id === job.createdByUserId;
+  const isHiredWorker = job && user?.id === job.hiredWorkerId;
+  const otherParticipantId = isPoster ? job?.hiredWorkerId : job?.createdByUserId;
 
   // WebSocket chat (pass undefined safely until job is loaded)
   const {
@@ -116,6 +131,49 @@ export default function JobDetailPage() {
       });
     }
   }, [wsMessages, job, jobId, addNotification, isLoadingHistory]);
+
+  // Once the job is completed, check whether the current participant already left a review
+  useEffect(() => {
+    let isActive = true;
+
+    if (!job || job.lifecycleStatus !== "COMPLETED" || !user?.id || !(isPoster || isHiredWorker)) {
+      setMyReview(null);
+      return;
+    }
+
+    reviewsApi
+      .listReviews({ jobId: job.id, createdByUserId: user.id })
+      .then((reviews) => {
+        if (isActive) setMyReview(reviews[0] ?? null);
+      })
+      .catch((err) => {
+        console.error("Failed to check existing review:", err);
+        if (isActive) setMyReview(null);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [job, user?.id, isPoster, isHiredWorker]);
+
+  const handleCompleteJob = async () => {
+    if (!job || !firebaseToken || !jobId) return;
+
+    const confirmed = window.confirm("Mark this job as completed? Both of you will be able to leave a review.");
+    if (!confirmed) return;
+
+    setCompletingJob(true);
+    try {
+      const updated = await api.completeJob(jobId, firebaseToken);
+      setJob(updated);
+      handleJobCompletion(updated.budget);
+    } catch (error) {
+      console.error("Failed to complete job:", error);
+      alert(error instanceof Error ? error.message : "Failed to mark job as completed.");
+    } finally {
+      setCompletingJob(false);
+    }
+  };
 
   const handleSend = () => {
     if (!input.trim() || !job || !jobId) return;
@@ -231,7 +289,7 @@ export default function JobDetailPage() {
           </Button>
           <div className="flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary/20 text-blue-800 text-xs font-semibold uppercase">
-              {job.category}
+              {getCategoryName(job.category, t)}
             </span>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               {job.title}
@@ -316,6 +374,63 @@ export default function JobDetailPage() {
               <li>Comfortable sharing progress updates and photos.</li>
             </ul>
           </div>
+
+          {(job.lifecycleStatus === "IN_PROGRESS" || job.lifecycleStatus === "COMPLETED") &&
+            firebaseToken &&
+            (isPoster || isHiredWorker) && (
+              <QuestStageTracker
+                job={job}
+                firebaseToken={firebaseToken}
+                isHiredWorker={Boolean(isHiredWorker)}
+                hasReviewed={Boolean(myReview)}
+                onUpdated={setJob}
+              />
+            )}
+
+          {job.lifecycleStatus === "IN_PROGRESS" &&
+            firebaseToken &&
+            (isPoster || user?.id === job.hiredWorkerId) && (
+              <JobChecklist jobId={job.id} firebaseToken={firebaseToken} />
+            )}
+
+          {(job.lifecycleStatus === "IN_PROGRESS" || job.lifecycleStatus === "COMPLETED") &&
+            firebaseToken &&
+            (isPoster || isHiredWorker) && (
+              <JobWorkPhotos jobId={job.id} firebaseToken={firebaseToken} currentUserId={user?.id} />
+            )}
+
+          {(job.lifecycleStatus === "IN_PROGRESS" || job.lifecycleStatus === "COMPLETED") &&
+            firebaseToken &&
+            (isPoster || isHiredWorker) && (
+              <JobPaymentCard
+                job={job}
+                firebaseToken={firebaseToken}
+                isPoster={Boolean(isPoster)}
+                onUpdated={setJob}
+              />
+            )}
+
+          {job.lifecycleStatus === "DISPUTED" && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+              <p className="text-sm font-semibold text-red-800">This job is under dispute</p>
+              <p className="mt-1 text-sm text-red-700">
+                A report has been filed and this job is frozen until an admin reviews it. Further payment and completion actions are paused.
+              </p>
+            </div>
+          )}
+
+          {["IN_PROGRESS", "COMPLETED"].includes(job.lifecycleStatus) &&
+            firebaseToken &&
+            otherParticipantId &&
+            (isPoster || isHiredWorker) && (
+              <ReportButton
+                reportedUserId={otherParticipantId}
+                reportedUserName={isPoster ? "the worker" : job.createdBy.name}
+                jobId={job.id}
+                firebaseToken={firebaseToken}
+                onSubmitted={() => setJob((prev) => (prev ? { ...prev, lifecycleStatus: "DISPUTED" } : prev))}
+              />
+            )}
         </div>
 
         {/* Sidebar */}
@@ -344,6 +459,12 @@ export default function JobDetailPage() {
             </div>
             {isPoster ? (
               <div className="space-y-3">
+                {job.lifecycleStatus === "IN_PROGRESS" && (
+                  <Button className="w-full" onClick={handleCompleteJob} disabled={completingJob}>
+                    <CheckCircle2 size={18} />
+                    {completingJob ? "Marking as completed..." : "Mark job as completed"}
+                  </Button>
+                )}
                 <Button
                   className="w-full"
                   asChild
@@ -364,20 +485,29 @@ export default function JobDetailPage() {
                 </Button>
               </div>
             ) : (
-              <>
-                <Button
-                  className="w-full"
-                  disabled={isPoster}
-                  title={isPoster ? "You cannot apply to your own job" : ""}
-                >
-                  {t("jobDetail.applyToJob")}
-                </Button>
-                <Button variant="outline" className="w-full">
-                  {t("jobDetail.saveForLater")}
-                </Button>
-              </>
+              <JobApplySidebar job={job} firebaseToken={firebaseToken} userId={user?.id} />
             )}
           </div>
+
+          {job.lifecycleStatus === "COMPLETED" &&
+            firebaseToken &&
+            otherParticipantId &&
+            (isPoster || isHiredWorker) &&
+            (myReview === undefined ? null : myReview ? (
+              <div className="bg-card shadow-sm rounded-2xl p-6 border border-gray-100">
+                <p className="text-sm text-muted-foreground">
+                  You rated this job {myReview.ratingCount} / 5. Thanks for the feedback!
+                </p>
+              </div>
+            ) : (
+              <ReviewForm
+                jobId={job.id}
+                targetUserId={otherParticipantId}
+                targetName={isPoster ? "the worker" : job.createdBy.name}
+                firebaseToken={firebaseToken}
+                onSubmitted={setMyReview}
+              />
+            ))}
 
           <div className="bg-card shadow-sm rounded-2xl p-6 border border-gray-100 flex flex-col h-[28rem]">
             <div className="flex items-center justify-between mb-3">

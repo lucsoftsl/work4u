@@ -1,19 +1,23 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import type { RootState } from '@/store';
+import { useState, useEffect, useMemo, type ChangeEvent } from 'react';
+import { useDispatch } from 'react-redux';
 import { setUser } from '@/store/slices/authSlice';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import { LocationPicker } from '@/components/ui/LocationPicker';
 import { useTranslation } from '@/lib/i18n';
 import { useAuth } from '@/context/AuthContext';
 import { updateUserProfile as updateProfile, getIdToken } from '@/lib/auth-service';
 import countriesData from '@/data/countries.json';
 import { deleteUserAccount } from '@/api';
 import { CharacterSheet } from '@/components/gamification/CharacterSheet';
-import { User, Sparkles } from 'lucide-react';
+import { ReviewsList } from '@/components/ReviewsList';
+import { reviewsApi } from '@/lib/reviews-api';
+import { uploadApi } from '@/lib/upload-api';
+import type { Review } from '@/api/types';
+import { User, Sparkles, Star, Camera, Gift } from 'lucide-react';
 
 type Country = typeof countriesData[number];
 const countries = countriesData as Country[];
@@ -29,7 +33,7 @@ const countryFlag = (code?: string) => {
 
 const parseAddress = (addr?: string | null) => {
   if (!addr) {
-    return { country: '', state: '', address: '', city: '', postcode: '', number: '' };
+    return { country: '', state: '', address: '', city: '', postcode: '', number: '', latitude: null as number | null, longitude: null as number | null };
   }
   try {
     const parsed = JSON.parse(addr);
@@ -40,9 +44,11 @@ const parseAddress = (addr?: string | null) => {
       city: parsed.city ?? '',
       postcode: parsed.postcode ?? '',
       number: parsed.number ?? '',
+      latitude: typeof parsed.latitude === 'number' ? parsed.latitude : null,
+      longitude: typeof parsed.longitude === 'number' ? parsed.longitude : null,
     };
   } catch {
-    return { country: '', state: '', address: '', city: '', postcode: '', number: '' };
+    return { country: '', state: '', address: '', city: '', postcode: '', number: '', latitude: null as number | null, longitude: null as number | null };
   }
 };
 
@@ -50,11 +56,14 @@ export default function ProfilePage() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const router = useRouter();
-  const { signOut } = useAuth();
-  const user = useSelector((state: RootState) => state.auth.user);
+  const { user, loading: authLoading, signOut, firebaseToken } = useAuth();
 
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<'character' | 'account'>('character');
+  const [activeTab, setActiveTab] = useState<'character' | 'account' | 'reviews'>('character');
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [exportingData, setExportingData] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -65,7 +74,7 @@ export default function ProfilePage() {
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [showStateDropdown, setShowStateDropdown] = useState(false);
 
-  const parsedUserAddress = user ? parseAddress(user.address) : { country: '', state: '', address: '', city: '', postcode: '', number: '' };
+  const parsedUserAddress = user ? parseAddress(user.address) : { country: '', state: '', address: '', city: '', postcode: '', number: '', latitude: null as number | null, longitude: null as number | null };
 
   const [formData, setFormData] = useState({
     displayName: user?.displayName || '',
@@ -78,6 +87,8 @@ export default function ProfilePage() {
     city: parsedUserAddress.city || '',
     postcode: parsedUserAddress.postcode || user?.postcode || '',
     number: parsedUserAddress.number || user?.number || '',
+    latitude: parsedUserAddress.latitude ?? null,
+    longitude: parsedUserAddress.longitude ?? null,
   });
 
   const selectedCountry = useMemo(() => countries.find((c) => c.code2 === formData.country), [formData.country]);
@@ -106,9 +117,39 @@ export default function ProfilePage() {
     }
   }, [selectedCountry, formData.state]);
 
+  useEffect(() => {
+    if (activeTab !== 'reviews' || !user?.id) return;
+    let isActive = true;
+
+    setReviewsLoading(true);
+    reviewsApi
+      .listReviews({ userId: user.id })
+      .then((data) => {
+        if (isActive) setReviews(data);
+      })
+      .catch((err) => console.error('Failed to load reviews:', err))
+      .finally(() => {
+        if (isActive) setReviewsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [activeTab, user?.id]);
+
   // Show nothing during SSR to prevent hydration mismatch
   if (!mounted) {
     return null;
+  }
+
+  // Firebase's auth check is async — wait for it before deciding the user
+  // is signed out, otherwise this flashes "sign in required" on every load.
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+      </div>
+    );
   }
 
   if (!user) {
@@ -139,6 +180,8 @@ export default function ProfilePage() {
       city: parsed.city || '',
       postcode: parsed.postcode || user.postcode || '',
       number: parsed.number || user.number || '',
+      latitude: parsed.latitude,
+      longitude: parsed.longitude,
     });
     setIsEditing(true);
     setError(null);
@@ -159,7 +202,7 @@ export default function ProfilePage() {
     setError(null);
   };
 
-  const parsedViewAddress = user ? parseAddress(user.address) : { country: '', state: '', address: '', city: '', postcode: '', number: '' };
+  const parsedViewAddress = user ? parseAddress(user.address) : { country: '', state: '', address: '', city: '', postcode: '', number: '', latitude: null as number | null, longitude: null as number | null };
   const viewCountry = user ? countries.find((c) => c.code2 === (parsedViewAddress.country || user.country)) : undefined;
   const viewState = viewCountry?.states.find((s) => s.code === (parsedViewAddress.state || user.state));
 
@@ -176,6 +219,8 @@ export default function ProfilePage() {
         city: formData.city || '',
         postcode: formData.postcode || '',
         number: formData.number || '',
+        latitude: formData.latitude,
+        longitude: formData.longitude,
       };
 
       const updated = await updateProfile(user.id, {
@@ -220,6 +265,52 @@ export default function ProfilePage() {
     }
   };
 
+  const handlePhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !firebaseToken) return;
+
+    setUploadingPhoto(true);
+    setError(null);
+    try {
+      const uploaded = await uploadApi.uploadImage(file, firebaseToken);
+      const updated = await updateProfile(user.id, { photoUrl: uploaded.url });
+      dispatch(setUser({ ...user, photoUrl: updated.photoUrl ?? uploaded.url }));
+    } catch (err: unknown) {
+      console.error('Failed to upload photo:', err);
+      setError((err as Error).message || t('profile.uploadPhotoError'));
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleExportData = async () => {
+    setExportingData(true);
+    setError(null);
+    try {
+      const token = await getIdToken();
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/users/${user.id}/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(t('profile.exportDataError'));
+
+      const data = await response.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `work4u-data-export-${user.id}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      console.error('Failed to export data:', err);
+      setError((err as Error).message || t('profile.exportDataError'));
+    } finally {
+      setExportingData(false);
+    }
+  };
+
   const handleDelete = async () => {
     setIsDeleting(true);
     setError(null);
@@ -251,11 +342,11 @@ export default function ProfilePage() {
           <p className="text-muted-foreground mb-6">{t('profile.subtitle')}</p>
 
           {/* Tab Navigation */}
-          <div className="flex gap-2 border-b border-border">
+          <div className="flex gap-2 overflow-x-auto border-b border-border [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
               onClick={() => setActiveTab('character')}
               className={`
-                px-6 py-3 font-semibold transition-all relative
+                shrink-0 whitespace-nowrap px-4 py-3 font-semibold transition-all relative sm:px-6
                 ${activeTab === 'character'
                   ? 'text-primary border-b-2 border-primary'
                   : 'text-muted-foreground hover:text-foreground'
@@ -264,13 +355,13 @@ export default function ProfilePage() {
             >
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4" />
-                Character Sheet
+                {t('profile.characterSheetTab')}
               </div>
             </button>
             <button
               onClick={() => setActiveTab('account')}
               className={`
-                px-6 py-3 font-semibold transition-all relative
+                shrink-0 whitespace-nowrap px-4 py-3 font-semibold transition-all relative sm:px-6
                 ${activeTab === 'account'
                   ? 'text-primary border-b-2 border-primary'
                   : 'text-muted-foreground hover:text-foreground'
@@ -279,14 +370,56 @@ export default function ProfilePage() {
             >
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4" />
-                Account Settings
+                {t('profile.accountSettingsTab')}
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('reviews')}
+              className={`
+                shrink-0 whitespace-nowrap px-4 py-3 font-semibold transition-all relative sm:px-6
+                ${activeTab === 'reviews'
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+                }
+              `}
+            >
+              <div className="flex items-center gap-2">
+                <Star className="w-4 h-4" />
+                {t('common.reviews')}
               </div>
             </button>
           </div>
         </div>
 
+        {/* Invite & Earn */}
+        <Link
+          href="/referrals"
+          className="mb-8 flex items-center justify-between gap-3 rounded-2xl border border-brand/20 bg-brand/5 px-5 py-4 transition-colors hover:bg-brand/10"
+        >
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand/10 text-brand">
+              <Gift className="h-4 w-4" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-ink">{t('profile.inviteFriendsTitle')}</p>
+              <p className="text-xs text-ink-muted">{t('profile.inviteFriendsDesc')}</p>
+            </div>
+          </div>
+          <span className="text-sm font-semibold text-brand whitespace-nowrap">{t('profile.inviteAction')} &rarr;</span>
+        </Link>
+
         {/* Tab Content */}
         {activeTab === 'character' && <CharacterSheet />}
+
+        {activeTab === 'reviews' && (
+          <div>
+            {reviewsLoading ? (
+              <div className="surface-panel p-10 text-center text-ink-muted">{t('profile.loadingReviews')}</div>
+            ) : (
+              <ReviewsList reviews={reviews} />
+            )}
+          </div>
+        )}
 
         {activeTab === 'account' && (
           <div>
@@ -299,20 +432,37 @@ export default function ProfilePage() {
               <div className="px-8 pb-8">
                 <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between -mt-16 mb-6">
                   <div className="flex items-end gap-4">
-                    {user.photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={user.photoUrl}
-                        alt={user.displayName || user.email || 'User'}
-                        className="w-32 h-32 rounded-full border-4 border-white shadow-lg bg-card object-cover"
-                      />
-                    ) : (
-                      <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center">
-                        <span className="text-4xl font-bold text-white">
-                          {(user.displayName || user.email || 'U')[0].toUpperCase()}
+                    <label className="relative block cursor-pointer group">
+                      {user.photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={user.photoUrl}
+                          alt={user.displayName || user.email || t('common.worker')}
+                          className="w-32 h-32 rounded-full border-4 border-white shadow-lg bg-card object-cover"
+                        />
+                      ) : (
+                        <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center">
+                          <span className="text-4xl font-bold text-white">
+                            {(user.displayName || user.email || 'U')[0].toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Camera className="w-6 h-6 text-white" />
+                      </span>
+                      {uploadingPhoto && (
+                        <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 text-xs font-semibold text-white">
+                          {t('profile.uploading')}
                         </span>
-                      </div>
-                    )}
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={handlePhotoChange}
+                        disabled={uploadingPhoto}
+                      />
+                    </label>
                     <div className="pb-2">
                       <h2 className="text-2xl font-bold text-foreground">{user.displayName || user.email}</h2>
                       <p className="text-muted-foreground">{user.email}</p>
@@ -325,7 +475,7 @@ export default function ProfilePage() {
                         {t('profile.editButton')}
                       </Button>
                       <Button onClick={handleSignOut} variant="outline" className="text-red-600 border-red-700 hover:bg-red-950/50">
-                        {t('nav.signOut') || 'Log out'}
+                        {t('nav.signOut')}
                       </Button>
                     </div>
                   )}
@@ -427,6 +577,17 @@ export default function ProfilePage() {
                           <Button variant="outline">{t('nav.postJob')}</Button>
                         </Link>
                       </div>
+                    </div>
+
+                    {/* Your Data */}
+                    <div className="pt-6 border-t border-border">
+                      <h3 className="text-lg font-semibold text-foreground mb-2">{t('profile.yourDataTitle')}</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        {t('profile.yourDataDesc')}
+                      </p>
+                      <Button variant="outline" onClick={handleExportData} disabled={exportingData}>
+                        {exportingData ? t('profile.preparingExport') : t('profile.downloadMyData')}
+                      </Button>
                     </div>
 
                     {/* Danger Zone */}
@@ -535,6 +696,24 @@ export default function ProfilePage() {
                           </span>
                         </label>
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">{t('profile.address')}</label>
+                      <LocationPicker
+                        value={{ lat: formData.latitude ?? 0, lng: formData.longitude ?? 0, address: formData.address }}
+                        onChange={({ lat, lng, address, components }) => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            address,
+                            latitude: lat,
+                            longitude: lng,
+                            city: components?.city || prev.city,
+                            postcode: components?.postcode || prev.postcode,
+                          }));
+                        }}
+                        addressPlaceholder={t('profile.address')}
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -652,15 +831,6 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">{t('profile.address')}</label>
-                        <input
-                          type="text"
-                          value={formData.address}
-                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                          className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary bg-card text-foreground"
-                        />
-                      </div>
                       <div>
                         <label className="block text-sm font-medium text-foreground mb-2">{t('profile.city')}</label>
                         <input

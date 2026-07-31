@@ -23,6 +23,15 @@ export async function fetchMessagesWithUser(token: string, withUserId: string, o
   return data;
 }
 
+export async function markMessageRead(token: string, messageId: string) {
+  const { data } = await api.post(
+    `/api/messages/${messageId}/read`,
+    {},
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return data;
+}
+
 export async function deleteUserAccount(token: string, userId: string) {
   await api.delete(`/api/users/${userId}`, {
     headers: { Authorization: `Bearer ${token}` },

@@ -1,7 +1,8 @@
 import { landingResponseSchema, type LandingResponse } from "@/types/landing";
 
-export async function fetchLandingContent(signal?: AbortSignal): Promise<LandingResponse> {
-  const response = await fetch(`/api/landing`, {
+export async function fetchLandingContent(signal?: AbortSignal, locale?: string): Promise<LandingResponse> {
+  const query = locale ? `?locale=${encodeURIComponent(locale)}` : "";
+  const response = await fetch(`/api/landing${query}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
     cache: "no-store",

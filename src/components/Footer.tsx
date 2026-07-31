@@ -1,17 +1,32 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useTranslation, type Locale } from '@/lib/i18n';
 import { useState } from 'react';
 
 export default function Footer() {
+    const pathname = usePathname();
     const { t, locale, setLocale } = useTranslation();
     const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+
+    // Same exclusion list as AppHeader: the homepage has its own bespoke
+    // footer already, and auth/immersive-map screens render chromeless.
+    if (
+        pathname === '/' ||
+        pathname.startsWith('/signup') ||
+        pathname.startsWith('/signin') ||
+        pathname.endsWith('/nearby-pros')
+    ) {
+        return null;
+    }
 
     const languages: { code: Locale; label: string }[] = [
         { code: 'en', label: t('footer.english') },
         { code: 'es', label: t('footer.spanish') },
         { code: 'fr', label: t('footer.french') },
+        { code: 'hu', label: t('footer.hungarian') },
+        { code: 'ro', label: t('footer.romanian') },
     ];
 
     const handleLanguageChange = (newLocale: Locale) => {
@@ -24,40 +39,42 @@ export default function Footer() {
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
                     <div>
-                        <h3 className="text-white font-semibold mb-4">work4u</h3>
+                        <h3 className="text-white font-semibold mb-4">Work4U</h3>
                         <p className="text-sm text-muted-foreground">
                             {t('footer.tagline')}
                         </p>
                     </div>
                     <div>
-                        <h4 className="text-white font-semibold mb-4">For Workers</h4>
+                        <h4 className="text-white font-semibold mb-4">{t('footer.forWorkers')}</h4>
                         <ul className="space-y-2 text-sm">
-                            <li><Link href="/jobs" className="text-muted-foreground hover:text-white transition-colors">Browse Jobs</Link></li>
-                            <li><Link href="/how-it-works" className="text-muted-foreground hover:text-white transition-colors">How it Works</Link></li>
-                            <li><Link href="#" className="text-muted-foreground hover:text-white transition-colors">Safety Tips</Link></li>
+                            <li><Link href="/jobs" className="text-muted-foreground hover:text-white transition-colors">{t('footer.browseJobs')}</Link></li>
+                            <li><Link href="/how-it-works" className="text-muted-foreground hover:text-white transition-colors">{t('footer.howItWorks')}</Link></li>
+                            <li><Link href="/how-it-works" className="text-muted-foreground hover:text-white transition-colors">{t('footer.safetyTips')}</Link></li>
                         </ul>
                     </div>
                     <div>
-                        <h4 className="text-white font-semibold mb-4">For Employers</h4>
+                        <h4 className="text-white font-semibold mb-4">{t('footer.forEmployers')}</h4>
                         <ul className="space-y-2 text-sm">
-                            <li><Link href="/post-job" className="text-muted-foreground hover:text-white transition-colors">Post a Job</Link></li>
-                            <li><Link href="#" className="text-muted-foreground hover:text-white transition-colors">Find Talent</Link></li>
-                            <li><Link href="#" className="text-muted-foreground hover:text-white transition-colors">Pricing</Link></li>
+                            <li><Link href="/post-job" className="text-muted-foreground hover:text-white transition-colors">{t('footer.postJob')}</Link></li>
+                            <li><Link href="/workers" className="text-muted-foreground hover:text-white transition-colors">{t('footer.findTalent')}</Link></li>
+                            <li><Link href="/pricing" className="text-muted-foreground hover:text-white transition-colors">{t('footer.pricing')}</Link></li>
                         </ul>
                     </div>
                     <div>
-                        <h4 className="text-white font-semibold mb-4">Company</h4>
+                        <h4 className="text-white font-semibold mb-4">{t('footer.company')}</h4>
                         <ul className="space-y-2 text-sm">
-                            <li><Link href="#" className="text-muted-foreground hover:text-white transition-colors">About</Link></li>
-                            <li><Link href="#" className="text-muted-foreground hover:text-white transition-colors">Blog</Link></li>
-                            <li><Link href="#" className="text-muted-foreground hover:text-white transition-colors">Contact</Link></li>
+                            <li><Link href="/how-it-works" className="text-muted-foreground hover:text-white transition-colors">{t('footer.about')}</Link></li>
+                            <li><Link href="/blog" className="text-muted-foreground hover:text-white transition-colors">{t('footer.blog')}</Link></li>
+                            <li><Link href="/contact" className="text-muted-foreground hover:text-white transition-colors">{t('footer.contact')}</Link></li>
+                            <li><Link href="/terms" className="text-muted-foreground hover:text-white transition-colors">{t('footer.terms')}</Link></li>
+                            <li><Link href="/privacy" className="text-muted-foreground hover:text-white transition-colors">{t('footer.privacy')}</Link></li>
                         </ul>
                     </div>
                 </div>
 
                 {/* Language Selector & Copyright */}
                 <div className="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <p className="text-sm text-muted-foreground">&copy; 2024 work4u. All rights reserved.</p>
+                    <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} Work4U. {t('footer.allRightsReserved')}</p>
 
                     {/* Language Dropdown */}
                     <div className="relative">
