@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/sync-translations.mjs",
-    "build": "next build",
+    "build": "node scripts/sync-translations.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "sync-translations": "node scripts/sync-translations.mjs",
