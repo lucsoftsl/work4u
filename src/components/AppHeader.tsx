@@ -8,8 +8,8 @@ import { ChatHeaderIcon } from "@/components/ChatHeaderIcon";
 import { XPBar } from '@/components/gamification/XPBar';
 import { BrandMark } from '@/components/BrandMark';
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Briefcase, Building2, Gift, LayoutDashboard, Menu, Settings, User, Users, X, Zap } from 'lucide-react';
+import { usePathname, useRouter } from "next/navigation";
+import { Briefcase, Building2, Gift, LayoutDashboard, LogOut, Menu, Settings, User, Users, X, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV_LINKS = [
@@ -22,8 +22,9 @@ const NAV_LINKS = [
 
 export function AppHeader() {
     const pathname = usePathname();
+    const router = useRouter();
     const { t } = useTranslation();
-    const { isAuthenticated, user, firebaseToken } = useAuth();
+    const { isAuthenticated, user, firebaseToken, signOut } = useAuth();
     const [menuOpen, setMenuOpen] = useState(false);
     const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(null);
 
@@ -54,6 +55,16 @@ export function AppHeader() {
         subStatus?.status === 'active' || subStatus?.status === 'trialing' ? subStatus.plan : 'free';
     const isPaid = currentPlan !== 'free';
     const planLabel = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
+    const isAdmin = user?.userType === 'ADMIN';
+
+    const handleSignOut = async () => {
+        try {
+            await signOut();
+            router.push('/signin');
+        } catch (error) {
+            console.error('Sign out failed:', error);
+        }
+    };
 
     // Don't show header on public marketing and auth onboarding screens, or
     // the full-bleed nearby-workers map (it renders its own compact top bar)
@@ -84,7 +95,7 @@ export function AppHeader() {
                                     {t(labelKey)}
                                 </Link>
                             ))}
-                            {isPaid ? (
+                            {isAdmin ? null : isPaid ? (
                                 <Link
                                     href="/pricing"
                                     className="hidden shrink-0 items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700 transition-colors hover:bg-amber-100 lg:inline-flex"
@@ -120,6 +131,14 @@ export function AppHeader() {
                             )}
                             <ChatHeaderIcon />
                             <button
+                                onClick={handleSignOut}
+                                title={t('nav.signOut')}
+                                aria-label={t('nav.signOut')}
+                                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border border-outline bg-white text-[#26445e] transition-colors hover:bg-[#f7fafc] lg:inline-flex"
+                            >
+                                <LogOut className="h-4 w-4" />
+                            </button>
+                            <button
                                 onClick={() => setMenuOpen((open) => !open)}
                                 aria-label={menuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
                                 aria-expanded={menuOpen}
@@ -148,14 +167,16 @@ export function AppHeader() {
                                 {t(labelKey)}
                             </Link>
                         ))}
-                        <Link
-                            href="/pricing"
-                            onClick={() => setMenuOpen(false)}
-                            className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-brand transition-colors hover:bg-[#f4f8fb]"
-                        >
-                            <Zap className="h-4 w-4" />
-                            {isPaid ? planLabel : t('nav.upgrade')}
-                        </Link>
+                        {!isAdmin && (
+                            <Link
+                                href="/pricing"
+                                onClick={() => setMenuOpen(false)}
+                                className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-brand transition-colors hover:bg-[#f4f8fb]"
+                            >
+                                <Zap className="h-4 w-4" />
+                                {isPaid ? planLabel : t('nav.upgrade')}
+                            </Link>
+                        )}
                         {user?.userType === 'ADMIN' && (
                             <Link
                                 href="/admin"
@@ -166,6 +187,16 @@ export function AppHeader() {
                                 {t('nav.admin')}
                             </Link>
                         )}
+                        <button
+                            onClick={() => {
+                                setMenuOpen(false);
+                                handleSignOut();
+                            }}
+                            className="flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold text-[#26445e] transition-colors hover:bg-[#f4f8fb]"
+                        >
+                            <LogOut className="h-4 w-4 text-brand" />
+                            {t('nav.signOut')}
+                        </button>
                     </div>
                 )}
 

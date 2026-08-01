@@ -82,12 +82,34 @@ async function clearLoggedInStateApi(userId: string, token: string): Promise<voi
     }
 }
 
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Signup creates the Firebase user first, which fires onAuthStateChanged
+// immediately — before POST /api/signup/step-1 has finished creating the
+// matching backend row. Without this retry, that race makes the very first
+// profile fetch 404 and permanently clobbers auth state to null for the
+// rest of the session. Retries only on 404 (row not created yet); any other
+// error status is returned immediately, unchanged.
+const PROFILE_FETCH_RETRY_DELAYS_MS = [300, 600, 1200, 2000];
+
 async function buildAuthUser(firebaseUser: User, token: string): Promise<AuthUser | null> {
-    const response = await fetch(`${API_URL}/api/users/${firebaseUser.uid}`, {
+    let response = await fetch(`${API_URL}/api/users/${firebaseUser.uid}`, {
         headers: {
             'Authorization': `Bearer ${token}`,
         },
     });
+
+    for (const delay of PROFILE_FETCH_RETRY_DELAYS_MS) {
+        if (response.status !== 404) break;
+        await sleep(delay);
+        response = await fetch(`${API_URL}/api/users/${firebaseUser.uid}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+    }
 
     if (!response.ok) {
         return null;

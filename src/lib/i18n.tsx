@@ -23,6 +23,12 @@ type Dictionaries = {
   ro: typeof ro;
 };
 
+// The DB (translationStrings table) is the editable source of truth for
+// admins, but the running app never fetches it directly — these bundled
+// JSON files are resynced from the DB at build time (see
+// scripts/sync-translations.mjs, wired as the "prebuild" step) and are what
+// actually ships. This keeps every page load a synchronous, zero-network
+// dictionary lookup instead of a per-locale-change API round trip.
 const dictionaries: Dictionaries = { en, fr, es, hu, ro };
 
 export type Locale = keyof Dictionaries;

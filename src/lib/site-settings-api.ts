@@ -1,4 +1,4 @@
-import type { ContactInfo, UpdateContactInfoPayload } from "@/api/types";
+import type { ContactInfo, UpdateContactInfoPayload, DeploySettings } from "@/api/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -23,5 +23,24 @@ export const siteSettingsApi = {
       body: JSON.stringify(payload),
     });
     return handle(response, "Failed to update contact info");
+  },
+
+  async adminGetDeploySettings(token: string): Promise<DeploySettings> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/site/deploy-settings`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return handle(response, "Failed to load deploy settings");
+  },
+
+  async adminSetDeploySettings(
+    payload: DeploySettings,
+    token: string
+  ): Promise<DeploySettings> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/site/deploy-settings`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    return handle(response, "Failed to update deploy settings");
   },
 };

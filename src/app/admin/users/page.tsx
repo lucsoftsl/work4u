@@ -14,15 +14,7 @@ import {
     type AdminUserSummary,
     type AdminGrantablePlan,
 } from "@/lib/admin-api";
-
-const GRANTABLE_PLANS: AdminGrantablePlan[] = ["free", "starter", "pro", "business"];
-
-const PLAN_LABEL_KEY: Record<AdminGrantablePlan, string> = {
-    free: "pricing.freeTierName",
-    starter: "pricing.starterTierName",
-    pro: "pricing.proTierName",
-    business: "pricing.businessTierName",
-};
+import { SetSubscriptionModal } from "@/components/admin/SetSubscriptionModal";
 
 const STATUS_STYLES: Record<AdminUserSummary["status"], string> = {
     ACTIVE: "bg-green-50 text-green-700",
@@ -40,6 +32,8 @@ export default function AdminUsersPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [actingOnId, setActingOnId] = useState<string | null>(null);
+    const [planModalUser, setPlanModalUser] = useState<AdminUserSummary | null>(null);
+    const [planModalInitialPlan, setPlanModalInitialPlan] = useState<AdminGrantablePlan>("free");
 
     useEffect(() => {
         if (user && user.userType !== "ADMIN") {
@@ -84,15 +78,15 @@ export default function AdminUsersPage() {
         }
     }
 
-    async function handleSetPlan(target: AdminUserSummary, plan: AdminGrantablePlan) {
-        if (!firebaseToken || !plan) return;
-        const reason = window.prompt(
-            `Set "${target.email}" to the ${plan} plan. Reason (optional, Cancel to abort):`
-        );
-        if (reason === null) return;
-        setActingOnId(target.id);
+    async function handleSetPlan(
+        plan: AdminGrantablePlan,
+        options: { reason?: string; activeFrom?: string; activeTo?: string }
+    ) {
+        if (!firebaseToken || !planModalUser) return;
+        setActingOnId(planModalUser.id);
         try {
-            await setUserSubscription(target.id, plan, firebaseToken, reason || undefined);
+            await setUserSubscription(planModalUser.id, plan, firebaseToken, options);
+            setPlanModalUser(null);
         } catch (err) {
             console.error("Failed to set subscription plan:", err);
             alert(err instanceof Error ? err.message : t("adminUsers.setPlanError"));
@@ -135,25 +129,16 @@ export default function AdminUsersPage() {
                                     </span>
                                     {u.userType !== "ADMIN" && (
                                         <>
-                                            <select
-                                                defaultValue=""
-                                                disabled={actingOnId === u.id}
-                                                onChange={(e) => {
-                                                    const plan = e.target.value as AdminGrantablePlan;
-                                                    e.target.value = "";
-                                                    if (plan) handleSetPlan(u, plan);
+                                            <button
+                                                onClick={() => {
+                                                    setPlanModalInitialPlan("free");
+                                                    setPlanModalUser(u);
                                                 }}
+                                                disabled={actingOnId === u.id}
                                                 className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground bg-background hover:bg-muted disabled:opacity-50"
                                             >
-                                                <option value="" disabled>
-                                                    {t("adminUsers.setPlanPlaceholder")}
-                                                </option>
-                                                {GRANTABLE_PLANS.map((plan) => (
-                                                    <option key={plan} value={plan}>
-                                                        {t(PLAN_LABEL_KEY[plan])}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                                {t("adminUsers.setPlanPlaceholder")}
+                                            </button>
                                             <button
                                                 onClick={() => handleToggleSuspend(u)}
                                                 disabled={actingOnId === u.id}
@@ -169,6 +154,14 @@ export default function AdminUsersPage() {
                     </div>
                 )}
             </div>
+            <SetSubscriptionModal
+                isOpen={planModalUser !== null}
+                user={planModalUser}
+                initialPlan={planModalInitialPlan}
+                onClose={() => setPlanModalUser(null)}
+                onSave={handleSetPlan}
+                isLoading={actingOnId === planModalUser?.id}
+            />
         </div>
     );
 }

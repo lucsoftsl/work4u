@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/sync-translations.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "sync-translations": "node scripts/sync-translations.mjs",
     "test:landing-contract": "node --test tests/landing-contract.test.mjs",
     "check:landing-api": "node scripts/verify-landing-api.mjs"
   },

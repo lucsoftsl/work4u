@@ -383,3 +383,7 @@ export type UpdateContactInfoPayload = {
   email?: string | null;
   address?: string | null;
 };
+
+export type DeploySettings = {
+  frontendDeployHookUrl: string | null;
+};

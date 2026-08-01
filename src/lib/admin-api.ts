@@ -227,13 +227,21 @@ export interface AdminSubscriptionGrant {
     userId: string;
     plan: AdminGrantablePlan;
     grantedByAdminId: string;
+    activeFrom: string | null;
+    activeTo: string | null;
+}
+
+export interface SetUserSubscriptionOptions {
+    reason?: string;
+    activeFrom?: string | null;
+    activeTo?: string | null;
 }
 
 export async function setUserSubscription(
     userId: string,
     plan: AdminGrantablePlan,
     token: string,
-    reason?: string
+    options?: SetUserSubscriptionOptions
 ): Promise<AdminSubscriptionGrant> {
     const response = await fetch(`${BASE_URL}/api/admin/users/${userId}/subscription`, {
         method: 'POST',
@@ -241,7 +249,12 @@ export async function setUserSubscription(
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ plan, reason }),
+        body: JSON.stringify({
+            plan,
+            reason: options?.reason,
+            activeFrom: options?.activeFrom || null,
+            activeTo: options?.activeTo || null,
+        }),
     });
 
     if (!response.ok) {
@@ -305,6 +318,109 @@ export async function scheduleJobDeletion(jobId: string, days: number, token: st
     if (!response.ok) {
         const error = await response.json().catch(() => ({}));
         throw new Error(error.error || 'Failed to schedule job deletion');
+    }
+    return response.json();
+}
+
+// Translation CMS API calls
+export type TranslationLocale = 'en' | 'fr' | 'es' | 'hu' | 'ro';
+
+export interface TranslationKeyEntry {
+    key: string;
+    values: Partial<Record<TranslationLocale, string>>;
+    dateTimeCreated: string;
+    dateTimeUpdated: string;
+}
+
+export interface TranslationListResult {
+    entries: TranslationKeyEntry[];
+    total: number;
+    page: number;
+    limit: number;
+}
+
+export async function fetchTranslations(
+    token: string,
+    options?: { search?: string; page?: number; limit?: number }
+): Promise<TranslationListResult> {
+    const params = new URLSearchParams();
+    if (options?.search) params.append('search', options.search);
+    if (options?.page) params.append('page', String(options.page));
+    if (options?.limit) params.append('limit', String(options.limit));
+
+    const response = await fetch(`${BASE_URL}/api/admin/translations?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch translations');
+    return response.json();
+}
+
+export async function createTranslationKey(
+    key: string,
+    values: Partial<Record<TranslationLocale, string>>,
+    token: string
+): Promise<TranslationKeyEntry> {
+    const response = await fetch(`${BASE_URL}/api/admin/translations`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ key, values }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || 'Failed to create translation key');
+    }
+    return response.json();
+}
+
+export async function updateTranslationValues(
+    key: string,
+    values: Partial<Record<TranslationLocale, string>>,
+    token: string
+): Promise<TranslationKeyEntry> {
+    const response = await fetch(`${BASE_URL}/api/admin/translations/${encodeURIComponent(key)}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ values }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || 'Failed to update translation values');
+    }
+    return response.json();
+}
+
+export async function deleteTranslationKey(key: string, token: string): Promise<void> {
+    const response = await fetch(`${BASE_URL}/api/admin/translations/${encodeURIComponent(key)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || 'Failed to delete translation key');
+    }
+}
+
+// Triggers a Vercel redeploy of the frontend so its bundled src/locales/*.json
+// files get resynced from the DB at build time (see scripts/sync-translations.mjs).
+export async function triggerTranslationsDeploy(token: string): Promise<{ triggered: true }> {
+    const response = await fetch(`${BASE_URL}/api/admin/translations/deploy`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || 'Failed to trigger frontend deploy');
     }
     return response.json();
 }
