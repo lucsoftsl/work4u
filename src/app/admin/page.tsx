@@ -3,7 +3,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Settings, Trophy, Scroll, BarChart3, ArrowRight, Users, Flag, Building2, AlertTriangle, ShieldAlert, Newspaper, Phone, Languages } from 'lucide-react';
+import { Settings, Trophy, Scroll, BarChart3, ArrowRight, Users, Flag, Building2, AlertTriangle, ShieldAlert, Newspaper, Phone, Languages, CreditCard, SlidersHorizontal } from 'lucide-react';
 import { fetchAdminStats, type AdminStats } from '@/lib/admin-api';
 import { useTranslation } from '@/lib/i18n';
 
@@ -36,6 +36,20 @@ export default function AdminDashboard() {
             icon: Users,
             href: '/admin/users',
             color: 'from-primary to-ember',
+        },
+        {
+            title: t('adminSubscriptions.title', 'Subscriptions'),
+            description: t('adminSubscriptions.subtitle', 'See who is on which plan and whether their payments went through.'),
+            icon: CreditCard,
+            href: '/admin/subscriptions',
+            color: 'from-money to-primary',
+        },
+        {
+            title: t('adminPlans.title', 'Plans'),
+            description: t('adminPlans.subtitle', 'Choose what each plan offers. Changes apply to everyone on that plan within a minute.'),
+            icon: SlidersHorizontal,
+            href: '/admin/plans',
+            color: 'from-primary to-money',
         },
         {
             title: t('adminReports.title'),

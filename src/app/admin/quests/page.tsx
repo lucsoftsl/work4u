@@ -14,6 +14,7 @@ import {
     deleteQuest,
 } from '@/lib/admin-api';
 import { QuestForm, Quest } from '@/types/admin';
+import { BackLink } from "@/components/ui/BackLink";
 
 const TYPES = ['daily', 'weekly', 'main', 'side'];
 const DIFFICULTIES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
@@ -110,6 +111,7 @@ export default function AdminQuestsPage() {
     return (
         <div className="min-h-screen bg-surface">
             <div className="max-w-7xl mx-auto px-4 py-8">
+                <BackLink href="/admin" label={t("admin.backToDashboard")} className="mb-2" />
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <div>

@@ -10,6 +10,7 @@ import { useNotificationFeed } from "@/hooks/useNotificationFeed";
 import { NotificationItem } from "@/components/notifications/NotificationItem";
 import { Button } from "@/components/ui/Button";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/QueryState";
+import { BackLink } from "@/components/ui/BackLink";
 
 const PAGE_LIMIT = 100;
 
@@ -25,6 +26,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-[var(--gutter)] py-8 md:py-12">
+      <BackLink href="/dashboard" label={t("nav.backToDashboard")} className="mb-2" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-h1 text-ink">{t("notif.title")}</h1>
         <Button variant="secondary" onClick={() => void feed.markAll()} disabled={feed.unreadInList === 0}>

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, MapPin, Search, SearchX, SlidersHorizontal, X } from "lucide-react";
 import { JobCard } from "@/components/JobCard";
 import { useTranslation } from "@/lib/i18n";
+import { scrollToListStart } from "@/lib/scroll";
 import { getCategoriesWithTranslations } from "@/lib/category-utils";
 import { api } from "@/lib/api";
 import type { Job } from "@/api/types";
@@ -145,6 +146,8 @@ export default function JobsPageContent() {
   const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const resultsRef = useRef<HTMLElement>(null);
+  const resultsHeadingRef = useRef<HTMLHeadingElement>(null);
   const filters = useMemo(() => readFilters(new URLSearchParams(searchParams.toString())), [searchParams]);
 
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -209,6 +212,11 @@ export default function JobsPageContent() {
       return String(b.dateTimeCreated).localeCompare(String(a.dateTimeCreated));
     });
   }, [jobs, filters]);
+
+  const goToPage = (page: number) => {
+    updateParams({ page: String(page) });
+    scrollToListStart(resultsRef.current, resultsHeadingRef.current);
+  };
 
   const totalPages = Math.max(1, Math.ceil(visibleJobs.length / JOBS_PER_PAGE));
   const currentPage = Math.min(filters.page, totalPages);
@@ -312,9 +320,18 @@ export default function JobsPageContent() {
           </div>
         </aside>
 
-        <section aria-labelledby="job-results-heading" className="min-w-0">
+        <section
+          ref={resultsRef}
+          aria-labelledby="job-results-heading"
+          className="min-w-0 scroll-mt-[calc(var(--header-h)+1rem)]"
+        >
           <div className="mb-4 grid grid-cols-2 items-end gap-3 rounded-card border border-line bg-surface p-3 md:p-4 lg:flex lg:justify-between">
-            <h2 id="job-results-heading" aria-live="polite" className="col-span-2 text-label text-ink lg:col-span-1 lg:self-center">
+            <h2
+              ref={resultsHeadingRef}
+              id="job-results-heading"
+              tabIndex={-1}
+              aria-live="polite"
+              className="focus:outline-none col-span-2 text-label text-ink lg:col-span-1 lg:self-center">
               {loading ? t("jobs.loading") : resultLabel}
             </h2>
             <Button variant="secondary" className="min-h-[48px] w-full lg:hidden" onClick={() => setSheetOpen(true)} aria-haspopup="dialog">
@@ -355,7 +372,7 @@ export default function JobsPageContent() {
                 <nav aria-label={t("jobs.pagination")} className="mt-6 flex items-center justify-between gap-3">
                   <Button
                     variant="secondary"
-                    onClick={() => updateParams({ page: String(currentPage - 1) })}
+                    onClick={() => goToPage(currentPage - 1)}
                     disabled={currentPage === 1}
                   >
                     <ChevronLeft className="h-4 w-4" aria-hidden="true" />
@@ -366,7 +383,7 @@ export default function JobsPageContent() {
                   </p>
                   <Button
                     variant="secondary"
-                    onClick={() => updateParams({ page: String(currentPage + 1) })}
+                    onClick={() => goToPage(currentPage + 1)}
                     disabled={currentPage === totalPages}
                   >
                     <span className="max-sm:sr-only">{t("common.next")}</span>

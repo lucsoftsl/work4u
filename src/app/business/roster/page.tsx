@@ -11,6 +11,8 @@ import { api } from "@/lib/api";
 import { useTranslation } from "@/lib/i18n";
 import type { Company, RosterWorker, WorkerListing } from "@/api/types";
 import { CalendarClock, Plus, Search, Star, Trash2, User, Users, X } from "lucide-react";
+import { BackLink } from "@/components/ui/BackLink";
+import { groupListingsByWorker } from "./roster-candidates";
 
 // ---------- shared presentational pieces ----------
 
@@ -243,11 +245,10 @@ function AddWorkerModal({
         <p className="py-8 text-center text-xs text-ink-subtle">{t('roster.noResultsFor')} &quot;{keywords}&quot;.</p>
       ) : (
         <div className="space-y-2">
-          {results.map((listing) => {
-            const workerId = listing.workerId;
+          {groupListingsByWorker(results).map(({ workerId, listing, categories }) => {
             const alreadyOnRoster = existingWorkerIds.has(workerId) || addedWorkerIds.has(workerId);
             return (
-              <div key={listing.id} className="flex items-center gap-3 rounded-2xl bg-surface p-3">
+              <div key={workerId} className="flex items-center gap-3 rounded-2xl bg-surface p-3">
                 <Avatar
                   worker={listing.worker ? { name: listing.worker.name, photoUrl: listing.worker.image } : null}
                   size={40}
@@ -257,10 +258,10 @@ function AddWorkerModal({
                   {listing.worker ? (
                     <p className="flex items-center gap-1 truncate text-xs text-ink-muted">
                       <Star size={12} className="shrink-0 fill-money text-money" />
-                      {listing.worker.rating.toFixed(1)} ({listing.worker.reviews}) · {listing.category}
+                      {listing.worker.rating.toFixed(1)} ({listing.worker.reviews}) · {categories.join(", ")}
                     </p>
                   ) : (
-                    <p className="truncate text-xs text-ink-muted">{listing.category}</p>
+                    <p className="truncate text-xs text-ink-muted">{categories.join(", ")}</p>
                   )}
                 </div>
                 <Button
@@ -383,6 +384,7 @@ export default function BusinessRosterPage() {
   return (
     <div className="min-h-screen bg-canvas">
       <div className="mx-auto max-w-4xl px-4 py-8 sm:py-10">
+        <BackLink href="/business/dashboard" label={t("biz.backToBusiness", "Back to business dashboard")} className="mb-2" />
         <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary-soft px-4 py-1.5 text-sm font-medium text-primary">

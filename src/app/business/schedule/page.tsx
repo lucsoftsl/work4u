@@ -32,6 +32,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import { BackLink } from "@/components/ui/BackLink";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_RECURRENCE_COUNT = 26;
@@ -971,6 +972,7 @@ export default function BusinessSchedulePage() {
   return (
     <div className="min-h-screen bg-canvas pb-28">
       <div className="mx-auto max-w-2xl px-4 py-8 sm:py-10">
+        <BackLink href="/business/dashboard" label={t("biz.backToBusiness", "Back to business dashboard")} className="mb-2" />
         <div className="mb-6">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary-soft px-4 py-1.5 text-sm font-medium text-primary">
             <CalendarClock size={14} />

@@ -4,7 +4,15 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { QuestForm } from '@/types/admin';
-import { useTranslation } from '@/lib/i18n';
+import { LOCALES, useTranslation, type Locale } from '@/lib/i18n';
+import {
+    emptyLocalizedText,
+    firstIncompleteLocale,
+    LocalizedFieldTabs,
+    nativeLanguageName,
+    withAllLocales,
+    type LocalizedFieldDef,
+} from './LocalizedFieldTabs';
 
 interface QuestModalProps {
     isOpen: boolean;
@@ -16,7 +24,6 @@ interface QuestModalProps {
 
 const TYPES = ['daily', 'weekly', 'main', 'side'];
 const DIFFICULTIES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-const LANGUAGES = { en: 'English', es: 'Español', fr: 'Français' };
 
 export function QuestModal({
     isOpen,
@@ -27,34 +34,39 @@ export function QuestModal({
 }: QuestModalProps) {
     const { t } = useTranslation();
     const [formData, setFormData] = useState<QuestForm>(
-        quest || {
-            id: '',
-            title: { en: '', es: '', fr: '' },
-            description: { en: '', es: '', fr: '' },
-            type: 'daily',
-            difficulty: 'common',
-            maxProgress: 1,
-            rewards: { xp: 0, gold: 0 },
-            enabled: true,
-        }
+        quest
+            ? { ...quest, title: withAllLocales(quest.title), description: withAllLocales(quest.description) }
+            : {
+                id: '',
+                title: emptyLocalizedText(),
+                description: emptyLocalizedText(),
+                type: 'daily',
+                difficulty: 'common',
+                maxProgress: 1,
+                rewards: { xp: 0, gold: 0 },
+                enabled: true,
+              }
     );
 
     const handleChange = (field: string, value: unknown) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
     };
 
-    const handleTitleChange = (lang: string, value: string) => {
-        setFormData((prev) => ({
-            ...prev,
-            title: { ...prev.title, [lang]: value },
-        }));
-    };
+    const [activeLocale, setActiveLocale] = useState<Locale>(LOCALES[0]);
+    const [missingLocale, setMissingLocale] = useState<Locale | null>(null);
 
-    const handleDescriptionChange = (lang: string, value: string) => {
-        setFormData((prev) => ({
-            ...prev,
-            description: { ...prev.description, [lang]: value },
-        }));
+    const localizedFields: LocalizedFieldDef[] = [
+        { key: 'title', label: t('admin.questTitle') },
+        { key: 'description', label: t('admin.description'), multiline: true },
+    ];
+    const localizedValues = { title: formData.title, description: formData.description };
+
+    const handleLocalizedChange = (field: string, locale: Locale, value: string) => {
+        setMissingLocale(null);
+        setFormData((prev) => {
+            const key = field as 'title' | 'description';
+            return { ...prev, [key]: { ...prev[key], [locale]: value } };
+        });
     };
 
     const handleRewardChange = (field: string, value: unknown) => {
@@ -66,6 +78,13 @@ export function QuestModal({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        // Every available language must be filled in; jump to the first gap instead of saving.
+        const incomplete = firstIncompleteLocale(localizedFields, localizedValues);
+        if (incomplete) {
+            setActiveLocale(incomplete);
+            setMissingLocale(incomplete);
+            return;
+        }
         await onSave(formData);
     };
 
@@ -102,40 +121,23 @@ export function QuestModal({
                         />
                     </div>
 
-                    {/* Titles by Language */}
-                    <div className="space-y-3">
-                        <label className="block text-sm font-medium text-ink">
-                            {t('admin.questTitle')} *
-                        </label>
-                        {Object.entries(LANGUAGES).map(([lang, langName]) => (
-                            <div key={lang}>
-                                <input
-                                    type="text"
-                                    value={formData.title[lang] || ''}
-                                    onChange={(e) => handleTitleChange(lang, e.target.value)}
-                                    placeholder={`${t('common.title')} (${langName})`}
-                                    className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
-                                />
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Descriptions by Language */}
-                    <div className="space-y-3">
-                        <label className="block text-sm font-medium text-ink">
-                            {t('admin.description')} *
-                        </label>
-                        {Object.entries(LANGUAGES).map(([lang, langName]) => (
-                            <div key={lang}>
-                                <textarea
-                                    value={formData.description[lang] || ''}
-                                    onChange={(e) => handleDescriptionChange(lang, e.target.value)}
-                                    placeholder={`${t('admin.description')} (${langName})`}
-                                    className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
-                                    rows={2}
-                                />
-                            </div>
-                        ))}
+                    {/* Localized text: one tab per available language */}
+                    <div className="space-y-2">
+                        <LocalizedFieldTabs
+                            fields={localizedFields}
+                            values={localizedValues}
+                            onChange={handleLocalizedChange}
+                            activeLocale={activeLocale}
+                            onActiveLocaleChange={setActiveLocale}
+                        />
+                        {missingLocale ? (
+                            <p role="alert" className="text-sm text-danger">
+                                {t('admin.missingTranslation', 'Fill in every field for {language} before saving.').replace(
+                                    '{language}',
+                                    nativeLanguageName(missingLocale)
+                                )}
+                            </p>
+                        ) : null}
                     </div>
 
                     {/* Type & Difficulty */}
@@ -249,7 +251,7 @@ export function QuestModal({
                         </Button>
                         <Button
                             type="submit"
-                            disabled={isLoading || !formData.id || !formData.title.en}
+                            disabled={isLoading || !formData.id}
                             className="flex-1"
                         >
                             {isLoading ? t('admin.saving') : t('admin.saveQuest')}

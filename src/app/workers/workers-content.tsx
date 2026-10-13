@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, MapPin, Search, SearchX, SlidersHorizontal } from "lucide-react";
 import { WorkerListingCard } from "@/components/WorkerListingCard";
 import { useTranslation } from "@/lib/i18n";
+import { scrollToListStart } from "@/lib/scroll";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import type { WorkerListing } from "@/api/types";
@@ -43,6 +44,8 @@ export default function WorkersPageContent() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const resultsRef = useRef<HTMLElement>(null);
+  const resultsHeadingRef = useRef<HTMLHeadingElement>(null);
   const filters = useMemo(() => readFilters(new URLSearchParams(searchParams.toString())), [searchParams]);
 
   const [listings, setListings] = useState<WorkerListing[]>([]);
@@ -104,6 +107,11 @@ export default function WorkersPageContent() {
       return String(b.dateTimeCreated).localeCompare(String(a.dateTimeCreated));
     });
   }, [listings, filters]);
+
+  const goToPage = (page: number) => {
+    updateParams({ page: String(page) });
+    scrollToListStart(resultsRef.current, resultsHeadingRef.current);
+  };
 
   const totalPages = Math.max(1, Math.ceil(visibleListings.length / LISTINGS_PER_PAGE));
   const currentPage = Math.min(filters.page, totalPages);
@@ -220,9 +228,18 @@ export default function WorkersPageContent() {
           </div>
         </aside>
 
-        <section aria-labelledby="worker-results-heading" className="min-w-0">
+        <section
+          ref={resultsRef}
+          aria-labelledby="worker-results-heading"
+          className="min-w-0 scroll-mt-[calc(var(--header-h)+1rem)]"
+        >
           <div className="mb-4 grid grid-cols-2 items-end gap-3 rounded-card border border-line bg-surface p-3 md:p-4 lg:flex lg:justify-between">
-            <h2 id="worker-results-heading" aria-live="polite" className="col-span-2 text-label text-ink lg:col-span-1 lg:self-center">
+            <h2
+              ref={resultsHeadingRef}
+              id="worker-results-heading"
+              tabIndex={-1}
+              aria-live="polite"
+              className="focus:outline-none col-span-2 text-label text-ink lg:col-span-1 lg:self-center">
               {loading ? t("workers.loading") : resultLabel}
             </h2>
             <Button variant="secondary" className="min-h-[48px] w-full lg:hidden" onClick={() => setSheetOpen(true)} aria-haspopup="dialog">
@@ -262,7 +279,7 @@ export default function WorkersPageContent() {
                 <nav aria-label={t("jobs.pagination")} className="mt-6 flex items-center justify-between gap-3">
                   <Button
                     variant="secondary"
-                    onClick={() => updateParams({ page: String(currentPage - 1) })}
+                    onClick={() => goToPage(currentPage - 1)}
                     disabled={currentPage === 1}
                   >
                     <ChevronLeft className="h-4 w-4" aria-hidden="true" />
@@ -273,7 +290,7 @@ export default function WorkersPageContent() {
                   </p>
                   <Button
                     variant="secondary"
-                    onClick={() => updateParams({ page: String(currentPage + 1) })}
+                    onClick={() => goToPage(currentPage + 1)}
                     disabled={currentPage === totalPages}
                   >
                     <span className="max-sm:sr-only">{t("common.next")}</span>

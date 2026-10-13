@@ -14,6 +14,7 @@ import type {
 } from "@/api/types";
 
 import { API_BASE_URL as API_BASE_URL, apiFetch, toApiError } from "./http";
+import { matchCategoryIds } from "./search-text";
 
 export const api = {
     async listJobs(params?: {
@@ -394,7 +395,12 @@ export const api = {
 
     async searchListings(params?: { keywords?: string; category?: string; location?: string }): Promise<WorkerListing[]> {
         const queryParams = new URLSearchParams();
-        if (params?.keywords) queryParams.append("keywords", params.keywords);
+        if (params?.keywords) {
+            queryParams.append("keywords", params.keywords);
+            // The backend has no category translations, so resolve "fontanero" → plumbing here.
+            const categoryMatches = matchCategoryIds(params.keywords);
+            if (categoryMatches.length > 0) queryParams.append("categoryMatches", categoryMatches.join(","));
+        }
         if (params?.category) queryParams.append("category", params.category);
         if (params?.location) queryParams.append("location", params.location);
 

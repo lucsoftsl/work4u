@@ -1,5 +1,6 @@
 "use client";
 import { currentPath, signInPath } from "@/lib/auth-redirect";
+import { planEntitlements } from "@/lib/plan-entitlements";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -23,7 +24,6 @@ import type { Job, JobLifecycleStatus } from "@/api/types";
 import { usePlans } from "@/hooks/usePlans";
 import { isPlanAvailable } from "@/lib/billing-plans";
 
-const FREE_POST_LIMIT = 3;
 const EXPIRY_SOON_DAYS = 3;
 const DAY_MS = 1000 * 60 * 60 * 24;
 
@@ -53,7 +53,7 @@ export default function MyJobsPage() {
 
   const { plans } = usePlans();
   const proAvailable = isPlanAvailable(plans, "pro");
-  const isPro = subscription?.plan === "pro" && subscription?.status === "active";
+  const { postLimit, unlimitedPosts: isUnlimited, boost: canBoost } = planEntitlements(subscription);
   const activeCount = jobs.filter((j) => !j.expiresAt || new Date(j.expiresAt) > new Date()).length;
 
   const load = useCallback(async () => {
@@ -128,7 +128,7 @@ export default function MyJobsPage() {
   }, [jobs]);
 
   const visibleJobs = filter === "all" ? jobs : jobs.filter((j) => j.lifecycleStatus === filter);
-  const limitReached = !isPro && activeCount >= FREE_POST_LIMIT;
+  const limitReached = postLimit !== null && activeCount >= postLimit;
 
   return (
     <div className="mx-auto w-full max-w-content px-[var(--gutter)] py-6 md:py-10">
@@ -153,37 +153,41 @@ export default function MyJobsPage() {
       {/* Plan usage */}
       {!loading && !error ? (
         <div className="mt-6 rounded-card border border-line bg-surface p-4">
-          {isPro ? (
+          {isUnlimited ? (
             <p className="inline-flex items-center gap-2 text-label font-bold text-warning">
               <Zap className="h-4 w-4" aria-hidden="true" />
-              {t("myJobs.proUnlimited")}
+              {t("myJobs.unlimitedPosts", "Unlimited active posts")}
             </p>
           ) : (
             <div>
               <p className="flex items-center justify-between gap-3 text-label font-bold text-ink">
                 <span>{t("myJobs.planUsage")}</span>
                 <span className="tabular text-ink-muted">
-                  {activeCount}/{FREE_POST_LIMIT} {t("myJobs.freePostsUsed")}
+                  {activeCount}/{postLimit} {t("myJobs.activePostsUsed", "active posts used")}
                 </span>
               </p>
               <div
                 role="progressbar"
                 aria-label={t("myJobs.planUsage")}
                 aria-valuemin={0}
-                aria-valuemax={FREE_POST_LIMIT}
-                aria-valuenow={Math.min(activeCount, FREE_POST_LIMIT)}
+                aria-valuemax={postLimit ?? 0}
+                aria-valuenow={Math.min(activeCount, postLimit ?? 0)}
                 className="mt-2 h-2 overflow-hidden rounded-full bg-sunken"
               >
                 <div
                   className={cn("h-full rounded-full", limitReached ? "bg-warning" : "bg-primary")}
-                  style={{ width: `${Math.min(100, (activeCount / FREE_POST_LIMIT) * 100)}%` }}
+                  style={{ width: `${postLimit ? Math.min(100, (activeCount / postLimit) * 100) : 100}%` }}
                 />
               </div>
               {limitReached ? (
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-control bg-warning-soft p-3">
                   <div className="min-w-0">
-                    <p className="text-label font-bold text-ink">{t("myJobs.limitReachedTitle")}</p>
-                    <p className="text-caption text-ink-muted">{t("myJobs.limitReachedBody")}</p>
+                    <p className="text-label font-bold text-ink">
+                      {t("myJobs.planLimitReachedTitle", "You've reached your plan's limit of {limit} active posts.").replace("{limit}", String(postLimit))}
+                    </p>
+                    <p className="text-caption text-ink-muted">
+                      {t("myJobs.planLimitReachedBody", "Upgrade your plan for more active listings, longer visibility and post boosting.")}
+                    </p>
                   </div>
                   {proAvailable ? (
                     <Link href="/pricing" className={buttonClasses("primary")}>
@@ -279,7 +283,7 @@ export default function MyJobsPage() {
                           </Link>
                         ) : null}
                         {isOpen && !isExpired ? (
-                          isPro ? (
+                          canBoost ? (
                             job.boosted ? null : (
                               <Button variant="ghost" onClick={() => void handleBoost(job.id)} loading={boostingJobId === job.id}>
                                 {boostingJobId !== job.id ? <TrendingUp className="h-4 w-4" aria-hidden="true" /> : null}

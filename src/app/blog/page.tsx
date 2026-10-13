@@ -6,6 +6,7 @@ import { useTranslation } from "@/lib/i18n";
 import { articlesApi } from "@/lib/articles-api";
 import { ArticleCard } from "@/components/blog/ArticleCard";
 import type { Article } from "@/api/types";
+import { HomeBackLink } from "@/components/ui/BackLink";
 
 export default function BlogPage() {
   const { t } = useTranslation();
@@ -35,6 +36,7 @@ export default function BlogPage() {
   return (
     <div className="min-h-screen">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <HomeBackLink className="mb-2" />
         <div className="mb-8">
           <h1 className="font-display text-h1 text-ink">{t("blog.title")}</h1>
           <p className="mt-3 text-sm leading-6 text-ink-muted">{t("blog.subtitle")}</p>

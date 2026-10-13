@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { TERMS_VERSION, TERMS_EFFECTIVE_DATE } from "@/lib/legal";
 import { useTranslation } from "@/lib/i18n";
+import { HomeBackLink } from "@/components/ui/BackLink";
 
 const SECTION_IDS = [
   "whoWeAre",
@@ -32,6 +33,7 @@ export default function TermsContent() {
   return (
     <div className="min-h-screen bg-canvas">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <HomeBackLink className="mb-2" />
         <header className="max-w-3xl">
           <span className="inline-flex items-center rounded-control bg-primary-soft px-2.5 py-1 text-micro uppercase text-primary">{t("legal.eyebrow")}</span>
           <h1 className="mt-5 font-display text-4xl font-black tracking-tight text-ink md:text-5xl">

@@ -182,10 +182,30 @@ export interface AdminUserSummary {
     dateTimeCreated: string;
 }
 
-export async function fetchUsers(token: string, filters?: { status?: string; userType?: string }): Promise<AdminUserSummary[]> {
+export type AdminUserSort = 'joined_desc' | 'joined_asc' | 'name_asc' | 'name_desc' | 'email_asc' | 'email_desc';
+
+export interface AdminUserListParams {
+    q?: string;
+    status?: AdminUserSummary['status'];
+    userType?: AdminUserSummary['userType'];
+    sort?: AdminUserSort;
+    limit?: number;
+    offset?: number;
+}
+
+export interface AdminUserPage {
+    items: AdminUserSummary[];
+    total: number;
+    limit: number;
+    offset: number;
+    sort: AdminUserSort;
+}
+
+export async function fetchUsers(token: string, filters: AdminUserListParams = {}): Promise<AdminUserPage> {
     const params = new URLSearchParams();
-    if (filters?.status) params.append('status', filters.status);
-    if (filters?.userType) params.append('userType', filters.userType);
+    for (const [key, value] of Object.entries(filters)) {
+        if (value !== undefined && value !== '') params.append(key, String(value));
+    }
 
     const response = await apiFetch(`${BASE_URL}/api/admin/users?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -423,4 +443,97 @@ export async function triggerTranslationsDeploy(token: string): Promise<{ trigge
         throw new Error(error.error || 'Failed to trigger frontend deploy');
     }
     return response.json();
+}
+
+export type SubscriptionPlan = 'free' | 'starter' | 'pro' | 'business';
+export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled' | 'inactive';
+export type PaymentStatus = 'succeeded' | 'failed' | 'action_required';
+export type SubscriptionSort = 'updated_desc' | 'started_desc' | 'started_asc' | 'renews_asc' | 'last_payment_desc' | 'name_asc';
+
+export interface AdminSubscriptionSummary {
+    userId: string;
+    displayName: string | null;
+    email: string;
+    userStatus: AdminUserSummary['status'];
+    plan: SubscriptionPlan;
+    status: SubscriptionStatus;
+    billingInterval: 'month' | 'year' | null;
+    currentPeriodStart: string | null;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+    grantedByAdminId: string | null;
+    grantReason: string | null;
+    activeFrom: string | null;
+    activeTo: string | null;
+    stripeCustomerId: string | null;
+    stripeSubscriptionId: string | null;
+    dateTimeCreated: string;
+    dateTimeUpdated: string;
+    lastPaymentStatus: PaymentStatus | null;
+    /** Minor currency units (cents). */
+    lastPaymentAmount: number | null;
+    lastPaymentCurrency: string | null;
+    lastPaymentAt: string | null;
+    lastPaymentFailureReason: string | null;
+    lastPaymentNextAttempt: string | null;
+}
+
+export interface AdminSubscriptionListParams {
+    q?: string;
+    plan?: SubscriptionPlan;
+    status?: SubscriptionStatus;
+    /** A payment status, or "none" for subscribers who have never been charged. */
+    payment?: PaymentStatus | 'none';
+    sort?: SubscriptionSort;
+    limit?: number;
+    offset?: number;
+}
+
+export interface AdminSubscriptionPage {
+    items: AdminSubscriptionSummary[];
+    total: number;
+    limit: number;
+    offset: number;
+    sort: SubscriptionSort;
+}
+
+export interface AdminPayment {
+    id: string;
+    stripeInvoiceId: string;
+    status: PaymentStatus;
+    /** Minor currency units (cents). */
+    amount: number;
+    currency: string;
+    attemptCount: number;
+    nextPaymentAttempt: string | null;
+    failureReason: string | null;
+    hostedInvoiceUrl: string | null;
+    periodStart: string | null;
+    periodEnd: string | null;
+    paidAt: string | null;
+    dateTimeCreated: string;
+}
+
+export async function fetchSubscriptions(token: string, filters: AdminSubscriptionListParams = {}): Promise<AdminSubscriptionPage> {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+        if (value !== undefined && value !== '') params.append(key, String(value));
+    }
+
+    const response = await apiFetch(`${BASE_URL}/api/admin/subscriptions?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch subscriptions');
+    return response.json();
+}
+
+export async function fetchUserPayments(userId: string, token: string): Promise<AdminPayment[]> {
+    const response = await apiFetch(`${BASE_URL}/api/admin/users/${encodeURIComponent(userId)}/payments`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch payments');
+    const data: { items: AdminPayment[] } = await response.json();
+    return data.items;
 }

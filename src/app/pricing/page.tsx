@@ -15,6 +15,8 @@ import { billingErrorKey, anyPlanAvailable, isPlanAvailable, showIntervalToggle 
 import { usePlans } from "@/hooks/usePlans";
 import { signInPath } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
+import { usePlanLimits } from "@/lib/plan-entitlements";
+import { HomeBackLink } from "@/components/ui/BackLink";
 
 type PayablePlan = Exclude<Plan, "free" | "business">;
 type Billing = "month" | "year";
@@ -75,6 +77,28 @@ export default function PricingPage() {
   const { t, locale } = useTranslation();
   const { push } = useToast();
   const { plans, loaded: plansLoaded } = usePlans();
+  const planLimits = usePlanLimits();
+
+  // Limit lines come from the admin-editable plan settings, so the copy never contradicts what is enforced.
+  const planFeatures = (plan: Plan, extra: string[]): string[] => {
+    const limits = planLimits[plan];
+    const lines = [
+      limits.postLimit === null
+        ? t("pricing.feature.unlimitedPosts", "Unlimited active job & service listings")
+        : t("pricing.feature.postLimit", "Up to {limit} active job & service listings").replace("{limit}", String(limits.postLimit)),
+    ];
+    if (plan !== "free") {
+      lines.push(
+        t("pricing.feature.visibility", "Extended post visibility — {days} days vs {freeDays}")
+          .replace("{days}", String(limits.expiryDays))
+          .replace("{freeDays}", String(planLimits.free.expiryDays))
+      );
+    }
+    if (limits.boost) lines.push(t("pricing.proFeature2"));
+    if (limits.companyFeatures) lines.push(t("pricing.businessFeature1"));
+    return [...lines, ...extra];
+  };
+  const maxPaidDays = Math.max(planLimits.starter.expiryDays, planLimits.pro.expiryDays, planLimits.business.expiryDays);
 
   const tiers: Tier[] = [
     {
@@ -83,7 +107,7 @@ export default function PricingPage() {
       tagline: t("pricing.freeTierTagline"),
       monthlyPrice: 0,
       yearlyPrice: 0,
-      features: [1, 2, 3, 4, 5].map((n) => t(`pricing.freeFeature${n}`)),
+      features: planFeatures("free", [3, 4, 5].map((n) => t(`pricing.freeFeature${n}`))),
     },
     {
       id: "starter",
@@ -91,7 +115,7 @@ export default function PricingPage() {
       tagline: t("pricing.starterTierTagline"),
       monthlyPrice: 9,
       yearlyPrice: 75,
-      features: [1, 2, 3].map((n) => t(`pricing.starterFeature${n}`)),
+      features: planFeatures("starter", [t("pricing.starterFeature3")]),
     },
     {
       id: "pro",
@@ -100,14 +124,27 @@ export default function PricingPage() {
       monthlyPrice: 29,
       yearlyPrice: 240,
       emphasised: true,
-      features: [1, 2, 3, 4].map((n) => t(`pricing.proFeature${n}`)),
+      features: planFeatures("pro", [t("pricing.proFeature4")]),
     },
   ];
 
   const benefits: { icon: LucideIcon; title: string; desc: string }[] = [
     { icon: TrendingUp, title: t("pricing.benefit1Title"), desc: t("pricing.benefit1Desc") },
-    { icon: Zap, title: t("pricing.benefit2Title"), desc: t("pricing.benefit2Desc") },
-    { icon: Clock, title: t("pricing.benefit3Title"), desc: t("pricing.benefit3Desc") },
+    {
+      icon: Zap,
+      title: t("pricing.benefit2Title"),
+      desc: t("pricing.benefit2DescTemplate", "Free accounts are limited to {limit} active listings — paid plans raise or remove that cap.").replace(
+        "{limit}",
+        String(planLimits.free.postLimit ?? "∞")
+      ),
+    },
+    {
+      icon: Clock,
+      title: t("pricing.benefit3Title"),
+      desc: t("pricing.benefit3DescTemplate", "Paid listings stay live for up to {days} days vs {freeDays} on free — more time to find the right match.")
+        .replace("{days}", String(maxPaidDays))
+        .replace("{freeDays}", String(planLimits.free.expiryDays)),
+    },
   ];
 
   const faqs: FaqItem[] = [1, 2, 3, 4].map((n) => ({ q: t(`pricing.faq${n}Question`), a: t(`pricing.faq${n}Answer`) }));
@@ -183,6 +220,7 @@ export default function PricingPage() {
 
   return (
     <div className="mx-auto w-full max-w-content px-[var(--gutter)] py-8 md:py-12">
+      <HomeBackLink className="mb-2" />
       {feedback === "success" ? (
         <p role="status" className="mb-6 flex items-center gap-2 rounded-card border-l-4 border-l-success bg-success-soft px-4 py-3 text-label text-ink">
           <Check className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
@@ -219,7 +257,7 @@ export default function PricingPage() {
         ) : null}
       </header>
 
-      {currentPlan === "business" ? (
+      {currentPlan === "business" && !status?.unlimited ? (
         <div className="mx-auto mt-6 flex max-w-xl flex-wrap items-center justify-between gap-3 rounded-card border border-line bg-surface p-4">
           <p className="text-label font-normal text-ink">{t("pricing.onBusinessPlan")}</p>
           <Button variant="secondary" onClick={handlePortal} loading={portalLoading}>

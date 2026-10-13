@@ -5,6 +5,7 @@ import { Mail, MapPin, Phone } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { siteSettingsApi } from "@/lib/site-settings-api";
 import type { ContactInfo } from "@/api/types";
+import { HomeBackLink } from "@/components/ui/BackLink";
 
 export default function ContactPage() {
   const { t } = useTranslation();
@@ -36,6 +37,7 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen">
       <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
+        <HomeBackLink className="mb-2" />
         <div className="mb-8 text-center">
           <h1 className="font-display text-h1 text-ink">{t("contact.title")}</h1>
           <p className="mt-3 text-sm leading-6 text-ink-muted">{t("contact.subtitle")}</p>

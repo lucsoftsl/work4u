@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { companiesApi } from "@/lib/companies-api";
+import { planEntitlements } from "@/lib/plan-entitlements";
 import { getSubscriptionStatus, type SubscriptionStatus } from "@/api/subscriptions";
 import type { Company, RosterWorker, Shift } from "@/api/types";
 import { Button } from "@/components/ui/Button";
@@ -20,6 +21,7 @@ import {
   UserPlus,
   ArrowRight,
 } from "lucide-react";
+import { BackLink } from "@/components/ui/BackLink";
 
 const STATUS_STYLES: Record<string, string> = {
   COMPLETED: "bg-emerald-50 text-success",
@@ -221,8 +223,7 @@ export default function BusinessDashboardPage() {
     );
   }
 
-  const hasBusinessPlan =
-    subStatus?.plan === "business" && (subStatus.status === "active" || subStatus.status === "trialing");
+  const hasBusinessPlan = planEntitlements(subStatus).companyFeatures;
 
   const today = new Date();
   const shiftsToday = shifts
@@ -245,6 +246,7 @@ export default function BusinessDashboardPage() {
   return (
     <div className="min-h-screen bg-canvas">
       <div className="max-w-5xl mx-auto px-4 py-10 sm:py-14">
+        <BackLink href="/dashboard" label={t("nav.backToDashboard")} className="mb-2" />
         {companyLoading || subStatusLoading ? (
           <div className="space-y-4">
             <div className="h-8 w-64 rounded-lg bg-sunken animate-pulse" />

@@ -11,6 +11,7 @@ import { signInPath } from "@/lib/auth-redirect";
 import { AccountTab } from "@/components/profile/AccountTab";
 import { ReviewsTab } from "@/components/profile/ReviewsTab";
 import { ProfileTabs, panelId, tabId, type ProfileTabItem } from "@/components/profile/ProfileTabs";
+import { BackLink } from "@/components/ui/BackLink";
 
 type TabId = "account" | "reviews";
 
@@ -61,6 +62,7 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto w-full max-w-content px-[var(--gutter)] py-6 md:py-10">
+      <BackLink href="/dashboard" label={t("nav.backToDashboard")} className="mb-2" />
       <h1 className="font-display text-h1 text-ink">{t("profile.title")}</h1>
       <p className="mt-2 text-body text-ink-muted">{t("profile.subtitle")}</p>
 

@@ -32,6 +32,8 @@ type Dictionaries = {
 const dictionaries: Dictionaries = { en, fr, es, hu, ro };
 
 export type Locale = keyof Dictionaries;
+
+export const LOCALES = Object.keys(dictionaries) as Locale[];
 export type TranslationKey = keyof typeof en;
 
 const isLocale = (value?: string | null): value is Locale =>

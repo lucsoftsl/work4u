@@ -4,7 +4,15 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { AchievementForm } from '@/types/admin';
-import { useTranslation } from '@/lib/i18n';
+import { LOCALES, useTranslation, type Locale } from '@/lib/i18n';
+import {
+    emptyLocalizedText,
+    firstIncompleteLocale,
+    LocalizedFieldTabs,
+    nativeLanguageName,
+    withAllLocales,
+    type LocalizedFieldDef,
+} from './LocalizedFieldTabs';
 
 interface AchievementModalProps {
     isOpen: boolean;
@@ -16,7 +24,6 @@ interface AchievementModalProps {
 
 const CATEGORIES = ['jobs', 'earnings', 'profile', 'social', 'special'];
 const RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-const LANGUAGES = { en: 'English', es: 'Español', fr: 'Français' };
 
 export function AchievementModal({
     isOpen,
@@ -27,36 +34,41 @@ export function AchievementModal({
 }: AchievementModalProps) {
     const { t } = useTranslation();
     const [formData, setFormData] = useState<AchievementForm>(
-        achievement || {
-            id: '',
-            name: { en: '', es: '', fr: '' },
-            description: { en: '', es: '', fr: '' },
-            category: 'jobs',
-            rarity: 'common',
-            icon: '🎯',
-            maxProgress: 1,
-            rewards: { xp: 0, gold: 0 },
-            hidden: false,
-            enabled: true,
-        }
+        achievement
+            ? { ...achievement, name: withAllLocales(achievement.name), description: withAllLocales(achievement.description) }
+            : {
+                id: '',
+                name: emptyLocalizedText(),
+                description: emptyLocalizedText(),
+                category: 'jobs',
+                rarity: 'common',
+                icon: '🎯',
+                maxProgress: 1,
+                rewards: { xp: 0, gold: 0 },
+                hidden: false,
+                enabled: true,
+              }
     );
 
     const handleChange = (field: string, value: unknown) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
     };
 
-    const handleNameChange = (lang: string, value: string) => {
-        setFormData((prev) => ({
-            ...prev,
-            name: { ...prev.name, [lang]: value },
-        }));
-    };
+    const [activeLocale, setActiveLocale] = useState<Locale>(LOCALES[0]);
+    const [missingLocale, setMissingLocale] = useState<Locale | null>(null);
 
-    const handleDescriptionChange = (lang: string, value: string) => {
-        setFormData((prev) => ({
-            ...prev,
-            description: { ...prev.description, [lang]: value },
-        }));
+    const localizedFields: LocalizedFieldDef[] = [
+        { key: 'name', label: t('admin.achievementName') },
+        { key: 'description', label: t('admin.description'), multiline: true },
+    ];
+    const localizedValues = { name: formData.name, description: formData.description };
+
+    const handleLocalizedChange = (field: string, locale: Locale, value: string) => {
+        setMissingLocale(null);
+        setFormData((prev) => {
+            const key = field as 'name' | 'description';
+            return { ...prev, [key]: { ...prev[key], [locale]: value } };
+        });
     };
 
     const handleRewardChange = (field: string, value: unknown) => {
@@ -68,6 +80,13 @@ export function AchievementModal({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        // Every available language must be filled in; jump to the first gap instead of saving.
+        const incomplete = firstIncompleteLocale(localizedFields, localizedValues);
+        if (incomplete) {
+            setActiveLocale(incomplete);
+            setMissingLocale(incomplete);
+            return;
+        }
         await onSave(formData);
     };
 
@@ -104,40 +123,23 @@ export function AchievementModal({
                         />
                     </div>
 
-                    {/* Names by Language */}
-                    <div className="space-y-3">
-                        <label className="block text-sm font-medium text-ink">
-                            {t('admin.achievementName')} *
-                        </label>
-                        {Object.entries(LANGUAGES).map(([lang, langName]) => (
-                            <div key={lang}>
-                                <input
-                                    type="text"
-                                    value={formData.name[lang] || ''}
-                                    onChange={(e) => handleNameChange(lang, e.target.value)}
-                                    placeholder={`${t('admin.name')} (${langName})`}
-                                    className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
-                                />
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Descriptions by Language */}
-                    <div className="space-y-3">
-                        <label className="block text-sm font-medium text-ink">
-                            {t('admin.description')} *
-                        </label>
-                        {Object.entries(LANGUAGES).map(([lang, langName]) => (
-                            <div key={lang}>
-                                <textarea
-                                    value={formData.description[lang] || ''}
-                                    onChange={(e) => handleDescriptionChange(lang, e.target.value)}
-                                    placeholder={`${t('admin.description')} (${langName})`}
-                                    className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
-                                    rows={2}
-                                />
-                            </div>
-                        ))}
+                    {/* Localized text: one tab per available language */}
+                    <div className="space-y-2">
+                        <LocalizedFieldTabs
+                            fields={localizedFields}
+                            values={localizedValues}
+                            onChange={handleLocalizedChange}
+                            activeLocale={activeLocale}
+                            onActiveLocaleChange={setActiveLocale}
+                        />
+                        {missingLocale ? (
+                            <p role="alert" className="text-sm text-danger">
+                                {t('admin.missingTranslation', 'Fill in every field for {language} before saving.').replace(
+                                    '{language}',
+                                    nativeLanguageName(missingLocale)
+                                )}
+                            </p>
+                        ) : null}
                     </div>
 
                     {/* Category & Rarity */}
@@ -260,7 +262,7 @@ export function AchievementModal({
                         </Button>
                         <Button
                             type="submit"
-                            disabled={isLoading || !formData.id || !formData.name.en}
+                            disabled={isLoading || !formData.id}
                             className="flex-1"
                         >
                             {isLoading ? t('admin.saving') : t('admin.saveAchievement')}

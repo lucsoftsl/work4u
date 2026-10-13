@@ -14,6 +14,7 @@ import {
 } from '@/lib/admin-api';
 import { AchievementForm, Achievement } from '@/types/admin';
 import { useTranslation } from '@/lib/i18n';
+import { BackLink } from "@/components/ui/BackLink";
 
 const CATEGORIES = ['jobs', 'earnings', 'profile', 'social', 'special'];
 const RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
@@ -110,6 +111,7 @@ export default function AdminAchievementsPage() {
     return (
         <div className="min-h-screen bg-surface">
             <div className="max-w-7xl mx-auto px-4 py-8">
+                <BackLink href="/admin" label={t("admin.backToDashboard")} className="mb-2" />
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <div>

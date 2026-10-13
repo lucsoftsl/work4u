@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/lib/i18n";
 import { currentPath, signInPath } from "@/lib/auth-redirect";
 import { useAccountMode, type ViewMode } from "@/hooks/useAccountMode";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import { useMenuKeys } from "@/hooks/useMenuKeys";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { BrandMark } from "@/components/BrandMark";
@@ -17,16 +18,40 @@ import { buttonClasses } from "@/components/ui/Button";
 import { NAV, isActivePath, isChromeless } from "@/components/shell/nav-config";
 import { cn } from "@/lib/utils";
 
-/** "Hiring | Working" switch (BOTH accounts only). Switching goes to that mode's Home and is announced. */
+type SwitchValue = ViewMode | "business";
+
+const BUSINESS_HOME = "/business/dashboard";
+const isBusinessPath = (pathname: string | null) => pathname === "/business" || Boolean(pathname?.startsWith("/business/"));
+
+/**
+ * "Hiring | Working" switch for BOTH accounts, plus "Business" for anyone whose plan includes company
+ * features (Business subscribers, admins). Switching goes to that area's home and is announced.
+ */
 export function ViewModeSwitch({ className, fullWidth = false }: { className?: string; fullWidth?: boolean }) {
   const { t } = useTranslation();
   const router = useRouter();
+  const pathname = usePathname();
   const { mode, view, setView } = useAccountMode();
+  const entitlements = useEntitlements();
   const [announcement, setAnnouncement] = useState("");
-  if (mode !== "BOTH") return null;
 
-  const change = (next: ViewMode) => {
-    if (next === view) return;
+  const hasBusiness = entitlements?.companyFeatures === true;
+  if (mode !== "BOTH" && !hasBusiness) return null;
+
+  const options: { value: SwitchValue; label: string }[] = [];
+  if (mode !== "WORKER") options.push({ value: "hiring", label: t("nav.viewHiring") });
+  if (mode !== "REQUESTOR") options.push({ value: "working", label: t("nav.viewWorking") });
+  if (hasBusiness) options.push({ value: "business", label: t("nav.viewBusiness", "Business") });
+
+  const current: SwitchValue = hasBusiness && isBusinessPath(pathname) ? "business" : view;
+
+  const change = (next: SwitchValue) => {
+    if (next === current) return;
+    if (next === "business") {
+      setAnnouncement(t("nav.switchedBusiness", "Switched to Business"));
+      router.push(BUSINESS_HOME);
+      return;
+    }
     setView(next);
     setAnnouncement(t(next === "hiring" ? "nav.switchedHiring" : "nav.switchedWorking"));
     router.push("/dashboard");
@@ -34,15 +59,12 @@ export function ViewModeSwitch({ className, fullWidth = false }: { className?: s
 
   return (
     <>
-      <SegmentedControl<ViewMode>
+      <SegmentedControl<SwitchValue>
         label={t("nav.viewMode")}
         tone="mode"
-        value={view}
+        value={current}
         onChange={change}
-        options={[
-          { value: "hiring", label: t("nav.viewHiring") },
-          { value: "working", label: t("nav.viewWorking") },
-        ]}
+        options={options}
         className={cn("min-w-0 shrink", fullWidth && "flex w-full", className)}
       />
       <span className="sr-only" role="status" aria-live="polite">

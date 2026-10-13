@@ -15,6 +15,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { ReviewList, Stepper, WizardActionBar, WizardAlert } from "@/components/ui/Stepper";
 import { BUDGET_TYPES, DURATIONS, EXPERIENCE_LEVELS } from "@/data/categories";
 import { getCategoriesWithTranslations, getCategoryName, getExperienceLevelLabel, getBudgetTypeLabel, getDurationLabel } from "@/lib/category-utils";
+import { planEntitlements } from "@/lib/plan-entitlements";
 import { useTranslation } from "@/lib/i18n";
 import { api } from "@/lib/api";
 import { getSubscriptionStatus } from "@/api/subscriptions";
@@ -60,7 +61,6 @@ const INITIAL_FORM: JobFormState = {
 };
 
 const TOTAL_STEPS = 3;
-const FREE_POST_LIMIT = 3;
 const DRAFT_KEY = "w4u:draft:post-job";
 const IDS: Record<FieldKey, string> = {
   title: "pj-title",
@@ -89,7 +89,7 @@ export default function PostJobPage() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formData, setFormData] = useState<JobFormState>(INITIAL_FORM);
   const [draftReady, setDraftReady] = useState(false);
-  const [usage, setUsage] = useState<{ active: number; isPro: boolean } | null>(null);
+  const [usage, setUsage] = useState<{ active: number; postLimit: number | null } | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const stepMounted = useRef(false);
   // Coordinates found by the geocode fallback in validateStep (state is stale inside the same submit).
@@ -135,7 +135,7 @@ export default function PostJobPage() {
         if (cancelled) return;
         const now = new Date();
         const active = jobs.filter((j) => !j.expiresAt || new Date(j.expiresAt) > now).length;
-        setUsage({ active, isPro: sub.plan === "pro" && sub.status === "active" });
+        setUsage({ active, postLimit: planEntitlements(sub).postLimit });
       })
       .catch(() => undefined);
     return () => {
@@ -260,7 +260,8 @@ export default function PostJobPage() {
     );
   }
 
-  const freeLeft = usage && !usage.isPro ? Math.max(0, FREE_POST_LIMIT - usage.active) : null;
+  const postLimit = usage?.postLimit ?? null;
+  const freeLeft = usage && postLimit !== null ? Math.max(0, postLimit - usage.active) : null;
 
   return (
     <div className="mx-auto w-full max-w-content px-[var(--gutter)] py-6 md:py-10">
@@ -283,12 +284,16 @@ export default function PostJobPage() {
           {freeLeft !== null ? (
             freeLeft > 0 ? (
               <WizardAlert tone="info" className="mb-6">
-                {t("wizard.freePostsLeft").replace("{left}", String(freeLeft)).replace("{limit}", String(FREE_POST_LIMIT))}
+                {t("wizard.planPostsLeft", "You have {left} of {limit} active posts left on your plan")
+                  .replace("{left}", String(freeLeft))
+                  .replace("{limit}", String(postLimit))}
               </WizardAlert>
             ) : (
               <WizardAlert tone="warning" className="mb-6">
-                <p className="font-bold">{t("myJobs.limitReachedTitle")}</p>
-                <p className="mt-0.5">{t("myJobs.limitReachedBody")}</p>
+                <p className="font-bold">
+                  {t("myJobs.planLimitReachedTitle", "You've reached your plan's limit of {limit} active posts.").replace("{limit}", String(postLimit))}
+                </p>
+                <p className="mt-0.5">{t("myJobs.planLimitReachedBody", "Upgrade your plan for more active listings, longer visibility and post boosting.")}</p>
                 <Link href="/pricing" className="mt-2 inline-flex min-h-[44px] items-center font-bold text-primary underline">
                   {t("wizard.viewPlans")}
                 </Link>

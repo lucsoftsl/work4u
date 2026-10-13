@@ -90,10 +90,10 @@
   h1, h2, h3, .font-display {
     font-family: var(--font-display), system-ui, sans-serif;
   }
+  /* The ring follows each element's own radius; forcing one here squared off pills and avatars. */
   :focus-visible {
     outline: none;
     box-shadow: var(--shadow-focus);
-    border-radius: var(--radius-control);
   }
   ::selection {
     background: rgb(var(--color-primary-soft));

@@ -82,9 +82,13 @@ export function PersonaSearch({ className, centered = false }: { className?: str
     router.push(query ? `${base}?${query}` : base);
   };
 
+  // Fields are borderless inside one bar; the bar itself carries the outline and the focus ring.
+  const fieldClass =
+    "relative flex min-w-0 items-center rounded-card transition-colors duration-fast hover:bg-canvas focus-within:bg-canvas";
   const inputClass =
-    "h-12 w-full rounded-control border border-line-strong bg-surface pl-10 pr-3 text-body text-ink " +
-    "placeholder:text-ink-subtle hover:border-ink-muted focus:border-primary";
+    "h-12 w-full border-0 bg-transparent pl-11 pr-3 text-body text-ink placeholder:text-ink-subtle " +
+    "focus:outline-none focus-visible:shadow-none [&::-webkit-search-cancel-button]:hidden";
+  const iconClass = "pointer-events-none absolute left-3.5 h-5 w-5 text-ink-subtle";
 
   return (
     <div className={cn("w-full", centered && "flex flex-col items-center", className)}>
@@ -92,22 +96,26 @@ export function PersonaSearch({ className, centered = false }: { className?: str
         value={persona}
         onChange={setPersona}
         label={t("landing.persona.label")}
+        tone="tabs"
         options={[
           { value: "hire", label: t("landing.persona.hire") },
           { value: "work", label: t("landing.persona.work") },
         ]}
-        className="w-full sm:w-auto"
       />
       <form
         role="search"
         onSubmit={handleSubmit}
-        className="mt-3 flex w-full flex-col gap-2 rounded-card border border-line bg-surface p-3 text-left shadow-stamp md:flex-row md:items-center md:p-2"
+        className={cn(
+          "mt-2 flex w-full flex-col gap-1 rounded-sheet border border-line bg-surface p-1.5 text-left shadow-stamp",
+          "transition-[border-color,box-shadow] duration-fast focus-within:border-primary focus-within:shadow-focus",
+          "md:flex-row md:items-center md:gap-0"
+        )}
       >
-        <div className="relative min-w-0 flex-1">
+        <div className={cn(fieldClass, "md:flex-[3]")}>
           <label htmlFor={whatId} className="sr-only">
             {t("landing.search.whatLabel")}
           </label>
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-subtle" aria-hidden="true" />
+          <Search className={iconClass} aria-hidden="true" />
           <input
             id={whatId}
             type="search"
@@ -117,11 +125,12 @@ export function PersonaSearch({ className, centered = false }: { className?: str
             className={inputClass}
           />
         </div>
-        <div className="relative min-w-0 flex-1">
+        <span aria-hidden="true" className="mx-3 h-px shrink-0 bg-line md:mx-1 md:h-7 md:w-px" />
+        <div className={cn(fieldClass, "md:flex-[2]")}>
           <label htmlFor={whereId} className="sr-only">
             {t("landing.search.whereLabel")}
           </label>
-          <MapPin className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-subtle" aria-hidden="true" />
+          <MapPin className={iconClass} aria-hidden="true" />
           <input
             id={whereId}
             type="text"
@@ -132,7 +141,10 @@ export function PersonaSearch({ className, centered = false }: { className?: str
             className={inputClass}
           />
         </div>
-        <button type="submit" className={buttonClasses("primary", "default", "h-12 w-full shrink-0 md:w-auto md:px-6")}>
+        <button
+          type="submit"
+          className={buttonClasses("primary", "default", "mt-1 h-12 w-full shrink-0 rounded-[10px] md:ml-1.5 md:mt-0 md:w-auto md:px-6")}
+        >
           {t(persona === "hire" ? "nav.findWorkers" : "nav.findJobs")}
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -252,7 +264,7 @@ export function JobRows({ items }: { items: JobRowItem[] }) {
       {items.map((job) => (
         <li key={job.id}>
           <LedgerRow
-            href={`/jobs?keywords=${encodeURIComponent(job.title)}`}
+            href={`/jobs/${encodeURIComponent(job.id)}`}
             title={job.title}
             eyebrow={
               <>

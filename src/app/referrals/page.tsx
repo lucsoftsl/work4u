@@ -15,6 +15,7 @@ import { errorMessage } from "@/lib/http";
 import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { MyReferralsResponse } from "@/api/types";
+import { BackLink } from "@/components/ui/BackLink";
 
 const COPIED_RESET_MS = 2000;
 
@@ -133,6 +134,7 @@ export default function ReferralsPage() {
 
   return (
     <div className="mx-auto w-full max-w-content px-[var(--gutter)] py-8 md:py-12">
+      <BackLink href="/dashboard" label={t("nav.backToDashboard")} className="mb-2" />
       <header className="max-w-2xl">
         <h1 className="font-display text-h1 text-ink">{t("referrals.heading")}</h1>
         <p className="mt-2 text-body-lg text-ink-muted">{t("referrals.subtitleNeutral")}</p>
