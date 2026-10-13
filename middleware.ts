@@ -6,9 +6,10 @@ export function middleware(req: NextRequest) {
     const isAuthed = req.cookies.get('work4u_auth')?.value === '1';
 
     // Prevent accessing signin/signup when authenticated
-    if (isAuthed && (pathname === '/signin' || pathname === '/signup')) {
+    // /signup is not redirected: signed-in users with unfinished onboarding must be able to resume it.
+    if (isAuthed && pathname === '/signin' && !req.nextUrl.searchParams.has('redirect')) {
         const url = req.nextUrl.clone();
-        url.pathname = '/';
+        url.pathname = '/dashboard';
         return NextResponse.redirect(url);
     }
 
@@ -16,5 +17,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/signin', '/signup'],
+    matcher: ['/signin'],
 };

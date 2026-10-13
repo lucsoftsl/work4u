@@ -41,8 +41,16 @@ async function main() {
     const filePath = path.join(LOCALES_DIR, `${locale}.json`);
     try {
       const dict = await fetchLocale(locale);
+      // DB wins for keys it knows; keys added in code but not yet seeded in the DB are kept.
+      const local = (() => {
+        try {
+          return JSON.parse(readFileSync(filePath, "utf8"));
+        } catch {
+          return {};
+        }
+      })();
       const sorted = Object.fromEntries(
-        Object.entries(dict).sort(([a], [b]) => a.localeCompare(b))
+        Object.entries({ ...local, ...dict }).sort(([a], [b]) => a.localeCompare(b))
       );
       writeFileSync(filePath, `${JSON.stringify(sorted, null, 2)}\n`);
       updated += 1;

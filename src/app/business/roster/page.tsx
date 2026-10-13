@@ -24,7 +24,7 @@ function Avatar({
   if (!worker) {
     return (
       <div
-        className="flex shrink-0 items-center justify-center rounded-full bg-muted text-ink-subtle"
+        className="flex shrink-0 items-center justify-center rounded-full bg-sunken text-ink-subtle"
         style={{ width: size, height: size }}
       >
         <User size={size * 0.5} />
@@ -45,7 +45,7 @@ function Avatar({
   }
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full bg-brand-soft text-sm font-bold text-brand"
+      className="flex shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary"
       style={{ width: size, height: size }}
     >
       {worker.name.charAt(0).toUpperCase()}
@@ -70,18 +70,18 @@ function ModalShell({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full flex-col rounded-t-3xl bg-card shadow-soft sm:max-w-lg sm:rounded-2xl"
+        className="flex max-h-[92vh] w-full flex-col rounded-t-3xl bg-surface shadow-stamp sm:max-w-lg sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-outline px-5 py-4">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
           <h2 className="text-lg font-bold text-ink">{title}</h2>
           <button
             onClick={onClose}
             aria-label={t('roster.close')}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition hover:bg-sunken focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <X size={18} />
           </button>
@@ -96,8 +96,8 @@ function EmptyRosterState({ onAdd }: { onAdd: () => void }) {
   const { t } = useTranslation();
 
   return (
-    <div className="rounded-2xl border border-outline bg-card px-6 py-16 text-center">
-      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft text-brand">
+    <div className="rounded-2xl border border-line bg-surface px-6 py-16 text-center">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary-soft text-primary">
         <Users size={24} />
       </div>
       <p className="text-sm font-semibold text-ink">{t('roster.emptyTitle')}</p>
@@ -124,19 +124,19 @@ function RosterCard({
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-outline bg-card p-5">
+    <div className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5">
       <div className="flex items-start gap-3">
         <Avatar worker={entry.worker} size={48} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-ink">{entry.worker.name}</p>
           <p className="mt-0.5 flex items-center gap-1 text-xs text-ink-muted">
-            <Star size={13} className="fill-[#f5b33f] text-[#f5b33f]" />
+            <Star size={13} className="fill-money text-money" />
             {entry.worker.rating.toFixed(1)} ({entry.worker.reviews} {t('jobDetail.reviews')})
           </p>
         </div>
       </div>
 
-      {entry.note && <p className="rounded-xl bg-muted px-3 py-2 text-xs italic text-ink-subtle">{entry.note}</p>}
+      {entry.note && <p className="rounded-xl bg-sunken px-3 py-2 text-xs italic text-ink-subtle">{entry.note}</p>}
 
       <div className="mt-auto flex gap-2">
         <Button asChild variant="outline" size="sm" className="flex-1">
@@ -150,7 +150,7 @@ function RosterCard({
           size="sm"
           onClick={onRemove}
           disabled={removing}
-          className="text-red-600 hover:bg-red-50"
+          className="text-danger hover:bg-red-50"
         >
           <Trash2 size={14} />
           {removing ? t('roster.removing') : t('roster.remove')}
@@ -221,7 +221,7 @@ function AddWorkerModal({
           value={keywords}
           onChange={(e) => setKeywords(e.target.value)}
           placeholder={t('roster.searchPlaceholder')}
-          className="field-shell w-full"
+          className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-full"
         />
         <Button type="submit" disabled={searching || !keywords.trim()} aria-label={t('roster.searchAria')}>
           <Search size={15} />
@@ -230,11 +230,11 @@ function AddWorkerModal({
 
       {searching ? (
         <div className="space-y-2">
-          <div className="h-16 animate-pulse rounded-2xl bg-muted" />
-          <div className="h-16 animate-pulse rounded-2xl bg-muted" />
+          <div className="h-16 animate-pulse rounded-2xl bg-sunken" />
+          <div className="h-16 animate-pulse rounded-2xl bg-sunken" />
         </div>
       ) : searchError ? (
-        <p className="rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-red-700">{searchError}</p>
+        <p className="rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-danger">{searchError}</p>
       ) : !hasSearched ? (
         <p className="py-8 text-center text-xs text-ink-subtle">
           {t('roster.searchHint')}
@@ -247,7 +247,7 @@ function AddWorkerModal({
             const workerId = listing.workerId;
             const alreadyOnRoster = existingWorkerIds.has(workerId) || addedWorkerIds.has(workerId);
             return (
-              <div key={listing.id} className="flex items-center gap-3 rounded-2xl bg-card p-3">
+              <div key={listing.id} className="flex items-center gap-3 rounded-2xl bg-surface p-3">
                 <Avatar
                   worker={listing.worker ? { name: listing.worker.name, photoUrl: listing.worker.image } : null}
                   size={40}
@@ -256,7 +256,7 @@ function AddWorkerModal({
                   <p className="truncate text-sm font-semibold text-ink">{listing.worker?.name ?? listing.title}</p>
                   {listing.worker ? (
                     <p className="flex items-center gap-1 truncate text-xs text-ink-muted">
-                      <Star size={12} className="shrink-0 fill-[#f5b33f] text-[#f5b33f]" />
+                      <Star size={12} className="shrink-0 fill-money text-money" />
                       {listing.worker.rating.toFixed(1)} ({listing.worker.reviews}) · {listing.category}
                     </p>
                   ) : (
@@ -365,13 +365,13 @@ export default function BusinessRosterPage() {
 
   if (authLoading || !isAuthenticated || companyLoading || !company || !firebaseToken) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center bg-background">
+      <div className="flex min-h-[60vh] items-center justify-center bg-canvas">
         {companyError ? (
-          <p className="text-sm font-medium text-red-600">{companyError}</p>
+          <p className="text-sm font-medium text-danger">{companyError}</p>
         ) : (
           <div
-            className="h-8 w-8 animate-spin rounded-full border-2 border-outline"
-            style={{ borderTopColor: "hsl(var(--brand))" }}
+            className="h-8 w-8 animate-spin rounded-full border-2 border-line"
+            style={{ borderTopColor: "rgb(var(--color-primary))" }}
           />
         )}
       </div>
@@ -381,11 +381,11 @@ export default function BusinessRosterPage() {
   const existingWorkerIds = new Set(roster.map((entry) => entry.workerId));
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="mx-auto max-w-4xl px-4 py-8 sm:py-10">
+    <div className="min-h-screen bg-canvas">
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:py-10">
         <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-brand-soft px-4 py-1.5 text-sm font-medium text-brand">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary-soft px-4 py-1.5 text-sm font-medium text-primary">
               <Users size={14} />
               {t('roster.yourRoster')}
             </div>
@@ -403,11 +403,11 @@ export default function BusinessRosterPage() {
         {rosterLoading ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-40 animate-pulse rounded-2xl bg-muted" />
+              <div key={i} className="h-40 animate-pulse rounded-2xl bg-sunken" />
             ))}
           </div>
         ) : rosterError ? (
-          <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{rosterError}</p>
+          <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-danger">{rosterError}</p>
         ) : roster.length === 0 ? (
           <EmptyRosterState onAdd={() => setShowAddModal(true)} />
         ) : (
@@ -422,7 +422,7 @@ export default function BusinessRosterPage() {
             ))}
           </div>
         )}
-      </main>
+      </div>
 
       {showAddModal && (
         <AddWorkerModal

@@ -44,10 +44,10 @@ export function QuestTracker() {
 
     if (quests.length === 0) {
         return (
-            <div className="bg-card border border-border rounded-lg p-6 text-center">
-                <ScrollText className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-muted-foreground">{t('gamification.noActiveQuests')}</p>
-                <p className="text-xs text-muted-foreground mt-1">{t('gamification.acceptQuestsHint')}</p>
+            <div className="bg-surface border border-line rounded-lg p-6 text-center">
+                <ScrollText className="w-12 h-12 mx-auto mb-3 text-ink-muted" />
+                <p className="text-ink-muted">{t('gamification.noActiveQuests')}</p>
+                <p className="text-xs text-ink-muted mt-1">{t('gamification.acceptQuestsHint')}</p>
             </div>
         );
     }
@@ -57,7 +57,7 @@ export function QuestTracker() {
             <div className="flex items-center gap-2 mb-4">
                 <ScrollText className="w-5 h-5 text-primary" />
                 <h3 className="font-bold text-lg">{t('gamification.activeQuests')}</h3>
-                <span className="text-xs text-muted-foreground">({quests.length})</span>
+                <span className="text-xs text-ink-muted">({quests.length})</span>
             </div>
 
             {quests.map((quest) => {
@@ -67,7 +67,7 @@ export function QuestTracker() {
                     <div
                         key={quest.id}
                         className={`
-              bg-card border-2 rounded-lg p-4 
+              bg-surface border-2 rounded-lg p-4 
               ${getRarityColor(quest.difficulty)}
               ${quest.difficulty === 'legendary' ? 'animate-pulse-glow' : ''}
               transition-all hover:scale-[1.02]
@@ -85,26 +85,26 @@ export function QuestTracker() {
                                         {quest.difficulty}
                                     </span>
                                 </div>
-                                <p className="text-xs text-muted-foreground">{quest.description}</p>
+                                <p className="text-xs text-ink-muted">{quest.description}</p>
                             </div>
                             {quest.type === 'daily' && (
-                                <Clock className="w-4 h-4 text-orange-500 ml-2" />
+                                <Clock className="w-4 h-4 text-ember-text ml-2" />
                             )}
                         </div>
 
                         {/* Progress bar */}
                         <div className="mb-3">
                             <div className="flex justify-between text-xs mb-1">
-                                <span className="text-muted-foreground">{t('gamification.questProgress')}</span>
+                                <span className="text-ink-muted">{t('gamification.questProgress')}</span>
                                 <span className="font-medium">
                                     {quest.progress} / {quest.maxProgress}
                                 </span>
                             </div>
-                            <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                            <div className="relative h-2 bg-sunken rounded-full overflow-hidden">
                                 <div
                                     className={`
                     absolute top-0 left-0 h-full transition-all duration-500
-                    ${quest.difficulty === 'legendary' ? 'bg-gradient-to-r from-secondary via-primary to-secondary' : 'bg-accent'}
+                    ${quest.difficulty === 'legendary' ? 'bg-gradient-to-r from-sunken via-primary to-sunken' : 'bg-ember'}
                   `}
                                     style={{ width: `${progress}%` }}
                                 />
@@ -114,15 +114,15 @@ export function QuestTracker() {
                         {/* Rewards */}
                         <div className="flex items-center gap-4 text-xs">
                             <div className="flex items-center gap-1">
-                                <Star className="w-3 h-3 text-accent" />
-                                <span className="text-muted-foreground">+{quest.rewards.xp} XP</span>
+                                <Star className="w-3 h-3 text-ember-text" />
+                                <span className="text-ink-muted">+{quest.rewards.xp} XP</span>
                             </div>
                             <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 rounded-full bg-secondary" />
-                                <span className="text-muted-foreground">+{quest.rewards.gold} Gold</span>
+                                <div className="w-3 h-3 rounded-full bg-sunken" />
+                                <span className="text-ink-muted">+{quest.rewards.gold} Gold</span>
                             </div>
                             {quest.progress >= quest.maxProgress && (
-                                <div className="flex items-center gap-1 text-accent ml-auto">
+                                <div className="flex items-center gap-1 text-ember-text ml-auto">
                                     <CheckCircle2 className="w-3 h-3" />
                                     <span className="font-bold">{t('gamification.readyToClaim')}</span>
                                 </div>

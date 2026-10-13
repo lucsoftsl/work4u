@@ -40,8 +40,8 @@ export function ImageCropper({ imageSrc, fileName, aspect = 16 / 9, onCancel, on
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="flex w-full max-w-lg flex-col rounded-2xl bg-white shadow-soft">
-        <div className="border-b border-outline px-5 py-4">
+      <div className="flex w-full max-w-lg flex-col rounded-2xl bg-white shadow-stamp">
+        <div className="border-b border-line px-5 py-4">
           <h2 className="text-lg font-bold text-ink">{t("articleForm.cropTitle")}</h2>
         </div>
         <div className="relative h-80 w-full bg-black/90">
@@ -55,7 +55,7 @@ export function ImageCropper({ imageSrc, fileName, aspect = 16 / 9, onCancel, on
             onCropComplete={handleCropComplete}
           />
         </div>
-        <div className="flex items-center justify-end gap-2 border-t border-outline px-5 py-4">
+        <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-4">
           <Button type="button" variant="outline" onClick={onCancel} disabled={processing}>
             {t("jobDetail.cancel")}
           </Button>

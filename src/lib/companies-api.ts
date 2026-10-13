@@ -8,7 +8,7 @@ import type {
   UpdateShiftPayload,
 } from "@/api/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+import { API_BASE_URL as API_BASE_URL, apiFetch } from "./http";
 
 async function handle<T>(response: Response, fallbackError: string): Promise<T> {
   if (!response.ok) {
@@ -20,7 +20,7 @@ async function handle<T>(response: Response, fallbackError: string): Promise<T> 
 
 export const companiesApi = {
   async createCompany(payload: CreateCompanyPayload, token: string): Promise<Company> {
-    const response = await fetch(`${API_BASE_URL}/api/companies`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/companies`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
@@ -29,7 +29,7 @@ export const companiesApi = {
   },
 
   async getMyCompany(token: string): Promise<Company | null> {
-    const response = await fetch(`${API_BASE_URL}/api/companies/me`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/companies/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (response.status === 404) return null;
@@ -37,14 +37,14 @@ export const companiesApi = {
   },
 
   async listRoster(companyId: string, token: string): Promise<RosterWorker[]> {
-    const response = await fetch(`${API_BASE_URL}/api/companies/${companyId}/roster`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/companies/${companyId}/roster`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return handle(response, "Failed to fetch roster");
   },
 
   async addRosterWorker(companyId: string, payload: AddRosterWorkerPayload, token: string): Promise<RosterWorker> {
-    const response = await fetch(`${API_BASE_URL}/api/companies/${companyId}/roster`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/companies/${companyId}/roster`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
@@ -53,7 +53,7 @@ export const companiesApi = {
   },
 
   async removeRosterWorker(companyId: string, workerId: string, token: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/api/companies/${companyId}/roster/${workerId}`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/companies/${companyId}/roster/${workerId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -61,7 +61,7 @@ export const companiesApi = {
   },
 
   async createShift(companyId: string, payload: CreateShiftPayload, token: string): Promise<Shift[]> {
-    const response = await fetch(`${API_BASE_URL}/api/companies/${companyId}/shifts`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/companies/${companyId}/shifts`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
@@ -71,14 +71,14 @@ export const companiesApi = {
 
   async listShifts(companyId: string, from: string, to: string, token: string): Promise<Shift[]> {
     const params = new URLSearchParams({ from, to });
-    const response = await fetch(`${API_BASE_URL}/api/companies/${companyId}/shifts?${params}`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/companies/${companyId}/shifts?${params}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return handle(response, "Failed to fetch shifts");
   },
 
   async updateShift(companyId: string, jobId: string, payload: UpdateShiftPayload, token: string): Promise<Shift> {
-    const response = await fetch(`${API_BASE_URL}/api/companies/${companyId}/shifts/${jobId}`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/companies/${companyId}/shifts/${jobId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),

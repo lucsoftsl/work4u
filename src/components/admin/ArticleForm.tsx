@@ -137,7 +137,7 @@ export function ArticleForm({ initial, onSubmit, submitError }: ArticleFormProps
 
       <div>
         <label className="mb-2 block text-sm font-semibold text-ink">{t("common.title")}</label>
-        <input {...register("title")} placeholder={t("articleForm.titlePlaceholder")} className="field-shell w-full" />
+        <input {...register("title")} placeholder={t("articleForm.titlePlaceholder")} className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-full" />
         {errors.title && <p className="mt-1 text-xs text-red-600">{errors.title.message}</p>}
       </div>
 
@@ -147,7 +147,7 @@ export function ArticleForm({ initial, onSubmit, submitError }: ArticleFormProps
           {...register("excerpt")}
           rows={2}
           placeholder={t("articleForm.excerptPlaceholder")}
-          className="field-shell w-full"
+          className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-full"
         />
       </div>
 
@@ -155,7 +155,7 @@ export function ArticleForm({ initial, onSubmit, submitError }: ArticleFormProps
         <label className="mb-2 block text-sm font-semibold text-ink">{t("articleForm.coverImageLabel")}</label>
         {coverImageUrl ? (
           <div className="flex items-center gap-4">
-            <div className="relative h-20 w-32 overflow-hidden rounded-2xl bg-[#eff7fa]">
+            <div className="relative h-20 w-32 overflow-hidden rounded-2xl bg-primary-soft">
               <Image src={coverImageUrl} alt="" fill unoptimized className="object-cover" />
             </div>
             <button
@@ -164,14 +164,14 @@ export function ArticleForm({ initial, onSubmit, submitError }: ArticleFormProps
                 setValue("coverImageUrl", "");
                 setValue("coverImageDeleteUrl", "");
               }}
-              className="secondary-cta"
+              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-control border border-ink/80 bg-surface px-5 py-2.5 text-label text-ink transition-colors duration-fast hover:bg-sunken active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45"
             >
               <X className="h-4 w-4" />
               {t("articleForm.removeCover")}
             </button>
           </div>
         ) : (
-          <label className="field-shell flex w-full cursor-pointer items-center justify-center gap-2 py-6 text-sm text-ink-muted">
+          <label className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus flex w-full cursor-pointer items-center justify-center gap-2 py-6 text-sm text-ink-muted">
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             {uploading ? t("profile.uploading") : t("articleForm.uploadCover")}
             <input type="file" accept="image/*" className="sr-only" onChange={handleFileSelect} disabled={uploading} />
@@ -192,26 +192,26 @@ export function ArticleForm({ initial, onSubmit, submitError }: ArticleFormProps
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-2 block text-sm font-semibold text-ink">{t("articleForm.visibleFromLabel")}</label>
-          <input type="datetime-local" {...register("visibleFrom")} className="field-shell w-full" />
+          <input type="datetime-local" {...register("visibleFrom")} className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-full" />
         </div>
         <div>
           <label className="mb-2 block text-sm font-semibold text-ink">{t("articleForm.visibleToLabel")}</label>
-          <input type="datetime-local" {...register("visibleTo")} className="field-shell w-full" />
+          <input type="datetime-local" {...register("visibleTo")} className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-full" />
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-2 block text-sm font-semibold text-ink">{t("articleForm.displayOrderLabel")}</label>
-          <input type="number" step="1" {...register("displayOrder")} className="field-shell w-full" />
+          <input type="number" step="1" {...register("displayOrder")} className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-full" />
         </div>
         <label className="flex items-center gap-2 self-end pb-2.5">
-          <input type="checkbox" {...register("isPublished")} className="h-4 w-4 rounded border-outline text-brand" />
+          <input type="checkbox" {...register("isPublished")} className="h-4 w-4 rounded border-line text-primary" />
           <span className="text-sm font-semibold text-ink">{t("articleForm.publishedLabel")}</span>
         </label>
       </div>
 
-      <div className="flex items-center gap-3 border-t border-outline pt-6">
+      <div className="flex items-center gap-3 border-t border-line pt-6">
         <Button type="submit" disabled={submitting || uploading}>
           {submitting ? t("articleForm.saving") : t("articleForm.save")}
         </Button>

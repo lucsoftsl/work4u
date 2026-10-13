@@ -45,10 +45,10 @@ const PERIOD_LABEL_KEYS: Record<Period, string> = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  IN_PROGRESS: "bg-brand-soft text-brand",
-  COMPLETED: "bg-green-50 text-green-700",
-  CANCELLED: "bg-muted text-ink-subtle",
-  DISPUTED: "bg-red-50 text-red-700",
+  IN_PROGRESS: "bg-primary-soft text-primary",
+  COMPLETED: "bg-green-50 text-success",
+  CANCELLED: "bg-sunken text-ink-subtle",
+  DISPUTED: "bg-red-50 text-danger",
 };
 
 const STATUS_LABEL_KEYS: Record<string, string> = {
@@ -144,7 +144,7 @@ function Avatar({
   if (!worker) {
     return (
       <div
-        className="flex shrink-0 items-center justify-center rounded-full bg-muted text-ink-subtle"
+        className="flex shrink-0 items-center justify-center rounded-full bg-sunken text-ink-subtle"
         style={{ width: size, height: size }}
       >
         <User size={size * 0.5} />
@@ -165,7 +165,7 @@ function Avatar({
   }
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full bg-brand-soft text-sm font-bold text-brand"
+      className="flex shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary"
       style={{ width: size, height: size }}
     >
       {worker.name.charAt(0).toUpperCase()}
@@ -179,7 +179,7 @@ function StatusPill({ status }: { status: string }) {
     <span
       className={cn(
         "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold",
-        STATUS_STYLES[status] ?? "bg-muted text-ink-subtle"
+        STATUS_STYLES[status] ?? "bg-sunken text-ink-subtle"
       )}
     >
       {STATUS_LABEL_KEYS[status] ? t(STATUS_LABEL_KEYS[status]) : status}
@@ -206,24 +206,24 @@ function ModalShell({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full flex-col rounded-t-3xl bg-card shadow-soft sm:max-w-lg sm:rounded-2xl"
+        className="flex max-h-[92vh] w-full flex-col rounded-t-3xl bg-surface shadow-stamp sm:max-w-lg sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-outline px-5 py-4">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
           <h2 className="text-lg font-bold text-ink">{title}</h2>
           <button
             onClick={onClose}
             aria-label={t('roster.close')}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition hover:bg-sunken focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <X size={18} />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
-        {footer && <div className="border-t border-outline px-5 py-4">{footer}</div>}
+        {footer && <div className="border-t border-line px-5 py-4">{footer}</div>}
       </div>
     </div>
   );
@@ -233,8 +233,8 @@ function EmptyDayState({ onSchedule }: { onSchedule: () => void }) {
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl bg-card px-6 py-16 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft text-brand">
+    <div className="flex flex-col items-center justify-center rounded-2xl bg-surface px-6 py-16 text-center">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary-soft text-primary">
         <CalendarX size={24} />
       </div>
       <p className="text-sm font-semibold text-ink">{t('schedule.noShiftsToday')}</p>
@@ -255,7 +255,7 @@ function ShiftAgendaRow({ shift, onSelect }: { shift: Shift; onSelect: () => voi
   return (
     <button
       onClick={onSelect}
-      className="flex w-full items-center gap-3 rounded-2xl bg-card p-4 text-left transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
+      className="flex w-full items-center gap-3 rounded-2xl bg-surface p-4 text-left transition hover:bg-sunken focus:outline-none focus:ring-2 focus:ring-primary"
     >
       <Avatar worker={shift.worker} size={44} />
       <div className="min-w-0 flex-1">
@@ -300,7 +300,7 @@ function WeekStrip({
       <button
         onClick={onPrev}
         aria-label={t('schedule.previousWeek')}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-muted transition hover:bg-muted hover:text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-muted transition hover:bg-sunken hover:text-ink focus:outline-none focus:ring-2 focus:ring-primary"
       >
         <ChevronLeft size={18} />
       </button>
@@ -316,12 +316,12 @@ function WeekStrip({
               aria-label={day.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
               className={cn(
                 "flex min-w-[52px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-primary",
-                isSelected ? "bg-brand text-white shadow-soft" : "bg-card text-ink-muted hover:bg-muted"
+                isSelected ? "bg-primary text-white shadow-stamp" : "bg-surface text-ink-muted hover:bg-sunken"
               )}
             >
               <span className="text-[11px] font-bold uppercase tracking-wide">{dayInitial(day)}</span>
               <span className="text-base font-bold">{day.getDate()}</span>
-              {isToday && !isSelected && <span className="h-1 w-1 rounded-full bg-brand" />}
+              {isToday && !isSelected && <span className="h-1 w-1 rounded-full bg-primary" />}
             </button>
           );
         })}
@@ -329,7 +329,7 @@ function WeekStrip({
       <button
         onClick={onNext}
         aria-label={t('schedule.nextWeek')}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-muted transition hover:bg-muted hover:text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-muted transition hover:bg-sunken hover:text-ink focus:outline-none focus:ring-2 focus:ring-primary"
       >
         <ChevronRight size={18} />
       </button>
@@ -442,7 +442,7 @@ function ScheduleShiftModal({
   return (
     <ModalShell title={t('schedule.scheduleShiftTitle')} onClose={onClose} footer={footer}>
       <form id="create-shift-form" onSubmit={handleSubmit} className="space-y-4">
-        {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-red-700">{error}</p>}
+        {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-danger">{error}</p>}
 
         <div className="space-y-1.5">
           <label htmlFor="shift-title" className="text-xs font-bold uppercase tracking-wide text-ink-subtle">
@@ -453,7 +453,7 @@ function ScheduleShiftModal({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={t('schedule.titlePlaceholder')}
-            className="field-shell w-full"
+            className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-full"
           />
         </div>
 
@@ -490,7 +490,7 @@ function ScheduleShiftModal({
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
             placeholder={t('schedule.descPlaceholder')}
-            className="field-shell w-full"
+            className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-full"
           />
         </div>
 
@@ -499,9 +499,9 @@ function ScheduleShiftModal({
             {t('schedule.workerLabel')}
           </label>
           {roster.length === 0 ? (
-            <p className="rounded-xl bg-muted px-3 py-2 text-xs text-ink-muted">
+            <p className="rounded-xl bg-sunken px-3 py-2 text-xs text-ink-muted">
               {t('schedule.emptyRosterInline')}{" "}
-              <Link href="/business/roster" className="font-semibold text-brand underline">
+              <Link href="/business/roster" className="font-semibold text-primary underline">
                 {t('schedule.addAWorker')}
               </Link>{" "}
               {t('schedule.beforeScheduling')}
@@ -511,7 +511,7 @@ function ScheduleShiftModal({
               id="shift-worker"
               value={workerId}
               onChange={(e) => setWorkerId(e.target.value)}
-              className="field-shell w-full"
+              className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-full"
             >
               {roster.map((entry) => (
                 <option key={entry.workerId} value={entry.workerId}>
@@ -532,18 +532,18 @@ function ScheduleShiftModal({
               value={budget}
               onChange={(e) => setBudget(e.target.value)}
               placeholder="0.00"
-              className="field-shell w-full"
+              className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-full"
             />
             <CurrencySelector value={budgetCurrency} onChange={setBudgetCurrency} />
           </div>
           <div className="flex gap-2">
-            <div className="flex overflow-hidden rounded-2xl bg-muted p-1">
+            <div className="flex overflow-hidden rounded-2xl bg-sunken p-1">
               <button
                 type="button"
                 onClick={() => setBudgetType("FIXED")}
                 className={cn(
                   "rounded-xl px-3 py-2 text-xs font-bold transition",
-                  budgetType === "FIXED" ? "bg-brand text-white" : "text-ink-muted"
+                  budgetType === "FIXED" ? "bg-primary text-white" : "text-ink-muted"
                 )}
               >
                 {t('schedule.fixed')}
@@ -553,7 +553,7 @@ function ScheduleShiftModal({
                 onClick={() => setBudgetType("HOURLY")}
                 className={cn(
                   "rounded-xl px-3 py-2 text-xs font-bold transition",
-                  budgetType === "HOURLY" ? "bg-brand text-white" : "text-ink-muted"
+                  budgetType === "HOURLY" ? "bg-primary text-white" : "text-ink-muted"
                 )}
               >
                 {t('schedule.hourly')}
@@ -572,7 +572,7 @@ function ScheduleShiftModal({
               type="datetime-local"
               value={scheduledStartAt}
               onChange={(e) => setScheduledStartAt(e.target.value)}
-              className="field-shell w-full"
+              className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-full"
             />
           </div>
           <div className="space-y-1.5">
@@ -584,7 +584,7 @@ function ScheduleShiftModal({
               type="datetime-local"
               value={scheduledEndAt}
               onChange={(e) => setScheduledEndAt(e.target.value)}
-              className="field-shell w-full"
+              className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-full"
             />
           </div>
         </div>
@@ -597,7 +597,7 @@ function ScheduleShiftModal({
             id="shift-recurrence"
             value={recurrenceRule}
             onChange={(e) => setRecurrenceRule(e.target.value as RecurrenceRule)}
-            className="field-shell w-full"
+            className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-full"
           >
             <option value="NONE">{t('schedule.doesNotRepeat')}</option>
             <option value="DAILY">{t('schedule.daily')}</option>
@@ -619,7 +619,7 @@ function ScheduleShiftModal({
                 onChange={(e) =>
                   setRecurrenceCount(Math.min(MAX_RECURRENCE_COUNT, Math.max(1, Number(e.target.value) || 1)))
                 }
-                className="field-shell w-20"
+                className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-20"
               />
               <span className="text-xs text-ink-subtle">({t('schedule.max')} {MAX_RECURRENCE_COUNT})</span>
             </div>
@@ -730,7 +730,7 @@ function ShiftDetailModal({
           <StatusPill status={shift.lifecycleStatus} />
         </div>
 
-        <div className="space-y-1.5 rounded-2xl bg-muted px-4 py-3 text-xs text-ink-muted">
+        <div className="space-y-1.5 rounded-2xl bg-sunken px-4 py-3 text-xs text-ink-muted">
           <p className="flex items-center gap-2">
             <Clock size={13} />
             {formatTime(shift.scheduledStartAt)} – {formatTime(shift.scheduledEndAt)}
@@ -746,7 +746,7 @@ function ShiftDetailModal({
         </div>
 
         {actionError && (
-          <p className="rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-red-700">{actionError}</p>
+          <p className="rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-danger">{actionError}</p>
         )}
 
         {!isEditable ? (
@@ -763,13 +763,13 @@ function ShiftDetailModal({
                   type="datetime-local"
                   value={scheduledStartAt}
                   onChange={(e) => setScheduledStartAt(e.target.value)}
-                  className="field-shell"
+                  className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus"
                 />
                 <input
                   type="datetime-local"
                   value={scheduledEndAt}
                   onChange={(e) => setScheduledEndAt(e.target.value)}
-                  className="field-shell"
+                  className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus"
                 />
               </div>
               <Button size="sm" variant="outline" onClick={handleReschedule} disabled={busyAction !== null}>
@@ -782,7 +782,7 @@ function ShiftDetailModal({
               <select
                 value={reassignWorkerId}
                 onChange={(e) => setReassignWorkerId(e.target.value)}
-                className="field-shell w-full"
+                className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-full"
               >
                 <option value="" disabled>
                   {t('schedule.chooseWorker')}
@@ -798,12 +798,12 @@ function ShiftDetailModal({
               </Button>
             </div>
 
-            <div className="space-y-2 border-t border-outline pt-4">
+            <div className="space-y-2 border-t border-line pt-4">
               {!confirmingCancel ? (
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="text-red-600 hover:bg-red-50"
+                  className="text-danger hover:bg-red-50"
                   onClick={() => setConfirmingCancel(true)}
                   disabled={busyAction !== null}
                 >
@@ -812,7 +812,7 @@ function ShiftDetailModal({
                 </Button>
               ) : (
                 <div className="rounded-xl bg-red-50 p-3">
-                  <p className="mb-2 text-xs font-medium text-red-700">
+                  <p className="mb-2 text-xs font-medium text-danger">
                     {t('schedule.confirmCancelShift')}
                   </p>
                   <div className="flex gap-2">
@@ -955,13 +955,13 @@ export default function BusinessSchedulePage() {
 
   if (authLoading || !isAuthenticated || companyLoading || !company || !firebaseToken) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center bg-background">
+      <div className="flex min-h-[60vh] items-center justify-center bg-canvas">
         {companyError ? (
-          <p className="text-sm font-medium text-red-600">{companyError}</p>
+          <p className="text-sm font-medium text-danger">{companyError}</p>
         ) : (
           <div
-            className="h-8 w-8 animate-spin rounded-full border-2 border-outline"
-            style={{ borderTopColor: "hsl(var(--brand))" }}
+            className="h-8 w-8 animate-spin rounded-full border-2 border-line"
+            style={{ borderTopColor: "rgb(var(--color-primary))" }}
           />
         )}
       </div>
@@ -969,10 +969,10 @@ export default function BusinessSchedulePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-28">
-      <main className="mx-auto max-w-2xl px-4 py-8 sm:py-10">
+    <div className="min-h-screen bg-canvas pb-28">
+      <div className="mx-auto max-w-2xl px-4 py-8 sm:py-10">
         <div className="mb-6">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-brand-soft px-4 py-1.5 text-sm font-medium text-brand">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary-soft px-4 py-1.5 text-sm font-medium text-primary">
             <CalendarClock size={14} />
             {t('schedule.badge')}
           </div>
@@ -997,11 +997,11 @@ export default function BusinessSchedulePage() {
 
         {shiftsLoading ? (
           <div className="space-y-3">
-            <div className="h-20 animate-pulse rounded-2xl bg-muted" />
-            <div className="h-20 animate-pulse rounded-2xl bg-muted" />
+            <div className="h-20 animate-pulse rounded-2xl bg-sunken" />
+            <div className="h-20 animate-pulse rounded-2xl bg-sunken" />
           </div>
         ) : shiftsError ? (
-          <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{shiftsError}</p>
+          <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-danger">{shiftsError}</p>
         ) : shifts.length === 0 ? (
           <EmptyDayState onSchedule={() => setShowCreateModal(true)} />
         ) : (
@@ -1023,12 +1023,12 @@ export default function BusinessSchedulePage() {
             )}
           </div>
         )}
-      </main>
+      </div>
 
       <button
         onClick={() => setShowCreateModal(true)}
         aria-label={t('schedule.scheduleShift')}
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white shadow-soft transition hover:bg-brand-strong focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-stamp transition hover:bg-primary-strong focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
       >
         <Plus size={26} />
       </button>

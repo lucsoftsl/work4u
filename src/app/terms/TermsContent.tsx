@@ -30,10 +30,10 @@ export default function TermsContent() {
   const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-canvas">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <header className="max-w-3xl">
-          <span className="eyebrow">{t("legal.eyebrow")}</span>
+          <span className="inline-flex items-center rounded-control bg-primary-soft px-2.5 py-1 text-micro uppercase text-primary">{t("legal.eyebrow")}</span>
           <h1 className="mt-5 font-display text-4xl font-black tracking-tight text-ink md:text-5xl">
             {t("terms.title")}
           </h1>
@@ -41,7 +41,7 @@ export default function TermsContent() {
           <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ink-subtle">
             <span>{t("legal.version")} {TERMS_VERSION}</span>
             <span>{t("legal.effective")} {TERMS_EFFECTIVE_DATE}</span>
-            <Link href="/privacy" className="font-semibold text-brand underline">
+            <Link href="/privacy" className="font-semibold text-primary underline">
               {t("terms.seePrivacyLink")}
             </Link>
           </div>
@@ -49,12 +49,12 @@ export default function TermsContent() {
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[220px_1fr] lg:gap-12">
           <nav aria-label="Table of contents" className="hidden lg:block">
-            <div className="sticky top-24 surface-panel p-4">
+            <div className="sticky top-24 rounded-card border border-line bg-surface p-4">
               <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-subtle">{t("legal.onThisPage")}</p>
               <ul className="mt-3 space-y-1.5 text-sm">
                 {SECTION_IDS.map((id) => (
                   <li key={id}>
-                    <a href={`#${id}`} className="block rounded-lg px-2 py-1 text-ink-muted hover:bg-brand-soft hover:text-brand">
+                    <a href={`#${id}`} className="block rounded-lg px-2 py-1 text-ink-muted hover:bg-primary-soft hover:text-primary">
                       {t(`terms.sections.${id}`)}
                     </a>
                   </li>
@@ -63,11 +63,11 @@ export default function TermsContent() {
             </div>
           </nav>
 
-          <article className="surface-card max-w-none p-6 md:p-10">
+          <article className="rounded-card border border-line bg-surface shadow-stamp max-w-none p-6 md:p-10">
             <div className="space-y-12 text-[15px] leading-7 text-ink">
               {SECTION_IDS.map((id) => (
                 <section key={id} id={id} className="scroll-mt-24">
-                  <h2 className="section-heading text-2xl md:text-3xl">{t(`terms.sections.${id}`)}</h2>
+                  <h2 className="font-display text-h1 text-ink text-2xl md:text-3xl">{t(`terms.sections.${id}`)}</h2>
                   <div dangerouslySetInnerHTML={{ __html: t(`terms.body.${id}`) }} />
                   {id === "contact" && (
                     <p className="mt-1 text-sm text-ink-subtle">{t("legal.placeholderContactNote")}</p>
@@ -77,7 +77,7 @@ export default function TermsContent() {
             </div>
           </article>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

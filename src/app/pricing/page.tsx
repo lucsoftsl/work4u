@@ -1,188 +1,156 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Check, ChevronDown, Clock, Lock, TrendingUp, Zap, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/Button";
-import {
-  getSubscriptionStatus,
-  createCheckoutSession,
-  createPortalSession,
-  type SubscriptionStatus,
-  type Plan,
-} from "@/api/subscriptions";
-import {
-  Check,
-  ChevronDown,
-  Lock,
-  Zap,
-  TrendingUp,
-  Clock,
-  Building2,
-} from "lucide-react";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { Skeleton } from "@/components/ui/QueryState";
+import { useToast } from "@/components/ui/Toast";
+import { formatMoney } from "@/components/ui/MoneyPlate";
+import { getSubscriptionStatus, createCheckoutSession, createPortalSession, type SubscriptionStatus, type Plan } from "@/api/subscriptions";
+import { billingErrorKey, anyPlanAvailable, isPlanAvailable, showIntervalToggle } from "@/lib/billing-plans";
+import { usePlans } from "@/hooks/usePlans";
+import { signInPath } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
 
-type PayablePlan = Exclude<Plan, "free">;
+type PayablePlan = Exclude<Plan, "free" | "business">;
+type Billing = "month" | "year";
 
 interface Tier {
-  id: Plan;
+  id: "free" | PayablePlan;
   name: string;
   tagline: string;
   monthlyPrice: number;
   yearlyPrice: number;
-  badge?: string;
+  emphasised?: boolean;
   features: string[];
 }
 
-function formatEuro(amount: number) {
-  return amount.toLocaleString(undefined, { maximumFractionDigits: 0 });
+interface FaqItem {
+  q: string;
+  a: string;
+}
+
+function FaqAccordion({ items }: { items: FaqItem[] }) {
+  const baseId = useId();
+  const [open, setOpen] = useState<number | null>(null);
+  return (
+    <div className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface">
+      {items.map((faq, i) => {
+        const expanded = open === i;
+        return (
+          <div key={faq.q}>
+            <h3>
+              <button
+                type="button"
+                id={`${baseId}-q${i}`}
+                aria-expanded={expanded}
+                aria-controls={`${baseId}-a${i}`}
+                onClick={() => setOpen(expanded ? null : i)}
+                className="flex min-h-[56px] w-full items-center justify-between gap-4 px-5 py-3 text-left text-body font-bold text-ink transition-colors duration-fast hover:bg-sunken"
+              >
+                <span className="min-w-0">{faq.q}</span>
+                <ChevronDown
+                  className={cn("h-5 w-5 shrink-0 text-ink-muted transition-transform duration-fast", expanded && "rotate-180")}
+                  aria-hidden="true"
+                />
+              </button>
+            </h3>
+            <div id={`${baseId}-a${i}`} role="region" aria-labelledby={`${baseId}-q${i}`} hidden={!expanded} className="px-5 pb-4 text-body text-ink-muted">
+              {faq.a}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function PricingPage() {
   const router = useRouter();
   const { isAuthenticated, firebaseToken, loading: authLoading } = useAuth();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const { push } = useToast();
+  const { plans, loaded: plansLoaded } = usePlans();
 
-  const TIERS: Tier[] = [
+  const tiers: Tier[] = [
     {
       id: "free",
-      name: t('pricing.freeTierName'),
-      tagline: t('pricing.freeTierTagline'),
+      name: t("pricing.freeTierName"),
+      tagline: t("pricing.freeTierTagline"),
       monthlyPrice: 0,
       yearlyPrice: 0,
-      features: [
-        t('pricing.freeFeature1'),
-        t('pricing.freeFeature2'),
-        t('pricing.freeFeature3'),
-        t('pricing.freeFeature4'),
-        t('pricing.freeFeature5'),
-      ],
+      features: [1, 2, 3, 4, 5].map((n) => t(`pricing.freeFeature${n}`)),
     },
     {
       id: "starter",
-      name: t('pricing.starterTierName'),
-      tagline: t('pricing.starterTierTagline'),
+      name: t("pricing.starterTierName"),
+      tagline: t("pricing.starterTierTagline"),
       monthlyPrice: 9,
       yearlyPrice: 75,
-      features: [
-        t('pricing.starterFeature1'),
-        t('pricing.starterFeature2'),
-        t('pricing.starterFeature3'),
-      ],
+      features: [1, 2, 3].map((n) => t(`pricing.starterFeature${n}`)),
     },
     {
       id: "pro",
-      name: t('pricing.proTierName'),
-      tagline: t('pricing.proTierTagline'),
+      name: t("pricing.proTierName"),
+      tagline: t("pricing.proTierTagline"),
       monthlyPrice: 29,
       yearlyPrice: 240,
-      badge: t('pricing.mostPopularBadge'),
-      features: [
-        t('pricing.proFeature1'),
-        t('pricing.proFeature2'),
-        t('pricing.proFeature3'),
-        t('pricing.proFeature4'),
-      ],
-    },
-    {
-      id: "business",
-      name: t('pricing.businessTierName'),
-      tagline: t('pricing.businessTierTagline'),
-      monthlyPrice: 59,
-      yearlyPrice: 480,
-      features: [
-        t('pricing.businessFeature1'),
-        t('pricing.businessFeature2'),
-        t('pricing.businessFeature3'),
-      ],
+      emphasised: true,
+      features: [1, 2, 3, 4].map((n) => t(`pricing.proFeature${n}`)),
     },
   ];
 
-  const BENEFITS = [
-    {
-      icon: TrendingUp,
-      title: t('pricing.benefit1Title'),
-      desc: t('pricing.benefit1Desc'),
-    },
-    {
-      icon: Zap,
-      title: t('pricing.benefit2Title'),
-      desc: t('pricing.benefit2Desc'),
-    },
-    {
-      icon: Clock,
-      title: t('pricing.benefit3Title'),
-      desc: t('pricing.benefit3Desc'),
-    },
-    {
-      icon: Building2,
-      title: t('pricing.benefit4Title'),
-      desc: t('pricing.benefit4Desc'),
-    },
+  const benefits: { icon: LucideIcon; title: string; desc: string }[] = [
+    { icon: TrendingUp, title: t("pricing.benefit1Title"), desc: t("pricing.benefit1Desc") },
+    { icon: Zap, title: t("pricing.benefit2Title"), desc: t("pricing.benefit2Desc") },
+    { icon: Clock, title: t("pricing.benefit3Title"), desc: t("pricing.benefit3Desc") },
   ];
 
-  const FAQS = [
-    {
-      q: t('pricing.faq1Question'),
-      a: t('pricing.faq1Answer'),
-    },
-    {
-      q: t('pricing.faq2Question'),
-      a: t('pricing.faq2Answer'),
-    },
-    {
-      q: t('pricing.faq3Question'),
-      a: t('pricing.faq3Answer'),
-    },
-    {
-      q: t('pricing.faq4Question'),
-      a: t('pricing.faq4Answer'),
-    },
-  ];
+  const faqs: FaqItem[] = [1, 2, 3, 4].map((n) => ({ q: t(`pricing.faq${n}Question`), a: t(`pricing.faq${n}Answer`) }));
 
-  const [billing, setBilling] = useState<"month" | "year">("month");
+  const [billing, setBilling] = useState<Billing>("month");
   const [status, setStatus] = useState<SubscriptionStatus | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState<PayablePlan | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [businessIntent, setBusinessIntent] = useState(false);
-
   const [feedback, setFeedback] = useState<"success" | "canceled" | null>(null);
+
   useEffect(() => {
-    const read = () => {
-      if (typeof window === "undefined") return;
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("success")) setFeedback("success");
-      else if (params.get("canceled")) setFeedback("canceled");
-      if (params.get("intent") === "business") setBusinessIntent(true);
-    };
-    read();
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("success")) setFeedback("success");
+    else if (params.get("canceled")) setFeedback("canceled");
   }, []);
 
   useEffect(() => {
     if (!isAuthenticated || !firebaseToken) return;
-
+    let isActive = true;
     const load = async () => {
       try {
         setLoadingStatus(true);
         const result = await getSubscriptionStatus(firebaseToken);
-        setStatus(result);
-      } catch {
-        setStatus(null);
+        if (isActive) setStatus(result);
+      } catch (error) {
+        console.error("Failed to load subscription status:", error);
+        if (isActive) setStatus(null);
       } finally {
-        setLoadingStatus(false);
+        if (isActive) setLoadingStatus(false);
       }
     };
     void load();
+    return () => {
+      isActive = false;
+    };
   }, [isAuthenticated, firebaseToken]);
 
-  const currentPlan = status?.status === "active" || status?.status === "trialing" ? status.plan : "free";
+  const currentPlan: Plan = status?.status === "active" || status?.status === "trialing" ? status.plan : "free";
 
   async function handleUpgrade(planId: PayablePlan) {
     if (!isAuthenticated) {
-      router.push("/signin?redirect=/pricing");
+      router.push(signInPath("/pricing"));
       return;
     }
     if (!firebaseToken) return;
@@ -190,7 +158,9 @@ export default function PricingPage() {
     try {
       const { url } = await createCheckoutSession(firebaseToken, planId, billing);
       window.location.assign(url);
-    } catch {
+    } catch (error) {
+      console.error("Checkout failed:", error);
+      push({ tone: "error", message: t(billingErrorKey(error)) });
       setCheckoutLoadingPlan(null);
     }
   }
@@ -201,246 +171,179 @@ export default function PricingPage() {
     try {
       const { url } = await createPortalSession(firebaseToken);
       window.location.href = url;
-    } catch {
+    } catch (error) {
+      console.error("Billing portal failed:", error);
+      push({ tone: "error", message: t(billingErrorKey(error)) });
       setPortalLoading(false);
     }
   }
 
+  const money = (amount: number) => formatMoney(amount, "EUR", locale);
+  const busy = loadingStatus || authLoading || !plansLoaded;
+
   return (
-    <div className="min-h-screen bg-background">
-      <main className="max-w-6xl mx-auto px-4 py-16">
-        {/* Feedback banner */}
-        {feedback === "success" && (
-          <div className="mb-8 rounded-2xl bg-green-50 border border-green-200 px-5 py-4 text-green-800 text-sm font-medium flex items-center gap-2">
-            <Check size={16} className="shrink-0" />
-            {t('pricing.paymentSuccessBanner')}
-          </div>
-        )}
-        {feedback === "canceled" && (
-          <div className="mb-8 rounded-2xl bg-amber-50 border border-amber-200 px-5 py-4 text-amber-800 text-sm">
-            {t('pricing.paymentCanceledBanner')}
-          </div>
-        )}
-        {businessIntent && (
-          <div className="mb-8 rounded-2xl bg-brand/10 border border-brand/30 px-5 py-4 text-sm text-ink flex items-center gap-2.5">
-            <Building2 size={16} className="shrink-0 text-brand" />
-            {t('pricing.businessIntentBannerPrefix')}{" "}
-            <span className="font-semibold">{t('pricing.businessTierName')}</span>{" "}
-            {t('pricing.businessIntentBannerSuffix')}
-          </div>
-        )}
+    <div className="mx-auto w-full max-w-content px-[var(--gutter)] py-8 md:py-12">
+      {feedback === "success" ? (
+        <p role="status" className="mb-6 flex items-center gap-2 rounded-card border-l-4 border-l-success bg-success-soft px-4 py-3 text-label text-ink">
+          <Check className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+          {t("pricing.paymentSuccessBanner")}
+        </p>
+      ) : null}
+      {feedback === "canceled" ? (
+        <p role="status" className="mb-6 rounded-card border-l-4 border-l-warning bg-warning-soft px-4 py-3 text-label text-ink">
+          {t("pricing.paymentCanceledBanner")}
+        </p>
+      ) : null}
 
-        {/* Hero */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 bg-brand/10 text-brand rounded-full px-4 py-1.5 text-sm font-medium mb-4">
-            <Zap size={14} />
-            {t('pricing.heroBadge')}
-          </div>
-          <h1 className="text-4xl font-bold text-ink mb-3">{t('pricing.heroTitle')}</h1>
-          <p className="text-ink-muted text-lg max-w-md mx-auto">
-            {t('pricing.heroSubtitle')}
+      <header className="mx-auto max-w-2xl text-center">
+        <h1 className="font-display text-h1 text-ink">{t("pricing.heroTitle")}</h1>
+        <p className="mt-3 text-body-lg text-ink-muted">{t("pricing.heroSubtitle")}</p>
+        {plansLoaded && !anyPlanAvailable(plans) ? (
+          <p className="mx-auto mt-4 inline-flex items-center gap-2 rounded-control bg-info-soft px-3 py-2 text-label text-ink">
+            <Clock className="h-4 w-4 shrink-0 text-info" aria-hidden="true" />
+            {t("pricing.comingSoonNote")}
           </p>
+        ) : null}
+        {showIntervalToggle(plans, ["starter", "pro"]) ? (
+        <div className="mt-6 flex justify-center">
+          <SegmentedControl
+            label={t("pricing.billingLabel")}
+            value={billing}
+            onChange={setBilling}
+            options={[
+              { value: "month", label: t("pricing.billingMonthly") },
+              { value: "year", label: `${t("pricing.billingYearly")} · ${t("pricing.billingSavePercent")}` },
+            ]}
+          />
         </div>
+        ) : null}
+      </header>
 
-        {/* Benefits grid */}
-        <div className="mb-16">
-          <h2 className="text-xl font-bold text-ink mb-2 text-center">{t('pricing.benefitsTitle')}</h2>
-          <p className="text-sm text-ink-muted text-center mb-8">
-            {t('pricing.benefitsSubtitle')}
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {BENEFITS.map(({ icon: Icon, title, desc }) => (
-              <div
-                key={title}
-                className="flex gap-3.5 rounded-2xl border border-outline bg-card p-5"
-              >
-                <div className="shrink-0 mt-0.5 w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center">
-                  <Icon size={16} className="text-brand" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-ink mb-1">{title}</p>
-                  <p className="text-xs text-ink-muted leading-relaxed">{desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+      {currentPlan === "business" ? (
+        <div className="mx-auto mt-6 flex max-w-xl flex-wrap items-center justify-between gap-3 rounded-card border border-line bg-surface p-4">
+          <p className="text-label font-normal text-ink">{t("pricing.onBusinessPlan")}</p>
+          <Button variant="secondary" onClick={handlePortal} loading={portalLoading}>
+            {t("pricing.manageSubscriptionLabel")}
+          </Button>
         </div>
+      ) : null}
 
-        {/* Billing toggle */}
-        <div className="flex items-center justify-center gap-3 mb-10">
-          <button
-            onClick={() => setBilling("month")}
-            className={cn(
-              "px-5 py-2 rounded-full text-sm font-medium transition-all",
-              billing === "month"
-                ? "bg-brand text-white shadow-sm"
-                : "text-ink-muted hover:text-ink"
-            )}
-          >
-            {t('pricing.billingMonthly')}
-          </button>
-          <button
-            onClick={() => setBilling("year")}
-            className={cn(
-              "px-5 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-1.5",
-              billing === "year"
-                ? "bg-brand text-white shadow-sm"
-                : "text-ink-muted hover:text-ink"
-            )}
-          >
-            {t('pricing.billingYearly')}
-            <span
+      <ul className="mt-10 grid items-stretch gap-6 lg:grid-cols-3 lg:gap-5">
+        {tiers.map((tier) => {
+          const isCurrent = currentPlan === tier.id;
+          const isFree = tier.id === "free";
+          const displayPrice = billing === "month" ? tier.monthlyPrice : Math.round(tier.yearlyPrice / 12);
+          return (
+            <li
+              key={tier.id}
               className={cn(
-                "rounded-full px-2 py-0.5 text-xs font-semibold",
-                billing === "year"
-                  ? "bg-white/20 text-white"
-                  : "bg-accent/20 text-accent-foreground"
+                "relative flex flex-col rounded-card bg-surface p-6",
+                tier.emphasised
+                  ? "order-first border-2 border-primary shadow-stamp lg:order-none lg:-my-3 lg:p-8"
+                  : "border border-line"
               )}
             >
-              {t('pricing.billingSavePercent')}
-            </span>
-          </button>
-        </div>
+              {tier.emphasised ? (
+                <span className="absolute -top-3 left-6 inline-flex h-6 items-center rounded-control bg-primary px-2 text-micro uppercase text-on-fill">
+                  {t("pricing.mostPopularBadge")}
+                </span>
+              ) : null}
+              {isCurrent && !isFree ? (
+                <span className="mb-3 inline-flex h-7 w-fit items-center gap-1.5 rounded-control bg-success-soft px-2 text-caption font-bold text-success">
+                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t("pricing.currentPlanLabel")}
+                </span>
+              ) : null}
 
-        {/* Plan cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          {TIERS.map((tier) => {
-            const isCurrent = currentPlan === tier.id;
-            const isFree = tier.id === "free";
-            const isBusiness = tier.id === "business";
-            const displayPrice = billing === "month" ? tier.monthlyPrice : Math.round(tier.yearlyPrice / 12);
+              <h2 className="font-display text-h3 text-ink">{tier.name}</h2>
+              <p className="mt-1 text-label font-normal text-ink-muted">{tier.tagline}</p>
 
-            return (
-              <div
-                key={tier.id}
-                className={cn(
-                  "rounded-2xl bg-card p-6 flex flex-col relative",
-                  tier.badge
-                    ? "border-2 border-brand shadow-soft"
-                    : isBusiness && businessIntent
-                      ? "border-2 border-brand shadow-soft"
-                      : "border border-outline"
-                )}
-              >
-                {tier.badge && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="whitespace-nowrap bg-brand text-white text-xs font-bold px-4 py-1 rounded-full shadow">
-                      {tier.badge}
-                    </span>
-                  </div>
-                )}
-                {!tier.badge && isBusiness && businessIntent && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="whitespace-nowrap bg-brand text-white text-xs font-bold px-4 py-1 rounded-full shadow">
-                      {t('pricing.recommendedForYouBadge')}
-                    </span>
-                  </div>
-                )}
+              <p className="mt-5 font-display text-display leading-none tabular text-money">
+                {money(displayPrice)}
+                {isFree ? null : <span className="ml-1 font-body text-label font-normal text-ink-muted">{t("pricing.perMonthSuffix")}</span>}
+              </p>
+              <p className="mt-2 min-h-[1.25rem] text-caption text-ink-muted">
+                {!isFree && billing === "year" ? `${money(tier.yearlyPrice)} ${t("pricing.billedAnnually")}` : ""}
+              </p>
 
-                <div className="mb-6">
-                  <p className="text-sm font-semibold text-ink-muted uppercase tracking-wider mb-2">{tier.name}</p>
-                  {isFree ? (
-                    <>
-                      <p className="text-4xl font-bold text-ink">€0</p>
-                      <p className="text-sm text-ink-subtle mt-1">{tier.tagline}</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-4xl font-bold text-ink">
-                        €{formatEuro(displayPrice)}
-                        <span className="text-base font-normal text-ink-muted"> {t('pricing.perMonthSuffix')}</span>
-                      </p>
-                      <p className="text-sm text-ink-subtle mt-1">
-                        {billing === "month" ? tier.tagline : `€${formatEuro(tier.yearlyPrice)} ${t('pricing.billedAnnually')}`}
-                      </p>
-                    </>
-                  )}
-                </div>
+              <ul className="mb-8 mt-5 flex-1 space-y-3">
+                {tier.features.map((feature) => (
+                  <li key={feature} className="flex items-start gap-2.5 text-body text-ink-muted">
+                    <Check className="mt-1 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+                    <span className="min-w-0">{feature}</span>
+                  </li>
+                ))}
+              </ul>
 
-                <ul className="space-y-3 flex-1 mb-8">
-                  {tier.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5 text-sm text-ink-muted">
-                      <Check size={15} className="shrink-0 mt-0.5 text-success" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-
-                {loadingStatus || authLoading ? (
-                  <div className="h-12 rounded-2xl bg-muted animate-pulse w-full" />
-                ) : isFree ? (
-                  <Button variant="outline" disabled className="w-full">
-                    {isAuthenticated ? t('pricing.currentPlanLabel') : t('pricing.getStartedFreeLabel')}
-                  </Button>
-                ) : isCurrent ? (
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={handlePortal}
-                    disabled={portalLoading}
-                  >
-                    {portalLoading ? t('pricing.openingPortalLabel') : t('pricing.manageSubscriptionLabel')}
-                  </Button>
-                ) : (
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    onClick={() => handleUpgrade(tier.id as PayablePlan)}
-                    disabled={checkoutLoadingPlan !== null}
-                  >
-                    {checkoutLoadingPlan === tier.id ? t('pricing.redirectingLabel') : `${t('pricing.upgradeToPrefix')} ${tier.name}`}
-                  </Button>
-                )}
-
-                {isCurrent && status?.cancelAtPeriodEnd && (
-                  <p className="text-xs text-center text-ink-subtle mt-2">
-                    {t('pricing.cancelsAtPeriodEnd')}
-                  </p>
-                )}
-                {!isCurrent && !isFree && (
-                  <p className="text-xs text-center text-ink-subtle mt-2">{t('pricing.cancelAnytimeNote')}</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* FAQ */}
-        <div className="mb-16">
-          <h2 className="text-xl font-bold text-ink mb-6 text-center">{t('pricing.faqTitle')}</h2>
-          <div className="divide-y divide-outline rounded-2xl border border-outline overflow-hidden">
-            {FAQS.map((faq, i) => (
-              <div key={i}>
-                <button
-                  className="w-full flex items-center justify-between px-6 py-4 text-left text-sm font-medium text-ink hover:bg-muted/50 transition-colors"
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+              {busy ? (
+                <Skeleton className="h-11 w-full" />
+              ) : isFree ? (
+                <Button variant="secondary" disabled className="w-full">
+                  {isAuthenticated && currentPlan === "free" ? t("pricing.currentPlanLabel") : t("pricing.freeIncluded")}
+                </Button>
+              ) : isCurrent ? (
+                <Button variant="secondary" className="w-full" onClick={handlePortal} loading={portalLoading}>
+                  {portalLoading ? t("pricing.openingPortalLabel") : t("pricing.manageSubscriptionLabel")}
+                </Button>
+              ) : !isPlanAvailable(plans, tier.id as PayablePlan, billing) ? (
+                <Button variant="secondary" disabled className="w-full">
+                  {t("pricing.comingSoon")}
+                </Button>
+              ) : (
+                <Button
+                  variant={tier.emphasised ? "primary" : "secondary"}
+                  size={tier.emphasised ? "lg" : "default"}
+                  className="w-full"
+                  onClick={() => handleUpgrade(tier.id as PayablePlan)}
+                  loading={checkoutLoadingPlan === tier.id}
+                  disabled={checkoutLoadingPlan !== null}
                 >
-                  {faq.q}
-                  <ChevronDown
-                    size={16}
-                    className={cn(
-                      "shrink-0 text-ink-muted transition-transform",
-                      openFaq === i && "rotate-180"
-                    )}
-                  />
-                </button>
-                {openFaq === i && (
-                  <div className="px-6 pb-4 text-sm text-ink-muted">{faq.a}</div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+                  {checkoutLoadingPlan === tier.id ? t("pricing.redirectingLabel") : `${t("pricing.upgradeToPrefix")} ${tier.name}`}
+                </Button>
+              )}
 
-        {/* Trust bar */}
-        <div className="flex items-center justify-center gap-2.5 text-sm text-ink-subtle">
-          <Lock size={14} className="shrink-0" />
-          <span>
-            {t('pricing.trustBarPrefix')}{" "}
-            <span className="font-semibold text-ink-muted">Stripe</span>. {t('pricing.trustBarSuffix')}
-          </span>
+              {isCurrent && !isFree && status?.cancelAtPeriodEnd ? (
+                <p className="mt-2 text-center text-caption text-ink-muted">{t("pricing.cancelsAtPeriodEnd")}</p>
+              ) : null}
+              {!isCurrent && !isFree && isPlanAvailable(plans, tier.id as PayablePlan, billing) ? <p className="mt-2 text-center text-caption text-ink-muted">{t("pricing.cancelAnytimeNote")}</p> : null}
+            </li>
+          );
+        })}
+      </ul>
+
+      <section aria-labelledby="pricing-benefits-heading" className="mt-16">
+        <h2 id="pricing-benefits-heading" className="font-display text-h2 text-ink">
+          {t("pricing.benefitsTitle")}
+        </h2>
+        <p className="mt-1 text-body text-ink-muted">{t("pricing.benefitsSubtitleIndividual")}</p>
+        <ul className="mt-6 grid gap-4 md:grid-cols-3">
+          {benefits.map(({ icon: Icon, title, desc }) => (
+            <li key={title} className="flex gap-3.5 rounded-card border border-line bg-surface p-5">
+              <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+              <div className="min-w-0">
+                <h3 className="text-body font-bold text-ink">{title}</h3>
+                <p className="mt-1 text-label font-normal text-ink-muted">{desc}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section aria-labelledby="pricing-faq-heading" className="mx-auto mt-16 max-w-3xl">
+        <h2 id="pricing-faq-heading" className="font-display text-h2 text-ink">
+          {t("pricing.faqTitle")}
+        </h2>
+        <div className="mt-6">
+          <FaqAccordion items={faqs} />
         </div>
-      </main>
+      </section>
+
+      <p className="mt-12 flex items-center justify-center gap-2.5 text-center text-label font-normal text-ink-muted">
+        <Lock className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span>
+          {t("pricing.trustBarPrefix")} <span className="font-bold text-ink">Stripe</span>. {t("pricing.trustBarSuffix")}
+        </span>
+      </p>
     </div>
   );
 }

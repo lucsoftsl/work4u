@@ -1,212 +1,289 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { useTranslation } from '@/lib/i18n';
-import { getSubscriptionStatus, type SubscriptionStatus } from '@/api/subscriptions';
-import { ChatHeaderIcon } from "@/components/ChatHeaderIcon";
-import { XPBar } from '@/components/gamification/XPBar';
-import { BrandMark } from '@/components/BrandMark';
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Briefcase, Building2, Gift, LayoutDashboard, LogOut, Menu, Settings, User, Users, X, Zap } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ChevronDown, Gift, LogOut, Menu, MessageSquare, Settings, User, X, Zap } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useTranslation } from "@/lib/i18n";
+import { currentPath, signInPath } from "@/lib/auth-redirect";
+import { useAccountMode, type ViewMode } from "@/hooks/useAccountMode";
+import { useMenuKeys } from "@/hooks/useMenuKeys";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { BrandMark } from "@/components/BrandMark";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { buttonClasses } from "@/components/ui/Button";
+import { NAV, isActivePath, isChromeless } from "@/components/shell/nav-config";
+import { cn } from "@/lib/utils";
 
-const NAV_LINKS = [
-    { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
-    { href: '/my-jobs', labelKey: 'myJobs.title', icon: Briefcase },
-    { href: '/workers', labelKey: 'nav.services', icon: Users },
-    { href: '/referrals', labelKey: 'nav.invite', icon: Gift },
-    { href: '/business', labelKey: 'nav.forBusiness', icon: Building2 },
-] as const;
+/** "Hiring | Working" switch (BOTH accounts only). Switching goes to that mode's Home and is announced. */
+export function ViewModeSwitch({ className, fullWidth = false }: { className?: string; fullWidth?: boolean }) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const { mode, view, setView } = useAccountMode();
+  const [announcement, setAnnouncement] = useState("");
+  if (mode !== "BOTH") return null;
+
+  const change = (next: ViewMode) => {
+    if (next === view) return;
+    setView(next);
+    setAnnouncement(t(next === "hiring" ? "nav.switchedHiring" : "nav.switchedWorking"));
+    router.push("/dashboard");
+  };
+
+  return (
+    <>
+      <SegmentedControl<ViewMode>
+        label={t("nav.viewMode")}
+        tone="mode"
+        value={view}
+        onChange={change}
+        options={[
+          { value: "hiring", label: t("nav.viewHiring") },
+          { value: "working", label: t("nav.viewWorking") },
+        ]}
+        className={cn("min-w-0 shrink", fullWidth && "flex w-full", className)}
+      />
+      <span className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </span>
+    </>
+  );
+}
+
+function useDismiss(open: boolean, close: () => void, ref: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && close();
+    const onClick = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) close();
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onClick);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onClick);
+    };
+  }, [open, close, ref]);
+}
+
+function AccountMenu() {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const { user, signOut } = useAuth();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+  useDismiss(open, () => setOpen(false), ref);
+  const onMenuKeys = useMenuKeys(open, () => setOpen(false), listRef, triggerRef);
+
+  const name = user?.displayName?.trim() || user?.email?.split("@")[0] || "";
+  const initial = (name[0] || "?").toUpperCase();
+  const isAdmin = user?.userType === "ADMIN";
+
+  const handleSignOut = async () => {
+    setOpen(false);
+    try {
+      await signOut();
+      router.push(signInPath(currentPath()));
+    } catch (error) {
+      console.error("Sign out failed:", error);
+    }
+  };
+
+  const item = "flex min-h-[44px] w-full items-center gap-3 rounded-control px-3 text-left text-label text-ink hover:bg-sunken";
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown" && !open) {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
+        aria-label={t("nav.account")}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
+        className="flex min-h-[44px] items-center gap-2 rounded-control px-1 hover:bg-sunken"
+      >
+        {user?.photoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={user.photoUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
+        ) : (
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft font-display text-label text-primary">{initial}</span>
+        )}
+        <span className="hidden max-w-[10rem] truncate text-label text-ink xl:inline">{name}</span>
+        <ChevronDown className="hidden h-4 w-4 text-ink-muted xl:inline" aria-hidden="true" />
+      </button>
+      {open ? (
+        <div ref={listRef} id={menuId} role="menu" onKeyDown={onMenuKeys} className="absolute right-0 top-full z-50 mt-2 w-60 rounded-card border border-line bg-surface p-1.5 shadow-raised">
+          <Link role="menuitem" href="/profile" onClick={() => setOpen(false)} className={item}>
+            <User className="h-4 w-4 text-ink-muted" aria-hidden="true" />
+            {t("nav.profile")}
+          </Link>
+          <Link role="menuitem" href="/pricing" onClick={() => setOpen(false)} className={item}>
+            <Zap className="h-4 w-4 text-ink-muted" aria-hidden="true" />
+            {t("nav.upgrade")}
+          </Link>
+          <Link role="menuitem" href="/referrals" onClick={() => setOpen(false)} className={item}>
+            <Gift className="h-4 w-4 text-ink-muted" aria-hidden="true" />
+            {t("nav.invite")}
+          </Link>
+          {isAdmin ? (
+            <Link role="menuitem" href="/admin" onClick={() => setOpen(false)} className={item}>
+              <Settings className="h-4 w-4 text-ink-muted" aria-hidden="true" />
+              {t("nav.admin")}
+            </Link>
+          ) : null}
+          <div className="my-1 border-t border-line" />
+          <button role="menuitem" type="button" onClick={handleSignOut} className={item}>
+            <LogOut className="h-4 w-4 text-ink-muted" aria-hidden="true" />
+            {t("nav.signOut")}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function MessagesLink({ unread }: { unread: number }) {
+  const { t } = useTranslation();
+  const label = unread > 0 ? `${t("nav.messages")} — ${t("chat.unreadCount").replace("{count}", String(unread))}` : t("nav.messages");
+  return (
+    <Link href="/chat" aria-label={label} className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-ink hover:bg-sunken">
+      <MessageSquare className="h-5 w-5" aria-hidden="true" />
+      {unread > 0 ? (
+        <span aria-hidden="true" className="absolute right-1 top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-ember px-1 text-micro text-on-fill">
+          {unread > 99 ? "99+" : unread}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
 
 export function AppHeader() {
-    const pathname = usePathname();
-    const router = useRouter();
-    const { t } = useTranslation();
-    const { isAuthenticated, user, firebaseToken, signOut } = useAuth();
-    const [menuOpen, setMenuOpen] = useState(false);
-    const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(null);
+  const pathname = usePathname();
+  const { t } = useTranslation();
+  const { isAuthenticated, loading } = useAuth();
+  const { view } = useAccountMode();
+  const unread = useUnreadMessages();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const moreTriggerRef = useRef<HTMLButtonElement>(null);
+  const moreListRef = useRef<HTMLElement>(null);
+  useDismiss(menuOpen, () => setMenuOpen(false), menuRef);
+  const onMoreKeys = useMenuKeys(menuOpen, () => setMenuOpen(false), moreListRef, moreTriggerRef);
 
-    useEffect(() => {
-        let isActive = true;
+  if (isChromeless(pathname)) return null;
 
-        const load = async () => {
-            if (!isAuthenticated || !firebaseToken) {
-                if (isActive) setSubStatus(null);
-                return;
-            }
-            try {
-                const data = await getSubscriptionStatus(firebaseToken);
-                if (isActive) setSubStatus(data);
-            } catch {
-                if (isActive) setSubStatus(null);
-            }
-        };
-
-        load();
-
-        return () => {
-            isActive = false;
-        };
-    }, [isAuthenticated, firebaseToken]);
-
-    const currentPlan =
-        subStatus?.status === 'active' || subStatus?.status === 'trialing' ? subStatus.plan : 'free';
-    const isPaid = currentPlan !== 'free';
-    const planLabel = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
-    const isAdmin = user?.userType === 'ADMIN';
-
-    const handleSignOut = async () => {
-        try {
-            await signOut();
-            router.push('/signin');
-        } catch (error) {
-            console.error('Sign out failed:', error);
-        }
-    };
-
-    // Don't show header on public marketing and auth onboarding screens, or
-    // the full-bleed nearby-workers map (it renders its own compact top bar)
-    if (
-        pathname === '/' ||
-        pathname.startsWith('/signup') ||
-        pathname.startsWith('/signin') ||
-        pathname.endsWith('/nearby-pros')
-    ) {
-        return null;
-    }
-
-    return (
-        <header className="sticky top-0 z-30 flex-shrink-0 border-b border-outline/80 bg-[#eef2f6]/95 backdrop-blur">
-            <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between gap-4">
-                    <BrandMark subtitle="Workspace" />
-
-                    {isAuthenticated && (
-                        <div className="flex items-center gap-2 lg:gap-3">
-                            {NAV_LINKS.map(({ href, labelKey, icon: Icon }) => (
-                                <Link
-                                    key={href}
-                                    href={href}
-                                    className="hidden shrink-0 items-center gap-2 rounded-full border border-outline bg-white px-4 py-2 text-sm font-semibold text-[#26445e] transition-colors hover:bg-[#f7fafc] lg:inline-flex"
-                                >
-                                    <Icon className="h-4 w-4 text-brand" />
-                                    {t(labelKey)}
-                                </Link>
-                            ))}
-                            {isAdmin ? null : isPaid ? (
-                                <Link
-                                    href="/pricing"
-                                    className="hidden shrink-0 items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700 transition-colors hover:bg-amber-100 lg:inline-flex"
-                                >
-                                    <Zap className="h-4 w-4" />
-                                    {planLabel}
-                                </Link>
-                            ) : (
-                                <Link
-                                    href="/pricing"
-                                    className="hidden shrink-0 items-center gap-1.5 rounded-full border border-brand/30 bg-brand/5 px-4 py-2 text-sm font-bold text-brand transition-colors hover:bg-brand/10 lg:inline-flex"
-                                >
-                                    <Zap className="h-4 w-4" />
-                                    {t('nav.upgrade')}
-                                </Link>
-                            )}
-                            <Link
-                                href="/profile"
-                                className="inline-flex shrink-0 items-center gap-2 rounded-full border border-outline bg-white px-4 py-2 text-sm font-semibold text-[#26445e] transition-colors hover:bg-[#f7fafc]"
-                            >
-                                <User className="h-4 w-4 text-brand" />
-                                <span className="hidden sm:inline">{t('nav.profile')}</span>
-                            </Link>
-                            {user?.userType === 'ADMIN' && (
-                                <Link
-                                    href="/admin"
-                                    className="hidden shrink-0 items-center gap-2 rounded-full border border-[#cfe0ea] bg-[#e8f3f7] px-4 py-2 text-sm font-semibold text-[#215b72] transition-colors hover:bg-[#dcecf2] sm:inline-flex"
-                                    title={t('admin.dashboard')}
-                                >
-                                    <Settings className="h-4 w-4" />
-                                    {t('nav.admin')}
-                                </Link>
-                            )}
-                            <ChatHeaderIcon />
-                            <button
-                                onClick={handleSignOut}
-                                title={t('nav.signOut')}
-                                aria-label={t('nav.signOut')}
-                                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border border-outline bg-white text-[#26445e] transition-colors hover:bg-[#f7fafc] lg:inline-flex"
-                            >
-                                <LogOut className="h-4 w-4" />
-                            </button>
-                            <button
-                                onClick={() => setMenuOpen((open) => !open)}
-                                aria-label={menuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
-                                aria-expanded={menuOpen}
-                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-outline bg-white text-[#26445e] transition-colors hover:bg-[#f7fafc] lg:hidden"
-                            >
-                                {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                {/* Mobile / tablet nav panel — covers everything collapsed below lg */}
-                {isAuthenticated && menuOpen && (
-                    <div className="mt-3 grid grid-cols-1 gap-1.5 rounded-3xl border border-outline/70 bg-white p-3 shadow-soft sm:grid-cols-2 lg:hidden">
-                        {NAV_LINKS.map(({ href, labelKey, icon: Icon }) => (
-                            <Link
-                                key={href}
-                                href={href}
-                                onClick={() => setMenuOpen(false)}
-                                className={cn(
-                                    "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-[#26445e] transition-colors hover:bg-[#f4f8fb]",
-                                    pathname === href && "bg-[#f4f8fb]"
-                                )}
-                            >
-                                <Icon className="h-4 w-4 text-brand" />
-                                {t(labelKey)}
-                            </Link>
-                        ))}
-                        {!isAdmin && (
-                            <Link
-                                href="/pricing"
-                                onClick={() => setMenuOpen(false)}
-                                className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-brand transition-colors hover:bg-[#f4f8fb]"
-                            >
-                                <Zap className="h-4 w-4" />
-                                {isPaid ? planLabel : t('nav.upgrade')}
-                            </Link>
-                        )}
-                        {user?.userType === 'ADMIN' && (
-                            <Link
-                                href="/admin"
-                                onClick={() => setMenuOpen(false)}
-                                className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-[#215b72] transition-colors hover:bg-[#f4f8fb] sm:hidden"
-                            >
-                                <Settings className="h-4 w-4" />
-                                {t('nav.admin')}
-                            </Link>
-                        )}
-                        <button
-                            onClick={() => {
-                                setMenuOpen(false);
-                                handleSignOut();
-                            }}
-                            className="flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold text-[#26445e] transition-colors hover:bg-[#f4f8fb]"
-                        >
-                            <LogOut className="h-4 w-4 text-brand" />
-                            {t('nav.signOut')}
-                        </button>
-                    </div>
-                )}
-
-                {/* XP Bar for authenticated users */}
-                {isAuthenticated && (
-                    <div className="mt-3 rounded-3xl border border-outline/70 bg-white px-4 py-3 shadow-soft">
-                        <XPBar />
-                    </div>
-                )}
-            </div>
-        </header>
+  const items = NAV[view].slice(0, 4);
+  const navLink = (active: boolean) =>
+    cn(
+      "relative inline-flex min-h-[44px] shrink-0 items-center whitespace-nowrap rounded-control px-2 text-[0.9375rem] font-bold transition-colors xl:px-3",
+      active
+        ? "text-primary after:absolute after:inset-x-2 after:bottom-1 after:h-0.5 after:rounded-full after:bg-primary"
+        : "text-ink-muted hover:text-ink"
     );
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-line bg-surface">
+      <div className="mx-auto flex h-14 max-w-content items-center gap-2 px-4 md:h-header md:gap-3 md:px-6">
+        <BrandMark size="sm" className="md:text-2xl" />
+
+        {loading ? (
+          // Reserve the right-hand cluster while auth resolves (no layout shift).
+          <div className="ml-auto h-9 w-28 rounded-control bg-sunken" aria-hidden="true" />
+        ) : isAuthenticated ? (
+          <>
+            <nav aria-label={t("nav.mainNav")} className="ml-4 hidden min-w-0 items-center gap-1 lg:flex">
+              {items.map(({ href, labelKey }) => {
+                const active = isActivePath(pathname, href);
+                return (
+                  <Link key={href} href={href} aria-current={active ? "page" : undefined} className={navLink(active)}>
+                    {t(labelKey)}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="ml-auto flex min-w-0 items-center gap-1 md:gap-2">
+              {/* Mobile has the full-width switch on the dashboard (M6), so the header one is md+ only. */}
+              <span className="hidden md:inline-flex md:min-w-0">
+                <ViewModeSwitch />
+              </span>
+
+              {/* md–lg: the four nav items move into a compact menu (fixes the 1024 overflow, F39). */}
+              <div ref={menuRef} className="relative hidden md:block lg:hidden">
+                <button
+                  ref={moreTriggerRef}
+                  type="button"
+                  onClick={() => setMenuOpen((v) => !v)}
+                  aria-expanded={menuOpen}
+                  aria-haspopup="true"
+                  className={buttonClasses("ghost", "sm", "text-ink")}
+                >
+                  {menuOpen ? <X className="h-4 w-4" aria-hidden="true" /> : <Menu className="h-4 w-4" aria-hidden="true" />}
+                  {t("nav.more")}
+                </button>
+                {menuOpen ? (
+                  <nav ref={moreListRef} onKeyDown={onMoreKeys} aria-label={t("nav.mainNav")} className="absolute right-0 top-full z-50 mt-2 w-60 rounded-card border border-line bg-surface p-1.5 shadow-raised">
+                    {items.map(({ href, labelKey, icon: Icon }) => {
+                      const active = isActivePath(pathname, href);
+                      return (
+                        <Link
+                          key={href}
+                          href={href}
+                          aria-current={active ? "page" : undefined}
+                          onClick={() => setMenuOpen(false)}
+                          className={cn(
+                            "flex min-h-[44px] items-center gap-3 rounded-control px-3 text-label",
+                            active ? "bg-primary-soft text-primary" : "text-ink hover:bg-sunken"
+                          )}
+                        >
+                          <Icon className="h-4 w-4" aria-hidden="true" />
+                          {t(labelKey)}
+                        </Link>
+                      );
+                    })}
+                  </nav>
+                ) : null}
+              </div>
+
+              <span className="hidden md:inline-flex">
+                <MessagesLink unread={unread} />
+              </span>
+              <NotificationBell />
+              <AccountMenu />
+            </div>
+          </>
+        ) : (
+          <>
+            <nav aria-label={t("nav.mainNav")} className="ml-4 hidden items-center gap-1 md:flex">
+              <Link href="/jobs" className={navLink(isActivePath(pathname, "/jobs"))}>{t("nav.findJobs")}</Link>
+              <Link href="/workers" className={navLink(isActivePath(pathname, "/workers"))}>{t("nav.findWorkers")}</Link>
+              <Link href="/how-it-works" className={cn(navLink(isActivePath(pathname, "/how-it-works")), "hidden lg:inline-flex")}>
+                {t("nav.howItWorks")}
+              </Link>
+            </nav>
+            <div className="ml-auto flex items-center gap-2">
+              <Link href={signInPath(pathname === "/" ? null : currentPath())} className={buttonClasses("ghost", "sm")}>
+                {t("nav.signIn")}
+              </Link>
+              <Link href="/signup" className={buttonClasses("primary", "sm")}>
+                {t("nav.joinNow")}
+              </Link>
+            </div>
+          </>
+        )}
+      </div>
+    </header>
+  );
 }

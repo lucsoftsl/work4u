@@ -1,6 +1,6 @@
 import type { Article, CreateArticlePayload, UpdateArticlePayload } from "@/api/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+import { API_BASE_URL as API_BASE_URL, apiFetch } from "./http";
 
 async function handle<T>(response: Response, fallbackError: string): Promise<T> {
   if (!response.ok) {
@@ -12,24 +12,24 @@ async function handle<T>(response: Response, fallbackError: string): Promise<T> 
 
 export const articlesApi = {
   async listArticles(): Promise<Article[]> {
-    const response = await fetch(`${API_BASE_URL}/api/articles`);
+    const response = await apiFetch(`${API_BASE_URL}/api/articles`);
     return handle(response, "Failed to load articles");
   },
 
   async getArticle(articleId: string): Promise<Article> {
-    const response = await fetch(`${API_BASE_URL}/api/articles/${articleId}`);
+    const response = await apiFetch(`${API_BASE_URL}/api/articles/${articleId}`);
     return handle(response, "Failed to load article");
   },
 
   async adminListArticles(token: string): Promise<Article[]> {
-    const response = await fetch(`${API_BASE_URL}/api/admin/articles`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/admin/articles`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return handle(response, "Failed to load articles");
   },
 
   async createArticle(payload: CreateArticlePayload, token: string): Promise<Article> {
-    const response = await fetch(`${API_BASE_URL}/api/admin/articles`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/admin/articles`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
@@ -38,7 +38,7 @@ export const articlesApi = {
   },
 
   async updateArticle(articleId: string, payload: UpdateArticlePayload, token: string): Promise<Article> {
-    const response = await fetch(`${API_BASE_URL}/api/admin/articles/${articleId}`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/admin/articles/${articleId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
@@ -47,7 +47,7 @@ export const articlesApi = {
   },
 
   async togglePublished(articleId: string, isPublished: boolean, token: string): Promise<Article> {
-    const response = await fetch(`${API_BASE_URL}/api/admin/articles/${articleId}`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/admin/articles/${articleId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ isPublished }),
@@ -56,7 +56,7 @@ export const articlesApi = {
   },
 
   async deleteArticle(articleId: string, token: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/api/admin/articles/${articleId}`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/admin/articles/${articleId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });

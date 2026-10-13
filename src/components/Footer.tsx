@@ -2,24 +2,35 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useId, useRef, useState } from 'react';
+import { ArrowRight, Globe } from 'lucide-react';
 import { useTranslation, type Locale } from '@/lib/i18n';
-import { useState } from 'react';
+import { BrandMark } from '@/components/BrandMark';
+import { useMenuKeys } from '@/hooks/useMenuKeys';
+import { isChromeless } from '@/components/shell/nav-config';
 
-export default function Footer() {
-    const pathname = usePathname();
+function LanguageMenu() {
     const { t, locale, setLocale } = useTranslation();
-    const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const listRef = useRef<HTMLUListElement>(null);
+    const listId = useId();
+    const onListKeys = useMenuKeys(open, () => setOpen(false), listRef, triggerRef);
 
-    // Same exclusion list as AppHeader: the homepage has its own bespoke
-    // footer already, and auth/immersive-map screens render chromeless.
-    if (
-        pathname === '/' ||
-        pathname.startsWith('/signup') ||
-        pathname.startsWith('/signin') ||
-        pathname.endsWith('/nearby-pros')
-    ) {
-        return null;
-    }
+    useEffect(() => {
+        if (!open) return;
+        const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false);
+        const onClick = (event: MouseEvent) => {
+            if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+        };
+        document.addEventListener('keydown', onKey);
+        document.addEventListener('mousedown', onClick);
+        return () => {
+            document.removeEventListener('keydown', onKey);
+            document.removeEventListener('mousedown', onClick);
+        };
+    }, [open]);
 
     const languages: { code: Locale; label: string }[] = [
         { code: 'en', label: t('footer.english') },
@@ -28,93 +39,80 @@ export default function Footer() {
         { code: 'hu', label: t('footer.hungarian') },
         { code: 'ro', label: t('footer.romanian') },
     ];
-
-    const handleLanguageChange = (newLocale: Locale) => {
-        setLocale(newLocale);
-        setShowLanguageMenu(false);
-    };
+    const current = languages.find((l) => l.code === locale)?.label ?? locale.toUpperCase();
 
     return (
-        <footer className="bg-gray-900 text-gray-100 py-12">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-                    <div>
-                        <h3 className="text-white font-semibold mb-4">Work4U</h3>
-                        <p className="text-sm text-muted-foreground">
-                            {t('footer.tagline')}
-                        </p>
-                    </div>
-                    <div>
-                        <h4 className="text-white font-semibold mb-4">{t('footer.forWorkers')}</h4>
-                        <ul className="space-y-2 text-sm">
-                            <li><Link href="/jobs" className="text-muted-foreground hover:text-white transition-colors">{t('footer.browseJobs')}</Link></li>
-                            <li><Link href="/how-it-works" className="text-muted-foreground hover:text-white transition-colors">{t('footer.howItWorks')}</Link></li>
-                            <li><Link href="/how-it-works" className="text-muted-foreground hover:text-white transition-colors">{t('footer.safetyTips')}</Link></li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 className="text-white font-semibold mb-4">{t('footer.forEmployers')}</h4>
-                        <ul className="space-y-2 text-sm">
-                            <li><Link href="/post-job" className="text-muted-foreground hover:text-white transition-colors">{t('footer.postJob')}</Link></li>
-                            <li><Link href="/workers" className="text-muted-foreground hover:text-white transition-colors">{t('footer.findTalent')}</Link></li>
-                            <li><Link href="/pricing" className="text-muted-foreground hover:text-white transition-colors">{t('footer.pricing')}</Link></li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 className="text-white font-semibold mb-4">{t('footer.company')}</h4>
-                        <ul className="space-y-2 text-sm">
-                            <li><Link href="/how-it-works" className="text-muted-foreground hover:text-white transition-colors">{t('footer.about')}</Link></li>
-                            <li><Link href="/blog" className="text-muted-foreground hover:text-white transition-colors">{t('footer.blog')}</Link></li>
-                            <li><Link href="/contact" className="text-muted-foreground hover:text-white transition-colors">{t('footer.contact')}</Link></li>
-                            <li><Link href="/terms" className="text-muted-foreground hover:text-white transition-colors">{t('footer.terms')}</Link></li>
-                            <li><Link href="/privacy" className="text-muted-foreground hover:text-white transition-colors">{t('footer.privacy')}</Link></li>
-                        </ul>
-                    </div>
-                </div>
+        <div ref={ref} className="relative">
+            <button
+                ref={triggerRef}
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                aria-haspopup="listbox"
+                aria-expanded={open}
+                aria-controls={listId}
+                aria-label={`${t('footer.language')}: ${current}`}
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-control border border-line-strong bg-surface px-3 text-label text-ink hover:bg-sunken"
+            >
+                <Globe className="h-4 w-4" aria-hidden="true" />
+                {current}
+            </button>
+            {open ? (
+                <ul ref={listRef} onKeyDown={onListKeys} id={listId} role="listbox" aria-label={t('footer.language')} className="absolute bottom-full left-0 z-50 mb-2 w-48 rounded-card border border-line bg-surface p-1.5 shadow-raised">
+                    {languages.map((lang) => (
+                        <li key={lang.code} role="option" aria-selected={locale === lang.code}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setLocale(lang.code);
+                                    setOpen(false);
+                                }}
+                                className={`flex min-h-[44px] w-full items-center rounded-control px-3 text-left text-label ${
+                                    locale === lang.code ? 'bg-primary-soft text-primary' : 'text-ink hover:bg-sunken'
+                                }`}
+                            >
+                                {lang.label}
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            ) : null}
+        </div>
+    );
+}
 
-                {/* Language Selector & Copyright */}
-                <div className="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} Work4U. {t('footer.allRightsReserved')}</p>
+export default function Footer() {
+    const pathname = usePathname();
+    const { t } = useTranslation();
 
-                    {/* Language Dropdown */}
-                    <div className="relative">
-                        <button
-                            onClick={() => setShowLanguageMenu(!showLanguageMenu)}
-                            className="flex items-center gap-2 px-3 py-2 rounded-md border border-gray-700 hover:border-gray-600 text-gray-300 hover:text-white transition-colors text-sm"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 00.948-.684l1.498-4.493a1 1 0 011.502-.684l1.498 4.493a1 1 0 00.948.684H19a2 2 0 012 2v2.5M3 15a2 2 0 012-2h3.28a1 1 0 00.948-.684l1.498-4.493a1 1 0 011.502-.684l1.498 4.493a1 1 0 00.948.684H19a2 2 0 012 2V17M17 18a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
-                            {t('footer.language')}
-                            <svg className={`w-4 h-4 transition-transform ${showLanguageMenu ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                            </svg>
-                        </button>
+    if (isChromeless(pathname)) return null;
 
-                        {showLanguageMenu && (
-                            <div className="absolute bottom-full mb-2 right-0 w-48 rounded-md shadow-lg bg-gray-800 border border-gray-700 py-2 z-10">
-                                {languages.map((lang) => (
-                                    <button
-                                        key={lang.code}
-                                        onClick={() => handleLanguageChange(lang.code)}
-                                        className={`w-full text-left px-4 py-2 text-sm transition-colors ${locale === lang.code
-                                                ? 'bg-blue-600 text-white'
-                                                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                                            }`}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <span>{lang.label}</span>
-                                            {locale === lang.code && (
-                                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                </svg>
-                                            )}
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+    const links = [
+        { href: '/how-it-works', label: t('footer.howItWorks') },
+        { href: '/how-it-works#safety', label: t('footer.safetyTips') },
+        { href: '/contact', label: t('footer.help') },
+        { href: '/blog', label: t('footer.blog') },
+        { href: '/terms', label: t('footer.terms') },
+        { href: '/privacy', label: t('footer.privacy') },
+    ];
+
+    return (
+        <footer className="mt-auto border-t border-line bg-sunken">
+            <div className="mx-auto flex max-w-content flex-col gap-6 px-4 py-8 md:px-6 lg:flex-row lg:items-center lg:justify-between">
+                <BrandMark size="sm" />
+                <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-1">
+                    {links.map((link) => (
+                        <Link key={link.href} href={link.href} className="inline-flex min-h-[44px] items-center text-label font-normal text-ink-muted hover:text-ink">
+                            {link.label}
+                        </Link>
+                    ))}
+                    <Link href="/business" className="inline-flex min-h-[44px] items-center gap-1 text-label text-primary hover:text-primary-strong">
+                        {t('footer.forCompanies')}
+                        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </Link>
+                </nav>
+                <div className="flex flex-wrap items-center gap-4">
+                    <LanguageMenu />
+                    <p className="text-caption text-ink-muted">© {new Date().getFullYear()} work4u. {t('footer.allRightsReserved')}</p>
                 </div>
             </div>
         </footer>

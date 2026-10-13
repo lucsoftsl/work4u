@@ -13,7 +13,7 @@ import type {
     JobWorkPhoto,
 } from "@/api/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+import { API_BASE_URL as API_BASE_URL, apiFetch, toApiError } from "./http";
 
 export const api = {
     async listJobs(params?: {
@@ -29,7 +29,7 @@ export const api = {
         if (params?.offset) queryParams.append("offset", String(params.offset));
 
         const url = `${API_BASE_URL}/api/jobs${queryParams.toString() ? `?${queryParams}` : ""}`;
-        const response = await fetch(url);
+        const response = await apiFetch(url);
 
         if (!response.ok) {
             throw new Error(`Failed to list jobs: ${response.statusText}`);
@@ -39,7 +39,7 @@ export const api = {
     },
 
     async getJob(jobId: string): Promise<Job> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`);
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}`);
 
         if (!response.ok) {
             if (response.status === 404) {
@@ -61,7 +61,7 @@ export const api = {
         if (params?.category) queryParams.append("category", params.category);
 
         const url = `${API_BASE_URL}/api/jobs/${jobId}/nearby-workers${queryParams.toString() ? `?${queryParams}` : ""}`;
-        const response = await fetch(url, {
+        const response = await apiFetch(url, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -76,7 +76,7 @@ export const api = {
     },
 
     async createJob(payload: any, token: string): Promise<Job> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -94,7 +94,7 @@ export const api = {
     },
 
     async updateJob(jobId: string, payload: any, token: string): Promise<Job> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}`, {
             method: "PATCH",
             headers: {
                 "Content-Type": "application/json",
@@ -112,7 +112,7 @@ export const api = {
     },
 
     async deleteJob(jobId: string, token: string): Promise<void> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}`, {
             method: "DELETE",
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -140,7 +140,7 @@ export const api = {
         if (params?.offset) queryParams.append("offset", String(params.offset));
 
         const url = `${API_BASE_URL}/api/jobs/search${queryParams.toString() ? `?${queryParams}` : ""}`;
-        const response = await fetch(url);
+        const response = await apiFetch(url);
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
@@ -151,7 +151,7 @@ export const api = {
     },
 
     async getMyJobs(userId: string, token: string): Promise<Job[]> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/user/${userId}`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/user/${userId}`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -168,7 +168,7 @@ export const api = {
     },
 
     async boostJob(jobId: string, token: string): Promise<Job> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/boost`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}/boost`, {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -184,7 +184,7 @@ export const api = {
     },
 
     async completeJob(jobId: string, token: string): Promise<Job> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/complete`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}/complete`, {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -199,8 +199,24 @@ export const api = {
         return response.json();
     },
 
+    /** Owner only. Throws ApiError (409 if already completed/cancelled, 429 when rate limited). */
+    async cancelJob(jobId: string, token: string): Promise<Job> {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}/cancel`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw await toApiError(response, `Failed to cancel job: ${response.statusText}`);
+        }
+
+        return response.json();
+    },
+
     async updateWorkStage(jobId: string, workStage: "EN_ROUTE" | "STARTED" | "AWAITING_REVIEW", token: string): Promise<Job> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/work-stage`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}/work-stage`, {
             method: "PATCH",
             headers: {
                 "Content-Type": "application/json",
@@ -218,7 +234,7 @@ export const api = {
     },
 
     async markJobPaid(jobId: string, paymentMethod: "CASH" | "BANK_TRANSFER", token: string): Promise<Job> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/payment`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}/payment`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -236,7 +252,7 @@ export const api = {
     },
 
     async listJobWorkPhotos(jobId: string, token: string): Promise<JobWorkPhoto[]> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/photos`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}/photos`, {
             headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -249,7 +265,7 @@ export const api = {
     },
 
     async addJobWorkPhoto(jobId: string, imageUrl: string, token: string, caption?: string): Promise<JobWorkPhoto> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/photos`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}/photos`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -267,7 +283,7 @@ export const api = {
     },
 
     async deleteJobWorkPhoto(jobId: string, photoId: string, token: string): Promise<void> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/photos/${photoId}`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}/photos/${photoId}`, {
             method: "DELETE",
             headers: { Authorization: `Bearer ${token}` },
         });
@@ -279,7 +295,7 @@ export const api = {
     },
 
     async confirmJobPayment(jobId: string, token: string): Promise<Job> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/payment/confirm`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}/payment/confirm`, {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -295,7 +311,7 @@ export const api = {
     },
 
     async applyToJob(jobId: string, payload: CreateApplicationPayload, token: string): Promise<Application> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/applications`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}/applications`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -313,7 +329,7 @@ export const api = {
     },
 
     async getJobApplicants(jobId: string, token: string): Promise<Application[]> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/applications`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}/applications`, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -328,7 +344,7 @@ export const api = {
     },
 
     async getMyApplications(userId: string, token: string): Promise<MyApplication[]> {
-        const response = await fetch(`${API_BASE_URL}/api/users/${userId}/applications`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/users/${userId}/applications`, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -343,7 +359,7 @@ export const api = {
     },
 
     async updateApplicationStatus(applicationId: string, status: ApplicationStatus, token: string): Promise<Application> {
-        const response = await fetch(`${API_BASE_URL}/api/applications/${applicationId}`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/applications/${applicationId}`, {
             method: "PATCH",
             headers: {
                 "Content-Type": "application/json",
@@ -367,7 +383,7 @@ export const api = {
         if (params?.workerId) queryParams.append("workerId", params.workerId);
 
         const url = `${API_BASE_URL}/api/worker-listings${queryParams.toString() ? `?${queryParams}` : ""}`;
-        const response = await fetch(url);
+        const response = await apiFetch(url);
 
         if (!response.ok) {
             throw new Error(`Failed to list worker listings: ${response.statusText}`);
@@ -383,7 +399,7 @@ export const api = {
         if (params?.location) queryParams.append("location", params.location);
 
         const url = `${API_BASE_URL}/api/worker-listings/search${queryParams.toString() ? `?${queryParams}` : ""}`;
-        const response = await fetch(url);
+        const response = await apiFetch(url);
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
@@ -394,7 +410,7 @@ export const api = {
     },
 
     async getListing(listingId: string): Promise<WorkerListing> {
-        const response = await fetch(`${API_BASE_URL}/api/worker-listings/${listingId}`);
+        const response = await apiFetch(`${API_BASE_URL}/api/worker-listings/${listingId}`);
 
         if (!response.ok) {
             if (response.status === 404) {
@@ -407,7 +423,7 @@ export const api = {
     },
 
     async getMyListings(userId: string, token: string): Promise<WorkerListing[]> {
-        const response = await fetch(`${API_BASE_URL}/api/worker-listings/user/${userId}`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/worker-listings/user/${userId}`, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -422,7 +438,7 @@ export const api = {
     },
 
     async createListing(payload: CreateListingPayload, token: string): Promise<WorkerListing> {
-        const response = await fetch(`${API_BASE_URL}/api/worker-listings`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/worker-listings`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -440,7 +456,7 @@ export const api = {
     },
 
     async updateListing(listingId: string, payload: UpdateListingPayload, token: string): Promise<WorkerListing> {
-        const response = await fetch(`${API_BASE_URL}/api/worker-listings/${listingId}`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/worker-listings/${listingId}`, {
             method: "PATCH",
             headers: {
                 "Content-Type": "application/json",
@@ -458,7 +474,7 @@ export const api = {
     },
 
     async deleteListing(listingId: string, token: string): Promise<void> {
-        const response = await fetch(`${API_BASE_URL}/api/worker-listings/${listingId}`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/worker-listings/${listingId}`, {
             method: "DELETE",
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -472,7 +488,7 @@ export const api = {
     },
 
     async getChecklist(jobId: string, token: string): Promise<JobChecklistItem[]> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/checklist`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}/checklist`, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -487,7 +503,7 @@ export const api = {
     },
 
     async addChecklistItem(jobId: string, text: string, token: string): Promise<JobChecklistItem> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/checklist`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}/checklist`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -510,7 +526,7 @@ export const api = {
         payload: { text?: string; isDone?: boolean },
         token: string
     ): Promise<JobChecklistItem> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/checklist/${itemId}`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}/checklist/${itemId}`, {
             method: "PATCH",
             headers: {
                 "Content-Type": "application/json",
@@ -528,7 +544,7 @@ export const api = {
     },
 
     async deleteChecklistItem(jobId: string, itemId: string, token: string): Promise<void> {
-        const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/checklist/${itemId}`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/jobs/${jobId}/checklist/${itemId}`, {
             method: "DELETE",
             headers: {
                 Authorization: `Bearer ${token}`,

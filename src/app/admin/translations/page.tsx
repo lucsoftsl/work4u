@@ -141,14 +141,14 @@ export default function AdminTranslationsPage() {
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
     return (
-        <div className="min-h-screen bg-card">
+        <div className="min-h-screen bg-surface">
             <div className="max-w-7xl mx-auto px-4 py-16">
                 <Link href="/admin" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
                     <ArrowLeft className="w-4 h-4" />
                     {t("admin.backToDashboard")}
                 </Link>
                 <div className="mt-4 flex items-center justify-between gap-4 mb-2">
-                    <h1 className="text-4xl font-bold text-foreground">{t("adminTranslations.title")}</h1>
+                    <h1 className="text-4xl font-bold text-ink">{t("adminTranslations.title")}</h1>
                     <div className="flex gap-3">
                         <Button
                             variant="outline"
@@ -167,7 +167,7 @@ export default function AdminTranslationsPage() {
                         </Button>
                     </div>
                 </div>
-                <p className="text-muted-foreground mb-2">{t("adminTranslations.subtitle")}</p>
+                <p className="text-ink-muted mb-2">{t("adminTranslations.subtitle")}</p>
                 {deployMessage && (
                     <p className={`text-sm font-semibold mb-6 ${deployMessage.type === "success" ? "text-green-700" : "text-red-600"}`}>
                         {deployMessage.text}
@@ -188,31 +188,31 @@ export default function AdminTranslationsPage() {
 
                 <form onSubmit={handleSearchSubmit} className="mb-6">
                     <div className="relative max-w-md">
-                        <Search className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
+                        <Search className="absolute left-3 top-3 w-5 h-5 text-ink-muted" />
                         <input
                             type="text"
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
                             placeholder={t("adminTranslations.searchPlaceholder")}
-                            className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="w-full pl-10 pr-4 py-2 border border-line rounded-lg bg-canvas text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                     </div>
                 </form>
 
                 {loading ? (
-                    <p className="text-muted-foreground">{t("adminTranslations.loading")}</p>
+                    <p className="text-ink-muted">{t("adminTranslations.loading")}</p>
                 ) : error ? (
                     <p className="text-red-600 font-semibold">{error}</p>
                 ) : entries.length === 0 ? (
-                    <p className="text-muted-foreground">{t("adminTranslations.empty")}</p>
+                    <p className="text-ink-muted">{t("adminTranslations.empty")}</p>
                 ) : (
-                    <div className="overflow-x-auto border border-border rounded-xl">
+                    <div className="overflow-x-auto border border-line rounded-xl">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="bg-background border-b border-border text-left">
-                                    <th className="p-3 font-semibold text-foreground w-64">{t("adminTranslations.keyColumn")}</th>
+                                <tr className="bg-canvas border-b border-line text-left">
+                                    <th className="p-3 font-semibold text-ink w-64">{t("adminTranslations.keyColumn")}</th>
                                     {LOCALES.map((locale) => (
-                                        <th key={locale} className="p-3 font-semibold text-foreground min-w-[200px]">
+                                        <th key={locale} className="p-3 font-semibold text-ink min-w-[200px]">
                                             {locale}
                                         </th>
                                     ))}
@@ -221,8 +221,8 @@ export default function AdminTranslationsPage() {
                             </thead>
                             <tbody>
                                 {entries.map((entry) => (
-                                    <tr key={entry.key} className="border-b border-border last:border-0">
-                                        <td className="p-3 align-top font-mono text-xs text-muted-foreground break-all">
+                                    <tr key={entry.key} className="border-b border-line last:border-0">
+                                        <td className="p-3 align-top font-mono text-xs text-ink-muted break-all">
                                             {entry.key}
                                         </td>
                                         {LOCALES.map((locale) => (
@@ -232,7 +232,7 @@ export default function AdminTranslationsPage() {
                                                     onBlur={(e) => handleValueBlur(entry.key, locale, e.target.value)}
                                                     disabled={savingCell === `${entry.key}:${locale}`}
                                                     rows={2}
-                                                    className="w-full resize-y rounded-lg border border-border bg-card px-2 py-1 text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                                    className="w-full resize-y rounded-lg border border-line bg-surface px-2 py-1 text-ink focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                                                 />
                                             </td>
                                         ))}
@@ -240,7 +240,7 @@ export default function AdminTranslationsPage() {
                                             <button
                                                 onClick={() => handleDelete(entry.key)}
                                                 title={t("adminTranslations.deleteKey")}
-                                                className="p-2 text-muted-foreground hover:text-red-600 transition-colors"
+                                                className="p-2 text-ink-muted hover:text-red-600 transition-colors"
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
@@ -254,7 +254,7 @@ export default function AdminTranslationsPage() {
 
                 {!loading && !error && totalPages > 1 && (
                     <div className="flex items-center justify-between mt-6">
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-ink-muted">
                             {t("adminTranslations.pageIndicator")
                                 .replace("{page}", String(page))
                                 .replace("{totalPages}", String(totalPages))
@@ -306,9 +306,9 @@ function AddKeyForm({ onCancel, onCreate }: AddKeyFormProps) {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="mb-6 border border-border rounded-xl p-4 bg-background space-y-4">
+        <form onSubmit={handleSubmit} className="mb-6 border border-line rounded-xl p-4 bg-canvas space-y-4">
             <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
+                <label className="block text-sm font-medium text-ink mb-2">
                     {t("adminTranslations.keyColumn")} *
                 </label>
                 <input
@@ -316,13 +316,13 @@ function AddKeyForm({ onCancel, onCreate }: AddKeyFormProps) {
                     value={key}
                     onChange={(e) => setKey(e.target.value)}
                     placeholder="section.someNewKey"
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                 />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {LOCALES.map((locale) => (
                     <div key={locale}>
-                        <label className="block text-xs text-muted-foreground mb-1">
+                        <label className="block text-xs text-ink-muted mb-1">
                             {locale}
                             {locale === "en" ? " *" : ""}
                         </label>
@@ -330,7 +330,7 @@ function AddKeyForm({ onCancel, onCreate }: AddKeyFormProps) {
                             type="text"
                             value={values[locale] ?? ""}
                             onChange={(e) => setValues((prev) => ({ ...prev, [locale]: e.target.value }))}
-                            className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="w-full px-3 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                     </div>
                 ))}
@@ -392,20 +392,20 @@ function DeploySettingsPanel({ token, onClose }: DeploySettingsPanelProps) {
     }
 
     return (
-        <form onSubmit={handleSubmit} className="mb-6 border border-border rounded-xl p-4 bg-background space-y-3">
-            <label className="block text-sm font-medium text-foreground">
+        <form onSubmit={handleSubmit} className="mb-6 border border-line rounded-xl p-4 bg-canvas space-y-3">
+            <label className="block text-sm font-medium text-ink">
                 {t("adminTranslations.deployHookUrlLabel")}
             </label>
-            <p className="text-xs text-muted-foreground">{t("adminTranslations.deployHookUrlHint")}</p>
+            <p className="text-xs text-ink-muted">{t("adminTranslations.deployHookUrlHint")}</p>
             {loading ? (
-                <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+                <p className="text-sm text-ink-muted">{t("common.loading")}</p>
             ) : (
                 <input
                     type="url"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     placeholder="https://api.vercel.com/v1/integrations/deploy/..."
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                 />
             )}
             {error && <p className="text-sm text-red-600">{error}</p>}

@@ -99,13 +99,14 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     setLocaleState((current) => (current === initial ? current : initial));
   }, []);
 
-  // Side-effect: persist locale when it changes
+  // Side-effect: persist locale when it changes, and keep <html lang> in step (screen readers, hyphenation).
   useEffect(() => {
     try {
       window.localStorage.setItem('locale', locale);
     } catch {
       // ignore
     }
+    document.documentElement.lang = locale;
   }, [locale]);
 
   const t = useMemo(() => {

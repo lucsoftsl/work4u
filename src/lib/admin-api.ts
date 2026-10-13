@@ -1,7 +1,7 @@
 import { AchievementForm, QuestForm } from '@/types/admin';
 import type { Job, JobModerationStatus } from '@/api/types';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { API_BASE_URL as BASE_URL, apiFetch } from "./http";
 
 // Achievement API calls — the :adminId path segment is kept for URL shape
 // compatibility but is NOT trusted for authorization; the backend verifies
@@ -14,7 +14,7 @@ export async function fetchAchievements(adminId: string, token: string, filters?
         });
     }
 
-    const response = await fetch(
+    const response = await apiFetch(
         `${BASE_URL}/api/gamification/admin/achievements/${adminId}?${params}`,
         {
             method: 'GET',
@@ -27,7 +27,7 @@ export async function fetchAchievements(adminId: string, token: string, filters?
 }
 
 export async function createAchievement(adminId: string, token: string, achievement: AchievementForm) {
-    const response = await fetch(
+    const response = await apiFetch(
         `${BASE_URL}/api/gamification/admin/achievements/${adminId}`,
         {
             method: 'POST',
@@ -46,7 +46,7 @@ export async function updateAchievement(
     achievementId: string,
     updates: Partial<AchievementForm>
 ) {
-    const response = await fetch(
+    const response = await apiFetch(
         `${BASE_URL}/api/gamification/admin/achievements/${adminId}/${achievementId}`,
         {
             method: 'PUT',
@@ -60,7 +60,7 @@ export async function updateAchievement(
 }
 
 export async function deleteAchievement(adminId: string, token: string, achievementId: string) {
-    const response = await fetch(
+    const response = await apiFetch(
         `${BASE_URL}/api/gamification/admin/achievements/${adminId}/${achievementId}`,
         {
             method: 'DELETE',
@@ -81,7 +81,7 @@ export async function fetchQuests(adminId: string, token: string, filters?: Reco
         });
     }
 
-    const response = await fetch(
+    const response = await apiFetch(
         `${BASE_URL}/api/gamification/admin/quests/${adminId}?${params}`,
         {
             method: 'GET',
@@ -94,7 +94,7 @@ export async function fetchQuests(adminId: string, token: string, filters?: Reco
 }
 
 export async function createQuest(adminId: string, token: string, quest: QuestForm) {
-    const response = await fetch(
+    const response = await apiFetch(
         `${BASE_URL}/api/gamification/admin/quests/${adminId}`,
         {
             method: 'POST',
@@ -113,7 +113,7 @@ export async function updateQuest(
     questId: string,
     updates: Partial<QuestForm>
 ) {
-    const response = await fetch(
+    const response = await apiFetch(
         `${BASE_URL}/api/gamification/admin/quests/${adminId}/${questId}`,
         {
             method: 'PUT',
@@ -127,7 +127,7 @@ export async function updateQuest(
 }
 
 export async function deleteQuest(adminId: string, token: string, questId: string) {
-    const response = await fetch(
+    const response = await apiFetch(
         `${BASE_URL}/api/gamification/admin/quests/${adminId}/${questId}`,
         {
             method: 'DELETE',
@@ -160,7 +160,7 @@ export interface AdminStats {
 }
 
 export async function fetchAdminStats(token: string): Promise<AdminStats> {
-    const response = await fetch(`${BASE_URL}/api/admin/stats`, {
+    const response = await apiFetch(`${BASE_URL}/api/admin/stats`, {
         headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -187,7 +187,7 @@ export async function fetchUsers(token: string, filters?: { status?: string; use
     if (filters?.status) params.append('status', filters.status);
     if (filters?.userType) params.append('userType', filters.userType);
 
-    const response = await fetch(`${BASE_URL}/api/admin/users?${params}`, {
+    const response = await apiFetch(`${BASE_URL}/api/admin/users?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -196,7 +196,7 @@ export async function fetchUsers(token: string, filters?: { status?: string; use
 }
 
 export async function suspendUser(userId: string, token: string): Promise<AdminUserSummary> {
-    const response = await fetch(`${BASE_URL}/api/admin/users/${userId}/suspend`, {
+    const response = await apiFetch(`${BASE_URL}/api/admin/users/${userId}/suspend`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
     });
@@ -209,7 +209,7 @@ export async function suspendUser(userId: string, token: string): Promise<AdminU
 }
 
 export async function reactivateUser(userId: string, token: string): Promise<AdminUserSummary> {
-    const response = await fetch(`${BASE_URL}/api/admin/users/${userId}/reactivate`, {
+    const response = await apiFetch(`${BASE_URL}/api/admin/users/${userId}/reactivate`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
     });
@@ -243,7 +243,7 @@ export async function setUserSubscription(
     token: string,
     options?: SetUserSubscriptionOptions
 ): Promise<AdminSubscriptionGrant> {
-    const response = await fetch(`${BASE_URL}/api/admin/users/${userId}/subscription`, {
+    const response = await apiFetch(`${BASE_URL}/api/admin/users/${userId}/subscription`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -272,7 +272,7 @@ export async function fetchModeratedJobs(
     const params = new URLSearchParams();
     if (filters?.moderationStatus) params.append('moderationStatus', filters.moderationStatus);
 
-    const response = await fetch(`${BASE_URL}/api/admin/jobs?${params}`, {
+    const response = await apiFetch(`${BASE_URL}/api/admin/jobs?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -289,7 +289,7 @@ export async function moderateJob(
     token: string,
     moderationNote?: string
 ): Promise<Job> {
-    const response = await fetch(`${BASE_URL}/api/admin/jobs/${jobId}/moderation`, {
+    const response = await apiFetch(`${BASE_URL}/api/admin/jobs/${jobId}/moderation`, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
@@ -306,7 +306,7 @@ export async function moderateJob(
 }
 
 export async function scheduleJobDeletion(jobId: string, days: number, token: string): Promise<Job> {
-    const response = await fetch(`${BASE_URL}/api/admin/jobs/${jobId}/schedule-deletion`, {
+    const response = await apiFetch(`${BASE_URL}/api/admin/jobs/${jobId}/schedule-deletion`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -348,7 +348,7 @@ export async function fetchTranslations(
     if (options?.page) params.append('page', String(options.page));
     if (options?.limit) params.append('limit', String(options.limit));
 
-    const response = await fetch(`${BASE_URL}/api/admin/translations?${params}`, {
+    const response = await apiFetch(`${BASE_URL}/api/admin/translations?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -361,7 +361,7 @@ export async function createTranslationKey(
     values: Partial<Record<TranslationLocale, string>>,
     token: string
 ): Promise<TranslationKeyEntry> {
-    const response = await fetch(`${BASE_URL}/api/admin/translations`, {
+    const response = await apiFetch(`${BASE_URL}/api/admin/translations`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -382,7 +382,7 @@ export async function updateTranslationValues(
     values: Partial<Record<TranslationLocale, string>>,
     token: string
 ): Promise<TranslationKeyEntry> {
-    const response = await fetch(`${BASE_URL}/api/admin/translations/${encodeURIComponent(key)}`, {
+    const response = await apiFetch(`${BASE_URL}/api/admin/translations/${encodeURIComponent(key)}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
@@ -399,7 +399,7 @@ export async function updateTranslationValues(
 }
 
 export async function deleteTranslationKey(key: string, token: string): Promise<void> {
-    const response = await fetch(`${BASE_URL}/api/admin/translations/${encodeURIComponent(key)}`, {
+    const response = await apiFetch(`${BASE_URL}/api/admin/translations/${encodeURIComponent(key)}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
     });
@@ -413,7 +413,7 @@ export async function deleteTranslationKey(key: string, token: string): Promise<
 // Triggers a Vercel redeploy of the frontend so its bundled src/locales/*.json
 // files get resynced from the DB at build time (see scripts/sync-translations.mjs).
 export async function triggerTranslationsDeploy(token: string): Promise<{ triggered: true }> {
-    const response = await fetch(`${BASE_URL}/api/admin/translations/deploy`, {
+    const response = await apiFetch(`${BASE_URL}/api/admin/translations/deploy`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
     });

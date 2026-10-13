@@ -12,7 +12,8 @@ import {
     type User,
 } from 'firebase/auth';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { API_BASE_URL as API_URL, apiFetch } from "./http";
+import { ProfileUnavailableError, isBusyResponse, isOutageStatus, parseRetryAfterMs } from "./auth-outage";
 
 function parseAddress(addressValue?: unknown) {
     if (!addressValue) {
@@ -34,7 +35,8 @@ function parseAddress(addressValue?: unknown) {
         return {
             country: parsed.country ?? null,
             state: parsed.state ?? null,
-            addressLine: parsed.address ?? null,
+            // signup step 3 stores the free-text location as `location`
+            addressLine: parsed.address ?? parsed.location ?? null,
             city: parsed.city ?? null,
             postcode: parsed.postcode ?? null,
             number: parsed.number ?? null,
@@ -46,7 +48,7 @@ function parseAddress(addressValue?: unknown) {
 
 async function setLoggedInStateApi(userId: string, token: string, loggedInData: Record<string, any>): Promise<void> {
     try {
-        const response = await fetch(`${API_URL}/api/users/${userId}/login-state`, {
+        const response = await apiFetch(`${API_URL}/api/users/${userId}/login-state`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -66,7 +68,7 @@ async function setLoggedInStateApi(userId: string, token: string, loggedInData: 
 
 async function clearLoggedInStateApi(userId: string, token: string): Promise<void> {
     try {
-        const response = await fetch(`${API_URL}/api/users/${userId}/login-state`, {
+        const response = await apiFetch(`${API_URL}/api/users/${userId}/login-state`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -95,7 +97,7 @@ function sleep(ms: number): Promise<void> {
 const PROFILE_FETCH_RETRY_DELAYS_MS = [300, 600, 1200, 2000];
 
 async function buildAuthUser(firebaseUser: User, token: string): Promise<AuthUser | null> {
-    let response = await fetch(`${API_URL}/api/users/${firebaseUser.uid}`, {
+    let response = await apiFetch(`${API_URL}/api/users/${firebaseUser.uid}`, {
         headers: {
             'Authorization': `Bearer ${token}`,
         },
@@ -104,13 +106,23 @@ async function buildAuthUser(firebaseUser: User, token: string): Promise<AuthUse
     for (const delay of PROFILE_FETCH_RETRY_DELAYS_MS) {
         if (response.status !== 404) break;
         await sleep(delay);
-        response = await fetch(`${API_URL}/api/users/${firebaseUser.uid}`, {
+        response = await apiFetch(`${API_URL}/api/users/${firebaseUser.uid}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
             },
         });
     }
 
+    if (isOutageStatus(response.status)) {
+        // The API is down or erroring: that says nothing about whether this person has a profile.
+        const body = (await response.clone().json().catch(() => ({}))) as { code?: unknown; retryAfterSeconds?: unknown };
+        const header = response.headers.get('Retry-After');
+        if (isBusyResponse(response.status, header, typeof body.code === 'string' ? body.code : undefined)) {
+            const fromBody = typeof body.retryAfterSeconds === 'number' ? String(body.retryAfterSeconds) : null;
+            throw new ProfileUnavailableError(undefined, { rateLimited: true, retryAfterMs: parseRetryAfterMs(header ?? fromBody) });
+        }
+        throw new ProfileUnavailableError();
+    }
     if (!response.ok) {
         return null;
     }
@@ -189,7 +201,7 @@ export async function signUp(data: SignUpData): Promise<AuthUser> {
         const token = await firebaseUser.getIdToken();
 
         // 3. Signup step 1
-        const response = await fetch(`${API_URL}/api/signup/step-1`, {
+        const response = await apiFetch(`${API_URL}/api/signup/step-1`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -279,7 +291,7 @@ export async function signInWithGoogle(): Promise<AuthUser> {
         const token = await firebaseUser.getIdToken();
 
         // Check if user exists in backend
-        const response = await fetch(`${API_URL}/api/users/${firebaseUser.uid}`, {
+        const response = await apiFetch(`${API_URL}/api/users/${firebaseUser.uid}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
             },
@@ -360,7 +372,7 @@ export async function signUpWithGoogle(userType: 'PERSONAL' | 'ENTERPRISE', work
         const token = await firebaseUser.getIdToken();
 
         // Signup step 1
-        const response = await fetch(`${API_URL}/api/signup/step-1`, {
+        const response = await apiFetch(`${API_URL}/api/signup/step-1`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -450,7 +462,7 @@ export async function signIn(data: SignInData): Promise<AuthUser> {
         const token = await firebaseUser.getIdToken();
 
         // 3. Get user profile from backend
-        const response = await fetch(`${API_URL}/api/users/${firebaseUser.uid}`, {
+        const response = await apiFetch(`${API_URL}/api/users/${firebaseUser.uid}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
             },
@@ -589,7 +601,7 @@ export async function updateUserProfile(
 ): Promise<ApiUser> {
     const token = await getIdToken();
 
-    const response = await fetch(`${API_URL}/api/users/${userId}`, {
+    const response = await apiFetch(`${API_URL}/api/users/${userId}`, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
@@ -610,7 +622,7 @@ export async function completeSignupStep2(
 ): Promise<ApiUser> {
     const token = await getIdToken();
 
-    const response = await fetch(`${API_URL}/api/signup/step-2`, {
+    const response = await apiFetch(`${API_URL}/api/signup/step-2`, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
@@ -640,7 +652,7 @@ export async function completeSignupStep3(data: {
 }): Promise<ApiUser> {
     const token = await getIdToken();
 
-    const response = await fetch(`${API_URL}/api/signup/step-3`, {
+    const response = await apiFetch(`${API_URL}/api/signup/step-3`, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
@@ -689,7 +701,7 @@ export async function trackEvent(
             osName: getOSName(),
         };
 
-        const response = await fetch(`${API_URL}/api/analytics`, {
+        const response = await apiFetch(`${API_URL}/api/analytics`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

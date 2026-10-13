@@ -1,147 +1,221 @@
-import { MapPin, Search, SlidersHorizontal, Star, BadgeCheck, Share2, Mail } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+"use client";
 
-export function DesktopCategoryCard({
-  icon: Icon,
-  name,
-  count,
-  onClick,
-}: {
-  icon: LucideIcon;
-  name: string;
-  count: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="rounded-2xl border border-outline bg-white p-5 text-left transition hover:border-brand/50 hover:shadow-soft"
-    >
-      <span className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#dbe8ef] text-brand">
-        <Icon className="h-4 w-4" />
-      </span>
-      <h3 className="font-display text-lg font-bold leading-tight text-ink">{name}</h3>
-      <p className="mt-1 text-sm text-ink-muted">{count}</p>
-    </button>
-  );
-}
+import Link from "next/link";
+import Image from "next/image";
+import { useId, useState, type FormEvent, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, MapPin, Search, Star, type LucideIcon } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import { buttonClasses } from "@/components/ui/Button";
+import { LedgerRow } from "@/components/ui/LedgerRow";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { Skeleton } from "@/components/ui/QueryState";
 
-export function ProfessionalCard({
-  name,
-  title,
-  rating,
-  distance,
-  tags,
-  jobsCompleted,
-  responsiveness,
-  communication,
-  cta,
-  verified,
-}: {
-  name: string;
+/* ------------------------------------------------------------------ */
+/* Layout                                                              */
+/* ------------------------------------------------------------------ */
+
+const CONTAINER = "mx-auto w-full max-w-content px-[var(--gutter)]";
+const STRETCHED_LINK = "rounded-control after:absolute after:inset-0 after:content-[''] focus-visible:shadow-focus";
+
+interface LandingSectionProps {
+  id: string;
   title: string;
-  rating: string;
-  distance: string;
-  tags: string[];
-  jobsCompleted: number;
-  responsiveness: number;
-  communication: number;
-  cta: string;
-  verified: string;
-}) {
+  subtitle?: string;
+  href?: string;
+  linkLabel?: string;
+  children: ReactNode;
+}
+
+/** Hairline-separated landing band with an H2 header and an optional "view all" link. */
+export function LandingSection({ id, title, subtitle, href, linkLabel, children }: LandingSectionProps) {
   return (
-    <article className="overflow-hidden rounded-2xl border border-outline bg-white shadow-soft">
-      <div className="relative h-40 bg-gradient-to-r from-brand to-brand-strong">
-        <span className="absolute right-3 top-3 rounded-md bg-white px-2 py-1 text-[10px] font-bold text-brand">{verified}</span>
-      </div>
-
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <h3 className="font-display text-xl font-black text-ink">{name}</h3>
-            <p className="text-sm text-ink-muted">{title}</p>
+    <section aria-labelledby={id} className="border-t border-line">
+      <div className={cn(CONTAINER, "py-12 md:py-16")}>
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+          <div className="min-w-0">
+            <h2 id={id} className="font-display text-h2 text-ink">
+              {title}
+            </h2>
+            {subtitle ? <p className="mt-1 text-body text-ink-muted">{subtitle}</p> : null}
           </div>
-          <span className="inline-flex items-center gap-1 text-sm font-semibold text-ink-muted">
-            <Star className="h-3.5 w-3.5 fill-accent text-accent" /> {rating}
-          </span>
+          {href && linkLabel ? (
+            <Link
+              href={href}
+              className="inline-flex min-h-[44px] items-center gap-1 rounded-control text-label text-primary hover:underline"
+            >
+              {linkLabel}
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          ) : null}
         </div>
-
-        <p className="mt-3 inline-flex items-center gap-1 text-xs text-ink-subtle">
-          <MapPin className="h-3 w-3" /> {distance}
-        </p>
-
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {tags.map((tag) => (
-            <span key={tag} className="rounded bg-[#e9f0f5] px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-[#4a6c84]">
-              {tag}
-            </span>
-          ))}
-        </div>
-
-        <div className="mt-4 space-y-2 border-t border-outline pt-4 text-[10px]">
-          <Metric label="JOBS COMPLETED" value={jobsCompleted} color="bg-brand" />
-          <Metric label="RESPONSIVENESS" value={responsiveness} color="bg-amber-500" />
-          <Metric label="COMMUNICATION" value={communication} color="bg-emerald-500" />
-        </div>
-
-        <button className="mt-4 w-full rounded-xl bg-brand py-2.5 text-sm font-bold text-white">{cta}</button>
+        {children}
       </div>
-    </article>
+    </section>
   );
 }
 
-function Metric({ label, value, color }: { label: string; value: number; color: string }) {
+/* ------------------------------------------------------------------ */
+/* Hero search                                                         */
+/* ------------------------------------------------------------------ */
+
+type Persona = "hire" | "work";
+
+/** Persona tabs + what/where search. Hire searches workers, work searches jobs; both pass keywords/location in the URL. */
+export function PersonaSearch({ className, centered = false }: { className?: string; centered?: boolean }) {
+  const router = useRouter();
+  const { t } = useTranslation();
+  const [persona, setPersona] = useState<Persona>("hire");
+  const [what, setWhat] = useState("");
+  const [where, setWhere] = useState("");
+  const whatId = useId();
+  const whereId = useId();
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const params = new URLSearchParams();
+    if (what.trim()) params.set("keywords", what.trim());
+    if (where.trim()) params.set("location", where.trim());
+    const base = persona === "hire" ? "/workers" : "/jobs";
+    const query = params.toString();
+    router.push(query ? `${base}?${query}` : base);
+  };
+
+  const inputClass =
+    "h-12 w-full rounded-control border border-line-strong bg-surface pl-10 pr-3 text-body text-ink " +
+    "placeholder:text-ink-subtle hover:border-ink-muted focus:border-primary";
+
   return (
-    <div>
-      <div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase text-[#5c6d86]">
-        <span>{label}</span>
-        <span>{value}%</span>
-      </div>
-      <div className="h-1.5 rounded-full bg-[#e3ebf0]">
-        <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${value}%` }} />
-      </div>
+    <div className={cn("w-full", centered && "flex flex-col items-center", className)}>
+      <SegmentedControl<Persona>
+        value={persona}
+        onChange={setPersona}
+        label={t("landing.persona.label")}
+        options={[
+          { value: "hire", label: t("landing.persona.hire") },
+          { value: "work", label: t("landing.persona.work") },
+        ]}
+        className="w-full sm:w-auto"
+      />
+      <form
+        role="search"
+        onSubmit={handleSubmit}
+        className="mt-3 flex w-full flex-col gap-2 rounded-card border border-line bg-surface p-3 text-left shadow-stamp md:flex-row md:items-center md:p-2"
+      >
+        <div className="relative min-w-0 flex-1">
+          <label htmlFor={whatId} className="sr-only">
+            {t("landing.search.whatLabel")}
+          </label>
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-subtle" aria-hidden="true" />
+          <input
+            id={whatId}
+            type="search"
+            value={what}
+            onChange={(event) => setWhat(event.target.value)}
+            placeholder={t(persona === "hire" ? "landing.search.hirePlaceholder" : "landing.search.workPlaceholder")}
+            className={inputClass}
+          />
+        </div>
+        <div className="relative min-w-0 flex-1">
+          <label htmlFor={whereId} className="sr-only">
+            {t("landing.search.whereLabel")}
+          </label>
+          <MapPin className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-subtle" aria-hidden="true" />
+          <input
+            id={whereId}
+            type="text"
+            autoComplete="address-level2"
+            value={where}
+            onChange={(event) => setWhere(event.target.value)}
+            placeholder={t("landing.search.wherePlaceholder")}
+            className={inputClass}
+          />
+        </div>
+        <button type="submit" className={buttonClasses("primary", "default", "h-12 w-full shrink-0 md:w-auto md:px-6")}>
+          {t(persona === "hire" ? "nav.findWorkers" : "nav.findJobs")}
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </form>
     </div>
   );
 }
 
-export function FeaturedJobCard({
-  type,
-  typeClass,
-  budget,
-  title,
-  location,
-  action,
-}: {
-  type: string;
-  typeClass: string;
-  budget: string;
+/* ------------------------------------------------------------------ */
+/* Featured helper card (hero, ≥ md)                                   */
+/* ------------------------------------------------------------------ */
+
+interface FeaturedHelper {
+  name: string;
   title: string;
-  location: string;
-  action: string;
-}) {
+  rating: string;
+}
+
+export function FeaturedHelperCard({ imageUrl, helper }: { imageUrl: string; helper?: FeaturedHelper }) {
+  const { t } = useTranslation();
   return (
-    <article className="flex h-[224px] flex-col rounded-2xl border border-outline bg-white p-5 shadow-soft">
-      <div className="mb-3 flex items-center justify-between">
-        <span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${typeClass}`}>{type}</span>
-        <span className="text-xl font-black text-brand">{budget}</span>
+    <article className="relative rounded-card border border-line bg-surface p-3 shadow-raised transition-[border-color] duration-fast hover:border-line-strong focus-within:border-line-strong">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-control bg-sunken">
+        <Image src={imageUrl} alt="" fill unoptimized loading="eager" sizes="(min-width: 1024px) 40vw, 36rem" className="object-cover" />
       </div>
-      <h3 className="font-display text-xl font-bold text-ink">{title}</h3>
-      <p className="mt-2 inline-flex items-center gap-1 text-xs text-ink-subtle">
-        <MapPin className="h-3 w-3" /> {location}
-      </p>
-      <button className="mt-auto w-full rounded-xl bg-brand py-2.5 text-sm font-bold text-white">{action}</button>
+      <div className="px-2 pb-1 pt-3">
+        <p className="text-micro uppercase text-ink-muted">{t("landing.featured.eyebrow")}</p>
+        <p className="mt-1 font-display text-h3 text-ink">
+          <Link href="/workers" className={STRETCHED_LINK}>
+            {helper?.name ?? t("nav.findWorkers")}
+          </Link>
+        </p>
+        {helper ? (
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-label font-normal text-ink-muted">
+            <span>{helper.title}</span>
+            <Rating value={helper.rating} />
+          </p>
+        ) : null}
+      </div>
     </article>
   );
 }
 
-export function FooterColumn({ title, links }: { title: string; links: Array<{ label: string; href: string }> }) {
+function Rating({ value, reviews }: { value: string; reviews?: string }) {
+  const { t } = useTranslation();
   return (
-    <div>
-      <h4 className="text-xs font-extrabold uppercase tracking-[0.18em] text-ink">{title}</h4>
-      <ul className="mt-4 space-y-3 text-sm text-ink-muted">
-        {links.map((link) => (
-          <li key={`${link.label}-${link.href}`}>
-            <a href={link.href} className="transition hover:text-brand">{link.label}</a>
+    <span className="inline-flex items-center gap-1">
+      <Star className="h-4 w-4 fill-money text-money" aria-hidden="true" />
+      <span className="sr-only">{t("landing.ratingLabel")}</span>
+      <span className="font-bold tabular text-ink">{value}</span>
+      {reviews ? <span className="tabular">({reviews})</span> : null}
+    </span>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Categories: scroll strip < md, 3×2 at md, 6 across at lg            */
+/* ------------------------------------------------------------------ */
+
+export interface CategoryItem {
+  slug: string;
+  name: string;
+  iconKey: string;
+  icon: LucideIcon;
+  countLabel?: string;
+}
+
+export function CategoryGrid({ items }: { items: CategoryItem[] }) {
+  return (
+    <div className="min-w-0 overflow-x-auto pb-2 md:overflow-visible md:pb-0">
+      <ul className="flex gap-3 md:grid md:grid-cols-3 md:gap-4 lg:grid-cols-6">
+        {items.map(({ slug, name, icon: Icon, countLabel }) => (
+          <li key={slug} className="shrink-0 md:shrink">
+            <Link
+              href={`/jobs?category=${encodeURIComponent(slug)}`}
+              className="flex min-h-[44px] items-center gap-2 rounded-card border border-line bg-surface px-3 py-1.5 text-ink transition-[box-shadow,border-color] duration-fast hover:border-line-strong hover:shadow-stamp md:h-full md:flex-col md:justify-center md:gap-2 md:p-5 md:text-center"
+            >
+              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary md:h-11 md:w-11">
+                <Icon className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
+              </span>
+              <span className="whitespace-nowrap font-display text-label md:whitespace-normal md:text-body md:font-semibold">{name}</span>
+              {countLabel ? <span className="hidden text-caption text-ink-muted md:block">{countLabel}</span> : null}
+            </Link>
           </li>
         ))}
       </ul>
@@ -149,208 +223,221 @@ export function FooterColumn({ title, links }: { title: string; links: Array<{ l
   );
 }
 
-export function MobileCategoryCard({
-  icon: Icon,
-  name,
-  onClick,
-}: {
-  icon: LucideIcon;
-  name: string;
-  onClick: () => void;
-}) {
-  return (
-    <button onClick={onClick} className="min-w-[78px] text-center">
-      <span className="mx-auto mb-2 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#dce5eb] text-brand">
-        <Icon className="h-6 w-6" />
-      </span>
-      <p className="text-[0.95rem] font-medium text-ink">{name}</p>
-    </button>
-  );
-}
+/* ------------------------------------------------------------------ */
+/* Job rows                                                            */
+/* ------------------------------------------------------------------ */
 
-export function HeroSearch({
-  value,
-  onChange,
-  placeholder,
-  onSubmit,
-  filterLabel,
-}: {
-  value: string;
-  onChange: (next: string) => void;
-  placeholder: string;
-  onSubmit: () => void;
-  filterLabel: string;
-}) {
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit();
-      }}
-      className="mt-6 flex items-center rounded-full bg-white px-3 py-2 shadow-soft"
-    >
-      <Search className="ml-2 h-5 w-5 text-[#96a3b8]" />
-      <input
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className="w-full border-none bg-transparent px-3 text-[0.95rem] text-ink outline-none placeholder:text-[#77839a]"
-      />
-      <button
-        type="submit"
-        aria-label={filterLabel}
-        className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-brand text-white"
-      >
-        <SlidersHorizontal className="h-5 w-5" />
-      </button>
-    </form>
-  );
-}
-
-export function TopProCard({
-  name,
-  rating,
-  reviews,
-  jobsCompleted,
-  jobsCompletedPct,
-  responsiveness,
-  responsivenessPct,
-  distance,
-  jobsCompletedTitle,
-  responsivenessTitle,
-  ctaLabel,
-}: {
-  name: string;
-  rating: string;
-  reviews: string;
-  jobsCompleted: string;
-  jobsCompletedPct: number;
-  responsiveness: string;
-  responsivenessPct: number;
-  distance: string;
-  jobsCompletedTitle: string;
-  responsivenessTitle: string;
-  ctaLabel: string;
-}) {
-  return (
-    <article className="min-w-[290px] rounded-[1.7rem] bg-white p-5 shadow-soft">
-      <div className="flex items-center gap-3">
-        <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-slate-200 text-sm font-black text-slate-700">A</span>
-        <div>
-          <h3 className="text-[1.35rem] font-black leading-none text-ink">{name}</h3>
-          <p className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-slate-600">
-            <Star className="h-3.5 w-3.5 fill-[#ffb648] text-[#ffb648]" /> {rating} ({reviews})
-          </p>
-        </div>
-        <BadgeCheck className="ml-auto h-5 w-5 text-[#3b82f6]" />
-      </div>
-
-      <div className="mt-5 space-y-3">
-        <div>
-          <div className="mb-1 flex items-center justify-between text-[0.72rem] font-bold uppercase text-[#5c6d86]">
-            <span>{jobsCompletedTitle}</span>
-            <span className="text-brand">{jobsCompleted}</span>
-          </div>
-          <div className="h-1.5 rounded-full bg-[#e3ebf0]">
-            <div className="h-1.5 rounded-full bg-brand" style={{ width: `${jobsCompletedPct}%` }} />
-          </div>
-        </div>
-        <div>
-          <div className="mb-1 flex items-center justify-between text-[0.72rem] font-bold uppercase text-[#5c6d86]">
-            <span>{responsivenessTitle}</span>
-            <span className="text-[#f59e0b]">{responsiveness}</span>
-          </div>
-          <div className="h-1.5 rounded-full bg-[#e3ebf0]">
-            <div className="h-1.5 rounded-full bg-[#f59e0b]" style={{ width: `${responsivenessPct}%` }} />
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 flex items-center justify-between">
-        <p className="inline-flex items-center gap-1 text-sm text-[#8a98ad]">
-          <MapPin className="h-3.5 w-3.5" /> {distance}
-        </p>
-        <button className="rounded-full bg-[#e5eef4] px-5 py-2 text-[0.9rem] font-semibold text-brand">{ctaLabel}</button>
-      </div>
-    </article>
-  );
-}
-
-export function ActiveJobCard({
-  title,
-  budget,
-  location,
-  tag,
-  tagClass,
-  applicants,
-  action,
-}: {
+export interface JobRowItem {
+  id: string;
   title: string;
-  budget: string;
-  location: string;
-  tag: string;
+  budgetLabel: string;
+  locationLabel: string;
+  tagLabel: string;
   tagClass: string;
-  applicants: string;
-  action: string;
-}) {
+  metaLabel?: string;
+}
+
+/** Budget arrives preformatted from the API, so it is shown on a money plate without re-formatting. */
+function MoneyLabel({ children }: { children: string }) {
   return (
-    <article className="rounded-[1.7rem] bg-white p-5 shadow-soft">
-      <div className="flex items-start gap-4">
-        <span className="inline-block h-16 w-16 rounded-2xl bg-gradient-to-br from-slate-200 to-slate-300" />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="text-[1.2rem] font-black leading-tight text-ink">{title}</h3>
-            <span className="text-[1.35rem] font-black leading-none text-[#f59e0b]">{budget}</span>
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 text-[0.85rem] text-[#8a98ad]">
-              <MapPin className="h-3.5 w-3.5" /> {location}
-            </span>
-            <span className={`rounded-full px-3 py-1 text-[0.8rem] font-semibold ${tagClass}`}>{tag}</span>
-          </div>
-          <div className="mt-2 flex items-center justify-between">
-            <p className="text-[0.85rem] text-[#8a98ad]">{applicants}</p>
-            <button className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white">{action}</button>
-          </div>
-        </div>
-      </div>
-    </article>
+    <span className="inline-flex items-center whitespace-nowrap rounded-control border border-money/25 bg-money-soft px-3 py-1.5 font-display text-lg font-bold tabular text-money md:text-xl">
+      {children}
+    </span>
   );
 }
 
-export function FooterActions() {
+export function JobRows({ items }: { items: JobRowItem[] }) {
   return (
-    <div className="mt-5 flex items-center justify-center gap-6">
-      <button className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-panel text-ink-subtle" aria-label="share">
-        <Share2 className="h-4 w-4" />
-      </button>
-      <button className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-panel text-ink-subtle" aria-label="contact">
-        <Mail className="h-4 w-4" />
-      </button>
+    <ul className="space-y-3">
+      {items.map((job) => (
+        <li key={job.id}>
+          <LedgerRow
+            href={`/jobs?keywords=${encodeURIComponent(job.title)}`}
+            title={job.title}
+            eyebrow={
+              <>
+                <span className={cn("inline-flex items-center rounded-control px-2 py-0.5 font-bold", job.tagClass)}>{job.tagLabel}</span>
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                  {job.locationLabel}
+                </span>
+              </>
+            }
+            meta={job.metaLabel ? <p>{job.metaLabel}</p> : undefined}
+            aside={<MoneyLabel>{job.budgetLabel}</MoneyLabel>}
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Worker cards: horizontal scroller < md, 2-up at md, 4 at lg         */
+/* ------------------------------------------------------------------ */
+
+export interface WorkerItem {
+  id: string;
+  name: string;
+  title?: string;
+  rating: string;
+  reviews?: string;
+  distanceLabel: string;
+  tags?: string[];
+}
+
+export function WorkerCards({ items }: { items: WorkerItem[] }) {
+  return (
+    <div className="min-w-0 overflow-x-auto pb-2 md:overflow-visible md:pb-0">
+      <ul className="flex snap-x gap-4 md:grid md:grid-cols-2 lg:grid-cols-4">
+        {items.map((worker) => (
+          <li key={worker.id} className="w-[min(80vw,18rem)] shrink-0 snap-start md:w-auto">
+            <article className="relative flex h-full flex-col rounded-card border border-line bg-surface p-5 transition-[box-shadow,border-color] duration-fast hover:border-line-strong hover:shadow-stamp focus-within:border-line-strong">
+              <div className="flex items-center gap-3">
+                <span
+                  aria-hidden="true"
+                  className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-soft font-display text-h3 text-primary"
+                >
+                  {worker.name.trim().charAt(0).toUpperCase()}
+                </span>
+                <div className="min-w-0">
+                  <h3 className="truncate font-display text-h3 text-ink">
+                    <Link href="/workers" className={STRETCHED_LINK}>
+                      {worker.name}
+                    </Link>
+                  </h3>
+                  {worker.title ? <p className="truncate text-label font-normal text-ink-muted">{worker.title}</p> : null}
+                </div>
+              </div>
+              {worker.tags?.length ? (
+                <ul className="mt-3 flex flex-wrap gap-1.5">
+                  {worker.tags.slice(0, 2).map((tag) => (
+                    <li key={tag} className="rounded-control bg-sunken px-2 py-0.5 text-caption text-ink-muted">
+                      {tag}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <div className="mt-auto pt-4">
+                <div className="flex items-center justify-between gap-2 border-t border-line pt-3 text-label font-normal text-ink-muted">
+                  <Rating value={worker.rating} reviews={worker.reviews} />
+                  <span className="inline-flex min-w-0 items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span className="truncate">{worker.distanceLabel}</span>
+                  </span>
+                </div>
+              </div>
+            </article>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-export function MobileNavItem({
-  label,
-  icon: Icon,
-  badge,
-  active = false,
-}: {
-  label: string;
-  icon: LucideIcon;
-  badge?: string;
-  active?: boolean;
-}) {
+/* ------------------------------------------------------------------ */
+/* Hire / work split band                                              */
+/* ------------------------------------------------------------------ */
+
+export function HireWorkBand() {
+  const { t } = useTranslation();
+  const panel = "flex flex-col items-start rounded-card p-6 md:rounded-none md:p-10";
   return (
-    <button className={`relative flex flex-col items-center gap-1 ${active ? "text-brand" : "text-ink-subtle"}`}>
-      <Icon className="h-5 w-5" />
-      <span className="text-[11px] font-bold">{label}</span>
-      {badge ? (
-        <span className="absolute -right-2 -top-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[9px] font-bold text-white">
-          {badge}
-        </span>
-      ) : null}
-    </button>
+    <div className="border-t border-line">
+      <div className={cn(CONTAINER, "py-12 md:py-16")}>
+        <div className="grid gap-4 md:grid-cols-2 md:gap-0 md:overflow-hidden md:rounded-card md:border md:border-line md:shadow-stamp">
+          <div className={cn(panel, "bg-primary text-on-fill")}>
+            <p className="text-micro uppercase">{t("landing.split.hireEyebrow")}</p>
+            <h2 className="mt-2 font-display text-h2">{t("landing.split.hireTitle")}</h2>
+            <p className="mt-3 max-w-md text-body">{t("landing.split.hireBody")}</p>
+            <Link href="/post-job" className={buttonClasses("secondary", "default", "mt-6 border-surface")}>
+              {t("home.ctaPostJob")}
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+          <div className={cn(panel, "border border-line bg-surface md:border-0")}>
+            <p className="text-micro uppercase text-ink-muted">{t("landing.split.workEyebrow")}</p>
+            <h2 className="mt-2 font-display text-h2 text-ink">{t("landing.split.workTitle")}</h2>
+            <p className="mt-3 max-w-md text-body text-ink-muted">{t("landing.split.workBody")}</p>
+            <Link href="/jobs" className={buttonClasses("primary", "default", "mt-6")}>
+              {t("nav.findJobs")}
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* How it works (fallback only)                                        */
+/* ------------------------------------------------------------------ */
+
+const STEPS = [1, 2, 3] as const;
+
+export function HowItWorksSteps() {
+  const { t } = useTranslation();
+  return (
+    <>
+      <ol className="grid gap-4 md:grid-cols-3">
+        {STEPS.map((step) => (
+          <li key={step} className="rounded-card border border-line bg-surface p-6">
+            <span aria-hidden="true" className="font-display text-h3 tabular text-primary">
+              {String(step).padStart(2, "0")}
+            </span>
+            <h3 className="mt-2 font-display text-h3 text-ink">{t(`how.step${step}Title`)}</h3>
+            <p className="mt-2 text-body text-ink-muted">{t(`how.step${step}Desc`)}</p>
+          </li>
+        ))}
+      </ol>
+      <Link
+        href="/how-it-works"
+        className="mt-6 inline-flex min-h-[44px] items-center gap-1 rounded-control text-label text-primary hover:underline"
+      >
+        {t("nav.howItWorks")}
+        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+      </Link>
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Loading skeleton with the final geometry                            */
+/* ------------------------------------------------------------------ */
+
+export function LandingSkeleton() {
+  const { t } = useTranslation();
+  return (
+    <div role="status" aria-busy="true" className={cn(CONTAINER, "py-10 md:py-16")}>
+      <span className="sr-only">{t("common.loading")}</span>
+      <div aria-hidden="true">
+        <div className="grid gap-10 lg:grid-cols-12 lg:items-center lg:gap-12">
+          <div className="space-y-4 lg:col-span-7">
+            <Skeleton className="h-10 w-4/5 md:h-14" />
+            <Skeleton className="h-10 w-3/5 md:h-14" />
+            <Skeleton className="h-11 w-full sm:w-80" />
+            <Skeleton className="h-44 w-full md:h-16" />
+          </div>
+          <Skeleton className="hidden aspect-[4/3] w-full rounded-card md:block md:max-w-xl lg:col-span-5 lg:max-w-none" />
+        </div>
+        <div className="mt-12 flex gap-3 overflow-hidden md:grid md:grid-cols-3 md:gap-4 lg:grid-cols-6">
+          {Array.from({ length: 6 }, (_, i) => (
+            <Skeleton key={i} className="h-11 w-28 shrink-0 rounded-card md:h-32 md:w-auto" />
+          ))}
+        </div>
+        <div className="mt-12 space-y-3">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="flex items-start justify-between gap-4 rounded-card border border-line bg-surface p-4 md:p-6">
+              <div className="min-w-0 flex-1 space-y-3">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-5 w-3/4" />
+              </div>
+              <Skeleton className="h-10 w-20 shrink-0" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

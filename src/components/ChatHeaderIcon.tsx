@@ -12,7 +12,7 @@ export function ChatHeaderIcon() {
     return (
         <Link
             href="/chat"
-            className="relative p-2 rounded-full hover:bg-muted transition-colors text-foreground hover:text-foreground"
+            className="relative p-2 rounded-full hover:bg-sunken transition-colors text-ink hover:text-ink"
             aria-label={t('chat.messagesAria')}
         >
             <MessageCircle size={24} />

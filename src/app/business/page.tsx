@@ -37,11 +37,11 @@ export default function BusinessLandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="max-w-5xl mx-auto px-4 py-16">
+    <div className="min-h-screen bg-canvas">
+      <div className="max-w-5xl mx-auto px-4 py-16">
         {/* Hero */}
         <div className="text-center mb-14">
-          <div className="inline-flex items-center gap-2 bg-brand-soft text-brand rounded-full px-4 py-1.5 text-sm font-medium mb-4">
+          <div className="inline-flex items-center gap-2 bg-primary-soft text-primary rounded-full px-4 py-1.5 text-sm font-medium mb-4">
             <Building2 size={14} />
             {t('business.badge')}
           </div>
@@ -68,9 +68,9 @@ export default function BusinessLandingPage() {
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {BENEFITS.map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="flex gap-3.5 rounded-2xl border border-outline bg-card p-5">
-                <div className="shrink-0 mt-0.5 w-8 h-8 rounded-xl bg-brand-soft flex items-center justify-center">
-                  <Icon size={16} className="text-brand" />
+              <div key={title} className="flex gap-3.5 rounded-2xl border border-line bg-surface p-5">
+                <div className="shrink-0 mt-0.5 w-8 h-8 rounded-xl bg-primary-soft flex items-center justify-center">
+                  <Icon size={16} className="text-primary" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-ink mb-1">{title}</p>
@@ -90,9 +90,9 @@ export default function BusinessLandingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-6">
             {STEPS.map(({ number, icon: Icon, title, desc }, i) => (
               <div key={number} className="relative text-center">
-                <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand text-white shadow-[0_14px_32px_rgba(30,109,138,0.2)]">
+                <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-[0_14px_32px_rgba(30,109,138,0.2)]">
                   <Icon size={22} />
-                  <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-bold text-brand shadow-soft ring-1 ring-outline">
+                  <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-bold text-primary shadow-stamp ring-1 ring-line">
                     {number}
                   </span>
                 </div>
@@ -110,7 +110,7 @@ export default function BusinessLandingPage() {
         </div>
 
         {/* Closing CTA */}
-        <div className="rounded-2xl bg-card border border-outline p-8 sm:p-10 text-center shadow-soft">
+        <div className="rounded-2xl bg-surface border border-line p-8 sm:p-10 text-center shadow-stamp">
           <h2 className="text-2xl font-bold text-ink mb-2">{t('business.closingTitle')}</h2>
           <p className="text-ink-muted text-sm mb-6 max-w-md mx-auto">
             {t('business.closingDesc')}
@@ -119,7 +119,7 @@ export default function BusinessLandingPage() {
             {t('business.createAccount')}
           </Button>
         </div>
-      </main>
+      </div>
 
     </div>
   );

@@ -1,4 +1,4 @@
-import { api } from './index';
+import { apiJson } from '@/lib/http';
 
 export type Plan = 'free' | 'starter' | 'pro' | 'business';
 
@@ -10,11 +10,10 @@ export interface SubscriptionStatus {
   cancelAtPeriodEnd: boolean;
 }
 
+const authHeaders = (token: string) => ({ Authorization: `Bearer ${token}` });
+
 export async function getSubscriptionStatus(token: string): Promise<SubscriptionStatus> {
-  const { data } = await api.get('/api/subscriptions/status', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return data;
+  return apiJson<SubscriptionStatus>('/api/subscriptions/status', { headers: authHeaders(token) });
 }
 
 export async function createCheckoutSession(
@@ -22,19 +21,13 @@ export async function createCheckoutSession(
   plan: 'starter' | 'pro' | 'business',
   interval: 'month' | 'year'
 ): Promise<{ url: string }> {
-  const { data } = await api.post(
-    '/api/subscriptions/checkout',
-    { plan, interval },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return data;
+  return apiJson<{ url: string }>('/api/subscriptions/checkout', {
+    method: 'POST',
+    headers: authHeaders(token),
+    json: { plan, interval },
+  });
 }
 
 export async function createPortalSession(token: string): Promise<{ url: string }> {
-  const { data } = await api.post(
-    '/api/subscriptions/portal',
-    {},
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return data;
+  return apiJson<{ url: string }>('/api/subscriptions/portal', { method: 'POST', headers: authHeaders(token), json: {} });
 }

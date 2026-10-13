@@ -1,56 +1,103 @@
 'use client';
+import { currentPath, signInPath } from "@/lib/auth-redirect";
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { ArrowRight, BriefcaseBusiness, CheckCircle2, MapPin, Settings, ShieldCheck, UserRound } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Briefcase, ClipboardList, Plus, Search, Settings } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTranslation } from '@/lib/i18n';
+import { api } from '@/lib/api';
+import { displayLocation } from '@/lib/user-location';
+import { useAccountMode, type ViewMode } from '@/hooks/useAccountMode';
+import { ViewModeSwitch } from '@/components/AppHeader';
+import { buttonClasses } from '@/components/ui/Button';
+import { EmptyState, ErrorState, ListSkeleton, Skeleton } from '@/components/ui/QueryState';
+import { LedgerRow } from '@/components/ui/LedgerRow';
+import { StatusChip } from '@/components/ui/StatusChip';
+import { cn } from '@/lib/utils';
+import { AccountCard, AttentionBadge, AttentionCard, Checklist, DashboardCard, MoneyPill } from '@/components/dashboard/DashboardSections';
+import {
+  activeApplications,
+  activeJobs,
+  buildChecklist,
+  hiringAttention,
+  workingAttention,
+} from '@/components/dashboard/dashboard-data';
+import type { Job, MyApplication, WorkerListing } from '@/api/types';
 
-function humanizeStatus(status?: string | null): string {
-  if (!status) return '—';
-  return status
-    .toLowerCase()
-    .split('_')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
+const ACTIVE_PREVIEW_LIMIT = 4;
+
+const PRIMARY_CTA: Record<ViewMode, { href: string; labelKey: string; icon: typeof Plus }> = {
+  hiring: { href: '/post-job', labelKey: 'nav.postJob', icon: Plus },
+  working: { href: '/jobs', labelKey: 'nav.findJobs', icon: Search },
+};
 
 const STATUS_LABEL_KEY: Record<string, string> = {
-  ACTIVE: 'dashboard.statusActive',
   PENDING_VERIFICATION: 'dashboard.statusPendingVerification',
   PENDING_DELETION: 'dashboard.statusPendingDeletion',
   SUSPENDED: 'dashboard.statusSuspended',
 };
 
-const ACCOUNT_MODE_LABEL_KEY: Record<string, string> = {
-  REQUESTOR: 'auth.signUp.requestorTitle',
-  WORKER: 'auth.signUp.workerModeTitle',
-  BOTH: 'auth.signUp.bothTitle',
-};
-
-const USER_TYPE_LABEL_KEY: Record<string, string> = {
-  PERSONAL: 'auth.signUp.personal',
-  ENTERPRISE: 'auth.signUp.enterprise',
-  ADMIN: 'dashboard.userTypeAdmin',
-};
+interface Activity {
+  jobs?: Job[];
+  applications?: MyApplication[];
+  listings?: WorkerListing[];
+}
 
 export default function DashboardPage() {
-  const { user, loading, isAuthenticated, signOut } = useAuth();
+  const { user, firebaseToken, loading, isAuthenticated } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
+  const { view } = useAccountMode();
+
+  const [activity, setActivity] = useState<Activity>({});
+  const [activityLoading, setActivityLoading] = useState(true);
+  const [activityError, setActivityError] = useState(false);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      router.push('/signin');
+      router.push(signInPath(currentPath()));
     }
   }, [loading, isAuthenticated, router]);
 
+  const userId = user?.id;
+  const loadActivity = useCallback(async () => {
+    if (!userId || !firebaseToken) return;
+    setActivityLoading(true);
+    setActivityError(false);
+    try {
+      if (view === 'hiring') {
+        setActivity({ jobs: await api.getMyJobs(userId, firebaseToken) });
+      } else {
+        const [applications, listings] = await Promise.all([
+          api.getMyApplications(userId, firebaseToken),
+          api.getMyListings(userId, firebaseToken),
+        ]);
+        setActivity({ applications, listings });
+      }
+    } catch (error) {
+      console.error('Failed to load dashboard activity:', error);
+      setActivity({});
+      setActivityError(true);
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [userId, firebaseToken, view]);
+
+  useEffect(() => {
+    void loadActivity();
+  }, [loadActivity]);
+
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-lg font-medium">{t('common.loading')}</div>
+      <div className="mx-auto w-full max-w-content space-y-6 px-[var(--gutter)] py-6 md:py-10" role="status" aria-busy="true">
+        <span className="sr-only">{t('common.loading')}</span>
+        <Skeleton className="h-32 w-full" />
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start">
+          <Skeleton className="h-56 w-full" />
+          <Skeleton className="h-56 w-full" />
+        </div>
       </div>
     );
   }
@@ -59,187 +106,179 @@ export default function DashboardPage() {
     return null;
   }
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      router.push('/signin');
-    } catch (error) {
-      console.error('Sign out failed:', error);
+  const hiring = view === 'hiring';
+  const cta = PRIMARY_CTA[view];
+  const CtaIcon = cta.icon;
+  const firstName = user.displayName?.split(' ')[0] || t('common.worker');
+
+  const attention = hiring ? hiringAttention(activity.jobs ?? []) : workingAttention(activity.applications ?? []);
+  const checklist = buildChecklist({
+    view,
+    emailVerified: !!user.emailVerified,
+    phoneVerified: !!user.phoneVerified,
+    onboardingCompleted: !!user.onboardingCompleted,
+    jobs: activityError ? undefined : activity.jobs,
+    listings: activityError ? undefined : activity.listings,
+  });
+  const showAttention = !activityLoading && !activityError && attention.length > 0;
+
+  const jobsPreview = activeJobs(activity.jobs ?? []);
+  const applicationsPreview = activeApplications(activity.applications ?? []);
+  const activeTotal = hiring ? jobsPreview.length : applicationsPreview.length;
+
+  const renderActive = () => {
+    if (activityLoading) return <ListSkeleton rows={2} label={t('common.loading')} />;
+    if (activeTotal === 0) {
+      return hiring ? (
+        <EmptyState
+          icon={Briefcase}
+          title={t('dashboard.noActiveJobs')}
+          description={t('myJobs.noJobsSubtitle')}
+          action={<Link href="/post-job" className={buttonClasses('primary')}>{t('myJobs.postFirst')}</Link>}
+        />
+      ) : (
+        <EmptyState
+          icon={ClipboardList}
+          title={t('dashboard.noActiveApplications')}
+          description={t('myApplications.emptyDesc')}
+          action={<Link href="/jobs" className={buttonClasses('primary')}>{t('myApplications.browseJobs')}</Link>}
+        />
+      );
     }
+    return (
+      <ul className="space-y-3">
+        {hiring
+          ? jobsPreview.slice(0, ACTIVE_PREVIEW_LIMIT).map((job) => (
+              <li key={job.id}>
+                <LedgerRow
+                  href={`/jobs/${job.id}`}
+                  title={job.title}
+                  eyebrow={
+                    <>
+                      <StatusChip kind="job" value={job.lifecycleStatus} />
+                      {job.lifecycleStatus === 'IN_PROGRESS' && job.workStage ? <StatusChip kind="stage" value={job.workStage} /> : null}
+                    </>
+                  }
+                  meta={
+                    job.lifecycleStatus === 'OPEN' ? (
+                      <p className="tabular">{job.applicants} {t('jobs.applicantsCount')}</p>
+                    ) : undefined
+                  }
+                  aside={<MoneyPill amount={job.budget} currency={job.budgetCurrency} hourly={job.budgetType === 'HOURLY'} />}
+                />
+              </li>
+            ))
+          : applicationsPreview.slice(0, ACTIVE_PREVIEW_LIMIT).map((application) => (
+              <li key={application.id}>
+                <LedgerRow
+                  href={`/jobs/${application.jobId}`}
+                  title={application.job.title}
+                  eyebrow={
+                    <>
+                      <StatusChip kind="application" value={application.status} />
+                      {application.status === 'ACCEPTED' ? <StatusChip kind="job" value={application.job.lifecycleStatus} /> : null}
+                    </>
+                  }
+                  aside={
+                    <MoneyPill
+                      amount={application.job.budget}
+                      currency={application.job.budgetCurrency}
+                      hourly={application.job.budgetType === 'HOURLY'}
+                    />
+                  }
+                />
+              </li>
+            ))}
+      </ul>
+    );
   };
 
   return (
-    <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
-      <main className="mx-auto max-w-7xl space-y-8">
-        <section className="surface-card overflow-hidden">
-          <div className="grid gap-8 p-6 md:grid-cols-[1.2fr_0.8fr] md:p-8">
-            <div>
-              <span className="eyebrow">{t('nav.dashboard')}</span>
-              <h1 className="mt-5 font-display text-4xl font-black tracking-tight text-ink md:text-5xl">
-                {t('dashboard.welcomeBack')}, {user.displayName?.split(' ')[0] || t('common.worker')}.
-              </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-ink-muted">
-                {t('dashboard.subtitle')}
-              </p>
+    <div className="mx-auto w-full max-w-content space-y-6 px-[var(--gutter)] py-6 md:py-10">
+      <div className="md:hidden">
+        <ViewModeSwitch fullWidth />
+      </div>
 
-              <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                <div className="rounded-[24px] bg-[#eff7fa] p-5">
-                  <p className="text-sm font-semibold text-ink-subtle">{t('dashboard.accountStatus')}</p>
-                  <p className="mt-2 break-words text-xl font-black text-ink sm:text-2xl">
-                    {STATUS_LABEL_KEY[user.status] ? t(STATUS_LABEL_KEY[user.status]) : humanizeStatus(user.status)}
-                  </p>
-                </div>
-                <div className="rounded-[24px] bg-[#eff7fa] p-5">
-                  <p className="text-sm font-semibold text-ink-subtle">{t('dashboard.onboarding')}</p>
-                  <p className="mt-2 text-2xl font-black text-ink">
-                    {user.onboardingCompleted ? t('dashboard.complete') : `${t('dashboard.step')} ${user.onboardingStep ?? 1}/3`}
-                  </p>
-                </div>
-                <div className="rounded-[24px] bg-[#eff7fa] p-5">
-                  <p className="text-sm font-semibold text-ink-subtle">{t('dashboard.accountMode')}</p>
-                  <p className="mt-2 text-2xl font-black text-ink">
-                    {user.accountMode
-                      ? (ACCOUNT_MODE_LABEL_KEY[user.accountMode] ? t(ACCOUNT_MODE_LABEL_KEY[user.accountMode]) : user.accountMode)
-                      : t('dashboard.notSet')}
-                  </p>
-                </div>
-              </div>
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-card border border-line bg-surface p-4 md:p-6">
+        <div className="min-w-0">
+          <h1 className="break-words font-display text-h1 text-ink">
+            {t('dashboard.welcomeBack')}, {firstName}.
+          </h1>
+          <p className="mt-2 text-body text-ink-muted">{hiring ? t('dashboard.heroSubHiring') : t('dashboard.heroSubWorking')}</p>
+        </div>
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          <Link href={cta.href} className={buttonClasses('primary', 'lg', 'w-full sm:w-auto')}>
+            <CtaIcon className="h-5 w-5" aria-hidden="true" />
+            {t(cta.labelKey)}
+          </Link>
+          {user.userType === 'ADMIN' ? (
+            <Link href="/admin" className={buttonClasses('secondary', 'lg', 'w-full sm:w-auto')}>
+              <Settings className="h-5 w-5" aria-hidden="true" />
+              {t('dashboard.adminDashboard')}
+            </Link>
+          ) : null}
+        </div>
+      </section>
 
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link href="/post-job" className="primary-cta">{t('nav.postJob')}</Link>
-                <Link href="/profile" className="secondary-cta">{t('dashboard.editProfile')}</Link>
-                {user.userType === 'ADMIN' && (
-                  <Link href="/admin" className="secondary-cta inline-flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    {t('dashboard.adminDashboard')}
-                  </Link>
-                )}
-              </div>
-            </div>
-
-            <aside className="rounded-[28px] bg-[#155e75] p-6 text-white">
-              {user.photoUrl ? (
-                <Image
-                  src={user.photoUrl}
-                  alt={user.displayName || t('common.worker')}
-                  width={80}
-                  height={80}
-                  className="h-20 w-20 rounded-full border-4 border-white/25 object-cover"
-                />
-              ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/15">
-                  <span className="text-2xl font-black text-white">{user.displayName?.charAt(0).toUpperCase() || 'U'}</span>
-                </div>
-              )}
-
-              <div className="mt-5">
-                <h2 className="text-2xl font-black">{user.displayName}</h2>
-                <p className="mt-1 text-sm text-white/78">{user.email}</p>
-              </div>
-
-              <div className="mt-6 space-y-3 text-sm text-white/82">
-                <div className="flex items-center gap-3">
-                  <UserRound className="h-4 w-4" />
-                  <span>{USER_TYPE_LABEL_KEY[user.userType] ? t(USER_TYPE_LABEL_KEY[user.userType]) : user.userType}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <ShieldCheck className="h-4 w-4" />
-                  <span>{user.emailVerified ? t('dashboard.emailVerified') : t('dashboard.emailPending')}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-4 w-4" />
-                  <span>{user.city || user.country || t('dashboard.locationNotSet')}</span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleSignOut}
-                className="mt-8 inline-flex rounded-full bg-white px-5 py-3 text-sm font-bold text-[#155e75] transition hover:bg-white/90"
-              >
-                {t('nav.signOut')}
-              </button>
-            </aside>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start">
+        {activityError ? (
+          <div className="xl:col-start-1 xl:row-start-1">
+            <ErrorState message={t('dashboard.loadError')} onRetry={() => void loadActivity()} />
           </div>
-        </section>
+        ) : null}
 
-        <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <article className="surface-card p-6 md:p-8">
-            <h2 className="section-heading">{t('dashboard.profileSummary')}</h2>
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div className="rounded-[24px] bg-[#f7fbfc] p-5">
-                <p className="text-sm font-semibold text-ink-subtle">{t('dashboard.roles')}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {user.workerTypes.length > 0 ? user.workerTypes.map((type) => (
-                    <span key={type} className="rounded-full bg-brand-soft px-4 py-2 text-sm font-semibold text-brand">
-                      {type === 'WORKER' ? t('dashboard.serviceProvider') : t('dashboard.jobPoster')}
-                    </span>
-                  )) : <span className="text-sm text-ink-muted">{t('dashboard.noRoles')}</span>}
-                </div>
+        {activityLoading || showAttention ? (
+          <DashboardCard
+            id="attention-heading"
+            title={t('dashboard.attentionTitle')}
+            aside={showAttention ? <AttentionBadge count={attention.length} /> : undefined}
+            className="xl:col-start-1 xl:row-start-1"
+          >
+            {activityLoading ? (
+              <ListSkeleton rows={1} label={t('common.loading')} />
+            ) : (
+              <div className="space-y-3">
+                {attention.map((item) => (
+                  <AttentionCard key={item.key} item={item} />
+                ))}
               </div>
-              <div className="rounded-[24px] bg-[#f7fbfc] p-5">
-                <p className="text-sm font-semibold text-ink-subtle">{t('dashboard.contact')}</p>
-                <p className="mt-3 text-base font-semibold text-ink">{user.phoneNumber || t('dashboard.phoneNotAdded')}</p>
-                <p className="mt-1 text-sm text-ink-muted">{user.email}</p>
-              </div>
-              <div className="rounded-[24px] bg-[#f7fbfc] p-5">
-                <p className="text-sm font-semibold text-ink-subtle">{t('dashboard.verification')}</p>
-                <div className="mt-3 space-y-2 text-sm text-ink">
-                  <p className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> {user.emailVerified ? t('dashboard.emailVerified') : t('dashboard.emailNotVerified')}</p>
-                  <p className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> {user.phoneVerified ? t('dashboard.phoneVerified') : t('dashboard.phoneNotVerified')}</p>
-                </div>
-              </div>
-              <div className="rounded-[24px] bg-[#f7fbfc] p-5">
-                <p className="text-sm font-semibold text-ink-subtle">{t('dashboard.routing')}</p>
-                <div className="mt-3 space-y-2">
-                  <Link href="/my-jobs" className="flex items-center justify-between rounded-2xl border border-outline bg-white px-4 py-3 text-sm font-semibold text-ink">
-                    {t('dashboard.jobsPosted')} <ArrowRight className="h-4 w-4 text-brand" />
-                  </Link>
-                  <Link href="/jobs" className="flex items-center justify-between rounded-2xl border border-outline bg-white px-4 py-3 text-sm font-semibold text-ink">
-                    {t('dashboard.browseJobsToHire')} <ArrowRight className="h-4 w-4 text-brand" />
-                  </Link>
-                  <Link href="/my-applications" className="flex items-center justify-between rounded-2xl border border-outline bg-white px-4 py-3 text-sm font-semibold text-ink">
-                    {t('dashboard.jobsApplied')} <ArrowRight className="h-4 w-4 text-brand" />
-                  </Link>
-                  <Link href="/my-listings" className="flex items-center justify-between rounded-2xl border border-outline bg-white px-4 py-3 text-sm font-semibold text-ink">
-                    {t('dashboard.servicesOffered')} <ArrowRight className="h-4 w-4 text-brand" />
-                  </Link>
-                  <Link href="/workers" className="flex items-center justify-between rounded-2xl border border-outline bg-white px-4 py-3 text-sm font-semibold text-ink">
-                    {t('dashboard.browseServices')} <ArrowRight className="h-4 w-4 text-brand" />
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </article>
+            )}
+          </DashboardCard>
+        ) : null}
 
-          <article className="surface-card p-6 md:p-8">
-            <h2 className="section-heading">{t('dashboard.nextActions')}</h2>
-            <div className="mt-6 space-y-4">
-              <Link href="/post-job" className="flex items-start gap-4 rounded-[24px] border border-outline bg-[#f7fbfc] p-5 transition hover:border-brand/35">
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-brand text-white">
-                  <BriefcaseBusiness className="h-5 w-5" />
-                </span>
-                <span>
-                  <span className="block text-base font-bold text-ink">{t('dashboard.createPostingTitle')}</span>
-                  <span className="mt-1 block text-sm leading-6 text-ink-muted">
-                    {t('dashboard.createPostingDesc')}
-                  </span>
-                </span>
-              </Link>
-              <Link href="/profile" className="flex items-start gap-4 rounded-[24px] border border-outline bg-[#f7fbfc] p-5 transition hover:border-brand/35">
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f4b548] text-white">
-                  <CheckCircle2 className="h-5 w-5" />
-                </span>
-                <span>
-                  <span className="block text-base font-bold text-ink">{t('dashboard.reviewOnboardingTitle')}</span>
-                  <span className="mt-1 block text-sm leading-6 text-ink-muted">
-                    {t('dashboard.reviewOnboardingDesc')}
-                  </span>
-                </span>
-              </Link>
-            </div>
-          </article>
-        </section>
-      </main>
+        <div className="xl:col-start-2 xl:row-span-2 xl:row-start-1">
+          <Checklist items={checklist} />
+        </div>
+
+        {!activityError ? (
+          <DashboardCard
+            id="active-heading"
+            title={hiring ? t('dashboard.activeJobs') : t('dashboard.activeApplications')}
+            aside={
+              activeTotal > 0 ? (
+                <Link href={hiring ? '/my-jobs' : '/my-applications'} className={buttonClasses('ghost', 'sm', '-mr-3')}>
+                  {t('dashboard.viewAll')}
+                </Link>
+              ) : undefined
+            }
+            className={cn('xl:col-start-1', activityLoading || showAttention ? 'xl:row-start-2' : 'xl:row-start-1')}
+          >
+            {renderActive()}
+          </DashboardCard>
+        ) : null}
+
+        <div className="xl:col-start-2 xl:row-start-3">
+          <AccountCard
+            name={user.displayName || user.email || ''}
+            email={user.email || ''}
+            phone={user.phoneNumber}
+            location={displayLocation(user) || t('dashboard.locationNotSet')}
+            emailVerified={!!user.emailVerified}
+            phoneVerified={!!user.phoneVerified}
+            statusLabel={STATUS_LABEL_KEY[user.status] ? t(STATUS_LABEL_KEY[user.status]) : undefined}
+          />
+        </div>
+      </div>
     </div>
   );
 }

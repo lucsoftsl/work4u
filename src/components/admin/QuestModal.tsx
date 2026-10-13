@@ -39,7 +39,7 @@ export function QuestModal({
         }
     );
 
-    const handleChange = (field: string, value: any) => {
+    const handleChange = (field: string, value: unknown) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
     };
 
@@ -57,7 +57,7 @@ export function QuestModal({
         }));
     };
 
-    const handleRewardChange = (field: string, value: any) => {
+    const handleRewardChange = (field: string, value: unknown) => {
         setFormData((prev) => ({
             ...prev,
             rewards: { ...prev.rewards, [field]: value },
@@ -73,14 +73,14 @@ export function QuestModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-card border border-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="sticky top-0 flex items-center justify-between bg-card border-b border-border p-6">
-                    <h2 className="text-2xl font-bold text-foreground">
+            <div className="bg-surface border border-line rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="sticky top-0 flex items-center justify-between bg-surface border-b border-line p-6">
+                    <h2 className="text-2xl font-bold text-ink">
                         {quest ? t('admin.editQuest') : t('admin.createQuest')}
                     </h2>
                     <button
                         onClick={onClose}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        className="text-ink-muted hover:text-ink transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -89,7 +89,7 @@ export function QuestModal({
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
                     {/* ID */}
                     <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
+                        <label className="block text-sm font-medium text-ink mb-2">
                             {t('admin.questId')} *
                         </label>
                         <input
@@ -97,14 +97,14 @@ export function QuestModal({
                             value={formData.id}
                             onChange={(e) => handleChange('id', e.target.value)}
                             disabled={!!quest}
-                            className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                            className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                             placeholder={t('admin.questIdPlaceholder')}
                         />
                     </div>
 
                     {/* Titles by Language */}
                     <div className="space-y-3">
-                        <label className="block text-sm font-medium text-foreground">
+                        <label className="block text-sm font-medium text-ink">
                             {t('admin.questTitle')} *
                         </label>
                         {Object.entries(LANGUAGES).map(([lang, langName]) => (
@@ -114,7 +114,7 @@ export function QuestModal({
                                     value={formData.title[lang] || ''}
                                     onChange={(e) => handleTitleChange(lang, e.target.value)}
                                     placeholder={`${t('common.title')} (${langName})`}
-                                    className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                                 />
                             </div>
                         ))}
@@ -122,7 +122,7 @@ export function QuestModal({
 
                     {/* Descriptions by Language */}
                     <div className="space-y-3">
-                        <label className="block text-sm font-medium text-foreground">
+                        <label className="block text-sm font-medium text-ink">
                             {t('admin.description')} *
                         </label>
                         {Object.entries(LANGUAGES).map(([lang, langName]) => (
@@ -131,7 +131,7 @@ export function QuestModal({
                                     value={formData.description[lang] || ''}
                                     onChange={(e) => handleDescriptionChange(lang, e.target.value)}
                                     placeholder={`${t('admin.description')} (${langName})`}
-                                    className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                                     rows={2}
                                 />
                             </div>
@@ -141,13 +141,13 @@ export function QuestModal({
                     {/* Type & Difficulty */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-foreground mb-2">
+                            <label className="block text-sm font-medium text-ink mb-2">
                                 {t('admin.type')} *
                             </label>
                             <select
                                 value={formData.type}
                                 onChange={(e) => handleChange('type', e.target.value)}
-                                className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                             >
                                 {TYPES.map((type) => (
                                     <option key={type} value={type}>
@@ -157,13 +157,13 @@ export function QuestModal({
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-foreground mb-2">
+                            <label className="block text-sm font-medium text-ink mb-2">
                                 {t('admin.difficulty')} *
                             </label>
                             <select
                                 value={formData.difficulty}
                                 onChange={(e) => handleChange('difficulty', e.target.value)}
-                                className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                             >
                                 {DIFFICULTIES.map((diff) => (
                                     <option key={diff} value={diff}>
@@ -177,26 +177,26 @@ export function QuestModal({
                     {/* Max Progress & Duration */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-foreground mb-2">
+                            <label className="block text-sm font-medium text-ink mb-2">
                                 {t('admin.maxProgress')}
                             </label>
                             <input
                                 type="number"
                                 value={formData.maxProgress}
                                 onChange={(e) => handleChange('maxProgress', parseInt(e.target.value))}
-                                className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                                 min="1"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-foreground mb-2">
+                            <label className="block text-sm font-medium text-ink mb-2">
                                 {t('admin.durationLabel')}
                             </label>
                             <input
                                 type="text"
                                 value={formData.duration || ''}
                                 onChange={(e) => handleChange('duration', e.target.value)}
-                                className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                                 placeholder="24h"
                             />
                         </div>
@@ -204,25 +204,25 @@ export function QuestModal({
 
                     {/* Rewards */}
                     <div className="space-y-3">
-                        <label className="block text-sm font-medium text-foreground">{t('admin.rewards')}</label>
+                        <label className="block text-sm font-medium text-ink">{t('admin.rewards')}</label>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs text-muted-foreground mb-1">{t('admin.xp')}</label>
+                                <label className="block text-xs text-ink-muted mb-1">{t('admin.xp')}</label>
                                 <input
                                     type="number"
                                     value={formData.rewards.xp}
                                     onChange={(e) => handleRewardChange('xp', parseInt(e.target.value))}
-                                    className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                                     min="0"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs text-muted-foreground mb-1">{t('admin.gold')}</label>
+                                <label className="block text-xs text-ink-muted mb-1">{t('admin.gold')}</label>
                                 <input
                                     type="number"
                                     value={formData.rewards.gold}
                                     onChange={(e) => handleRewardChange('gold', parseInt(e.target.value))}
-                                    className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                                     min="0"
                                 />
                             </div>
@@ -236,14 +236,14 @@ export function QuestModal({
                                 type="checkbox"
                                 checked={formData.enabled}
                                 onChange={(e) => handleChange('enabled', e.target.checked)}
-                                className="w-4 h-4 rounded border border-border bg-card"
+                                className="w-4 h-4 rounded border border-line bg-surface"
                             />
-                            <span className="text-sm text-foreground">{t('admin.enabled')}</span>
+                            <span className="text-sm text-ink">{t('admin.enabled')}</span>
                         </label>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-3 pt-4 border-t border-border">
+                    <div className="flex gap-3 pt-4 border-t border-line">
                         <Button variant="outline" onClick={onClose} disabled={isLoading}>
                             {t('admin.cancel')}
                         </Button>

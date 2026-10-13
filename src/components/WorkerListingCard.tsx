@@ -2,100 +2,132 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { MapPin, Star } from "lucide-react";
-import type { WorkerListing } from "@/api/types";
+import { MapPin, Star, Trash2 } from "lucide-react";
+import type { ListingAvailability, WorkerListing } from "@/api/types";
 import { useTranslation } from "@/lib/i18n";
 import { getCategoryName } from "@/lib/category-utils";
+import { LedgerRow } from "@/components/ui/LedgerRow";
+import { MoneyPlate } from "@/components/ui/MoneyPlate";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { StatusChip } from "@/components/ui/StatusChip";
+import { buttonClasses, Button } from "@/components/ui/Button";
 
-function formatRate(amount: number, currency: string, pricingModel: "HOURLY" | "FIXED") {
-  const formatted = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
+const AVAILABILITY_OPTIONS: readonly ListingAvailability[] = ["AVAILABLE", "BUSY", "PAUSED"];
 
-  return pricingModel === "HOURLY" ? `${formatted}/hr` : formatted;
+export interface WorkerListingOwnerControls {
+  /** True while an availability change for this listing is in flight. */
+  updating?: boolean;
+  /** Inline error for this listing (availability change failed). */
+  error?: string | null;
+  onAvailabilityChange: (availability: ListingAvailability) => void;
+  onRemove: () => void;
 }
 
-const AVAILABILITY_KEYS: Record<WorkerListing["availability"], string> = {
-  AVAILABLE: "workers.availableNow",
-  BUSY: "workers.busy",
-  PAUSED: "workers.paused",
-};
+interface WorkerListingCardProps {
+  headingLevel?: "h2" | "h3";
+  listing: WorkerListing;
+  /** Owner variant (My services): availability control, edit/public-profile links, remove. */
+  owner?: WorkerListingOwnerControls;
+}
 
-export function WorkerListingCard({ listing }: { listing: WorkerListing }) {
+export function WorkerListingCard({ listing, owner, headingLevel }: WorkerListingCardProps) {
   const worker = listing.worker;
   const { t } = useTranslation();
+  const isHourly = listing.pricingModel === "HOURLY";
+  const radius = listing.serviceRadiusKm ? `${listing.serviceRadiusKm}km ${t("workers.radius")}` : "";
+
+  const actions = owner ? (
+    <div className="flex w-full flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <span className="text-label font-bold text-ink-muted">{t("myListings.availabilityLabel")}</span>
+        <SegmentedControl
+          label={t("myListings.availabilityLabel")}
+          value={listing.availability}
+          options={AVAILABILITY_OPTIONS.map((value) => ({ value, label: t(`status.availability.${value}`) }))}
+          onChange={(next) => {
+            if (!owner.updating && next !== listing.availability) owner.onAvailabilityChange(next);
+          }}
+          className={owner.updating ? "opacity-60" : undefined}
+        />
+      </div>
+      {owner.error ? (
+        <p role="alert" className="text-label font-bold text-danger">
+          {owner.error}
+        </p>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        <Link href={`/workers/${listing.workerId}`} className={buttonClasses("secondary")}>
+          {t("myListings.viewPublicProfile")}
+        </Link>
+        <Button variant="ghost" className="text-danger hover:bg-danger-soft" onClick={owner.onRemove}>
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
+          {t("myListings.remove")}
+        </Button>
+      </div>
+    </div>
+  ) : undefined;
 
   return (
-    <Link href={`/workers/${listing.workerId}`} className="block">
-      <article className="surface-panel h-full p-6 transition hover:-translate-y-0.5 hover:border-brand/35">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-brand">
+    <LedgerRow
+      headingLevel={headingLevel}
+      href={`/workers/${listing.workerId}`}
+      title={listing.title}
+      eyebrow={
+        <>
+          <span className="inline-flex h-6 items-center rounded-control bg-primary-soft px-2 text-caption font-bold text-primary">
             {getCategoryName(listing.category, t)}
           </span>
-          <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-green-700">
-            {t(AVAILABILITY_KEYS[listing.availability])}
-          </span>
-        </div>
-
-        <div className="mt-5 flex items-start justify-between gap-4">
-          <div className="flex min-w-0 items-start gap-4">
-            {listing.imageUrl && (
-              <Image
-                src={listing.imageUrl}
-                alt={listing.title}
-                width={64}
-                height={64}
-                className="h-16 w-16 shrink-0 rounded-2xl object-cover"
-              />
-            )}
-            <div className="min-w-0">
-              <h3 className="text-xl font-black leading-tight text-ink">{listing.title}</h3>
-              <p className="mt-3 line-clamp-3 text-sm leading-6 text-ink-muted">{listing.description}</p>
-            </div>
-          </div>
-          <div className="shrink-0 rounded-[22px] bg-[#eff7fa] px-4 py-3 text-right">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-ink-subtle">{t("common.rate")}</p>
-            <p className="mt-1 text-lg font-black text-brand">{formatRate(listing.rate, listing.rateCurrency, listing.pricingModel)}</p>
-          </div>
-        </div>
-
-        {(listing.location || listing.serviceRadiusKm) && (
-          <div className="mt-6 flex flex-wrap items-center gap-4 text-sm text-ink-muted">
-            <span className="inline-flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              {listing.location || t("jobs.flexibleLocation")}
-              {listing.serviceRadiusKm ? ` · ${listing.serviceRadiusKm}km ${t("workers.radius")}` : ""}
-            </span>
-          </div>
-        )}
-
-        {worker && (
-          <div className="mt-6 flex items-center justify-between border-t border-outline pt-5">
-            <div className="flex items-center gap-3">
+          <StatusChip kind="availability" value={listing.availability} />
+        </>
+      }
+      meta={
+        <>
+          {listing.description ? <p className="line-clamp-2 break-words">{listing.description}</p> : null}
+          {listing.location || radius ? (
+            <p className="inline-flex min-w-0 items-center gap-1.5">
+              <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 break-words">{[listing.location || t("jobs.flexibleLocation"), radius].filter(Boolean).join(" · ")}</span>
+            </p>
+          ) : null}
+          {!owner && worker ? (
+            <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 pt-1">
               {worker.image ? (
-                <Image src={worker.image} alt={worker.name} width={44} height={44} className="h-11 w-11 rounded-full object-cover" />
+                <Image src={worker.image} alt="" width={24} height={24} className="h-6 w-6 shrink-0 rounded-full object-cover" />
               ) : (
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#dce9ef] text-sm font-black text-brand">
-                  {worker.name.charAt(0)}
-                </div>
+                <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-micro text-primary">
+                  {worker.name.charAt(0).toUpperCase()}
+                </span>
               )}
-              <div>
-                <p className="text-sm font-bold text-ink">{worker.name}</p>
-                <p className="inline-flex items-center gap-1 text-xs text-ink-muted">
-                  <Star className="h-3.5 w-3.5 fill-[#f5b33f] text-[#f5b33f]" />
-                  {worker.rating.toFixed(1)} ({worker.reviews} {t("jobDetail.reviews")})
-                </p>
-              </div>
-            </div>
-
-            <span className="rounded-full border border-outline px-4 py-2 text-sm font-semibold text-ink">
-              {t("common.viewProfile")}
-            </span>
-          </div>
-        )}
-      </article>
-    </Link>
+              <span className="min-w-0 truncate font-bold text-ink">{worker.name}</span>
+              {worker.reviews > 0 ? (
+                <span className="inline-flex items-center gap-1 tabular text-money">
+                  <Star className="h-3.5 w-3.5 fill-money" aria-hidden="true" />
+                  <span className="font-bold">{worker.rating.toFixed(1)}</span>
+                  <span aria-hidden="true">({worker.reviews})</span>
+                  <span className="sr-only">{t("jobs.reviewsCountSr").replace("{count}", String(worker.reviews))}</span>
+                </span>
+              ) : (
+                <span className="rounded-control bg-info-soft px-1.5 text-micro text-info">{t("jobs.newOnWork4u")}</span>
+              )}
+            </p>
+          ) : null}
+        </>
+      }
+      aside={
+        <>
+          <MoneyPlate
+            className="hidden md:inline-flex"
+            amount={listing.rate}
+            currency={listing.rateCurrency}
+            label={t("common.rate")}
+            suffix={isHourly ? t("jobs.perHour") : undefined}
+          />
+          <span className="inline-flex rounded-control border border-money/25 bg-money-soft px-2 py-1 md:hidden">
+            <MoneyPlate size="inline" amount={listing.rate} currency={listing.rateCurrency} suffix={isHourly ? t("jobs.perHour") : undefined} />
+          </span>
+        </>
+      }
+      actions={actions}
+    />
   );
 }

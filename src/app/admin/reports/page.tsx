@@ -13,7 +13,7 @@ const STATUS_STYLES: Record<ReportStatus, string> = {
     OPEN: "bg-red-50 text-red-700",
     REVIEWING: "bg-amber-50 text-amber-700",
     RESOLVED: "bg-green-50 text-green-700",
-    DISMISSED: "bg-muted text-muted-foreground",
+    DISMISSED: "bg-sunken text-ink-muted",
 };
 
 const REASON_LABEL_KEY: Record<Report["reason"], string> = {
@@ -89,14 +89,14 @@ export default function AdminReportsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-card">
+        <div className="min-h-screen bg-surface">
             <div className="max-w-5xl mx-auto px-4 py-16">
                 <Link href="/admin" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
                     <ArrowLeft className="w-4 h-4" />
                     {t("admin.backToDashboard")}
                 </Link>
-                <h1 className="mt-4 text-4xl font-bold text-foreground mb-2">{t("adminReports.title")}</h1>
-                <p className="text-muted-foreground mb-6">{t("adminReports.subtitle")}</p>
+                <h1 className="mt-4 text-4xl font-bold text-ink mb-2">{t("adminReports.title")}</h1>
+                <p className="text-ink-muted mb-6">{t("adminReports.subtitle")}</p>
 
                 <div className="mb-6 flex gap-2">
                     {(["OPEN", "REVIEWING", "RESOLVED", "DISMISSED", ""] as const).map((status) => (
@@ -104,7 +104,7 @@ export default function AdminReportsPage() {
                             key={status || "all"}
                             onClick={() => setStatusFilter(status)}
                             className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
-                                statusFilter === status ? "border-primary bg-primary/10 text-primary" : "border-border text-foreground"
+                                statusFilter === status ? "border-primary bg-primary/10 text-primary" : "border-line text-ink"
                             }`}
                         >
                             {status || t("adminReports.filterAll")}
@@ -113,21 +113,21 @@ export default function AdminReportsPage() {
                 </div>
 
                 {loading ? (
-                    <p className="text-muted-foreground">{t("adminReports.loading")}</p>
+                    <p className="text-ink-muted">{t("adminReports.loading")}</p>
                 ) : error ? (
                     <p className="text-red-600 font-semibold">{error}</p>
                 ) : reports.length === 0 ? (
-                    <p className="text-muted-foreground">{t("adminReports.empty")}</p>
+                    <p className="text-ink-muted">{t("adminReports.empty")}</p>
                 ) : (
                     <div className="space-y-4">
                         {reports.map((report) => (
-                            <div key={report.id} className="border border-border rounded-xl p-5 bg-background">
+                            <div key={report.id} className="border border-line rounded-xl p-5 bg-canvas">
                                 <div className="flex flex-wrap items-start justify-between gap-3">
                                     <div>
-                                        <p className="font-semibold text-foreground">
+                                        <p className="font-semibold text-ink">
                                             {report.reporter?.name || t("adminReports.someone")} {t("adminReports.reportedVerb")} {report.reportedUser?.name || t("adminReports.aUser")}
                                         </p>
-                                        <p className="text-sm text-muted-foreground">
+                                        <p className="text-sm text-ink-muted">
                                             {t(REASON_LABEL_KEY[report.reason])}
                                             {report.jobId ? ` · ${t("adminReports.jobDisputeLabel")} (${report.jobId.slice(0, 8)}…)` : ""}
                                         </p>
@@ -138,7 +138,7 @@ export default function AdminReportsPage() {
                                 </div>
 
                                 {report.description && (
-                                    <p className="mt-3 text-sm text-foreground bg-muted rounded-lg p-3">{report.description}</p>
+                                    <p className="mt-3 text-sm text-ink bg-sunken rounded-lg p-3">{report.description}</p>
                                 )}
 
                                 {report.status === "OPEN" || report.status === "REVIEWING" ? (
@@ -147,7 +147,7 @@ export default function AdminReportsPage() {
                                             value={notesById[report.id] ?? ""}
                                             onChange={(e) => setNotesById((prev) => ({ ...prev, [report.id]: e.target.value }))}
                                             placeholder={t("adminReports.notesPlaceholder")}
-                                            className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                                            className="w-full rounded-lg border border-line px-3 py-2 text-sm"
                                         />
                                         {report.jobId && (
                                             <select
@@ -158,7 +158,7 @@ export default function AdminReportsPage() {
                                                         [report.id]: e.target.value as "" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED",
                                                     }))
                                                 }
-                                                className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                                                className="w-full rounded-lg border border-line px-3 py-2 text-sm"
                                             >
                                                 <option value="">{t("adminReports.revertOptionKeepDisputed")}</option>
                                                 <option value="IN_PROGRESS">{t("adminReports.revertOptionInProgress")}</option>
@@ -177,7 +177,7 @@ export default function AdminReportsPage() {
                                             <button
                                                 onClick={() => handleResolve(report, "DISMISSED")}
                                                 disabled={actingOnId === report.id}
-                                                className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground disabled:opacity-50"
+                                                className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink disabled:opacity-50"
                                             >
                                                 {t("adminReports.dismiss")}
                                             </button>
@@ -185,7 +185,7 @@ export default function AdminReportsPage() {
                                     </div>
                                 ) : (
                                     report.resolutionNotes && (
-                                        <p className="mt-3 text-sm text-muted-foreground italic">{t("adminReports.notePrefix")} {report.resolutionNotes}</p>
+                                        <p className="mt-3 text-sm text-ink-muted italic">{t("adminReports.notePrefix")} {report.resolutionNotes}</p>
                                     )
                                 )}
                             </div>

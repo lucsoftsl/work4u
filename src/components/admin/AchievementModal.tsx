@@ -41,7 +41,7 @@ export function AchievementModal({
         }
     );
 
-    const handleChange = (field: string, value: any) => {
+    const handleChange = (field: string, value: unknown) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
     };
 
@@ -59,7 +59,7 @@ export function AchievementModal({
         }));
     };
 
-    const handleRewardChange = (field: string, value: any) => {
+    const handleRewardChange = (field: string, value: unknown) => {
         setFormData((prev) => ({
             ...prev,
             rewards: { ...prev.rewards, [field]: value },
@@ -75,14 +75,14 @@ export function AchievementModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-card border border-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="sticky top-0 flex items-center justify-between bg-card border-b border-border p-6">
-                    <h2 className="text-2xl font-bold text-foreground">
+            <div className="bg-surface border border-line rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="sticky top-0 flex items-center justify-between bg-surface border-b border-line p-6">
+                    <h2 className="text-2xl font-bold text-ink">
                         {achievement ? t('admin.editAchievement') : t('admin.createAchievement')}
                     </h2>
                     <button
                         onClick={onClose}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        className="text-ink-muted hover:text-ink transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -91,7 +91,7 @@ export function AchievementModal({
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
                     {/* ID */}
                     <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
+                        <label className="block text-sm font-medium text-ink mb-2">
                             {t('admin.achievementId')} *
                         </label>
                         <input
@@ -99,14 +99,14 @@ export function AchievementModal({
                             value={formData.id}
                             onChange={(e) => handleChange('id', e.target.value)}
                             disabled={!!achievement}
-                            className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                            className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                             placeholder={t('admin.achievementIdPlaceholder')}
                         />
                     </div>
 
                     {/* Names by Language */}
                     <div className="space-y-3">
-                        <label className="block text-sm font-medium text-foreground">
+                        <label className="block text-sm font-medium text-ink">
                             {t('admin.achievementName')} *
                         </label>
                         {Object.entries(LANGUAGES).map(([lang, langName]) => (
@@ -116,7 +116,7 @@ export function AchievementModal({
                                     value={formData.name[lang] || ''}
                                     onChange={(e) => handleNameChange(lang, e.target.value)}
                                     placeholder={`${t('admin.name')} (${langName})`}
-                                    className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                                 />
                             </div>
                         ))}
@@ -124,7 +124,7 @@ export function AchievementModal({
 
                     {/* Descriptions by Language */}
                     <div className="space-y-3">
-                        <label className="block text-sm font-medium text-foreground">
+                        <label className="block text-sm font-medium text-ink">
                             {t('admin.description')} *
                         </label>
                         {Object.entries(LANGUAGES).map(([lang, langName]) => (
@@ -133,7 +133,7 @@ export function AchievementModal({
                                     value={formData.description[lang] || ''}
                                     onChange={(e) => handleDescriptionChange(lang, e.target.value)}
                                     placeholder={`${t('admin.description')} (${langName})`}
-                                    className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                                     rows={2}
                                 />
                             </div>
@@ -143,13 +143,13 @@ export function AchievementModal({
                     {/* Category & Rarity */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-foreground mb-2">
+                            <label className="block text-sm font-medium text-ink mb-2">
                                 {t('admin.category')} *
                             </label>
                             <select
                                 value={formData.category}
                                 onChange={(e) => handleChange('category', e.target.value)}
-                                className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                             >
                                 {CATEGORIES.map((cat) => (
                                     <option key={cat} value={cat}>
@@ -159,13 +159,13 @@ export function AchievementModal({
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-foreground mb-2">
+                            <label className="block text-sm font-medium text-ink mb-2">
                                 {t('admin.rarity')} *
                             </label>
                             <select
                                 value={formData.rarity}
                                 onChange={(e) => handleChange('rarity', e.target.value)}
-                                className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                             >
                                 {RARITIES.map((rarity) => (
                                     <option key={rarity} value={rarity}>
@@ -179,26 +179,26 @@ export function AchievementModal({
                     {/* Icon & Max Progress */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-foreground mb-2">
+                            <label className="block text-sm font-medium text-ink mb-2">
                                 {t('admin.icon')}
                             </label>
                             <input
                                 type="text"
                                 value={formData.icon}
                                 onChange={(e) => handleChange('icon', e.target.value)}
-                                className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-2xl"
+                                className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary text-2xl"
                                 maxLength={2}
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-foreground mb-2">
+                            <label className="block text-sm font-medium text-ink mb-2">
                                 {t('admin.maxProgress')}
                             </label>
                             <input
                                 type="number"
                                 value={formData.maxProgress}
                                 onChange={(e) => handleChange('maxProgress', parseInt(e.target.value))}
-                                className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                                 min="1"
                             />
                         </div>
@@ -206,25 +206,25 @@ export function AchievementModal({
 
                     {/* Rewards */}
                     <div className="space-y-3">
-                        <label className="block text-sm font-medium text-foreground">{t('admin.rewards')}</label>
+                        <label className="block text-sm font-medium text-ink">{t('admin.rewards')}</label>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs text-muted-foreground mb-1">{t('admin.xp')}</label>
+                                <label className="block text-xs text-ink-muted mb-1">{t('admin.xp')}</label>
                                 <input
                                     type="number"
                                     value={formData.rewards.xp}
                                     onChange={(e) => handleRewardChange('xp', parseInt(e.target.value))}
-                                    className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                                     min="0"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs text-muted-foreground mb-1">{t('admin.gold')}</label>
+                                <label className="block text-xs text-ink-muted mb-1">{t('admin.gold')}</label>
                                 <input
                                     type="number"
                                     value={formData.rewards.gold}
                                     onChange={(e) => handleRewardChange('gold', parseInt(e.target.value))}
-                                    className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                                     min="0"
                                 />
                             </div>
@@ -238,23 +238,23 @@ export function AchievementModal({
                                 type="checkbox"
                                 checked={formData.enabled}
                                 onChange={(e) => handleChange('enabled', e.target.checked)}
-                                className="w-4 h-4 rounded border border-border bg-card"
+                                className="w-4 h-4 rounded border border-line bg-surface"
                             />
-                            <span className="text-sm text-foreground">{t('admin.enabled')}</span>
+                            <span className="text-sm text-ink">{t('admin.enabled')}</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                             <input
                                 type="checkbox"
                                 checked={formData.hidden}
                                 onChange={(e) => handleChange('hidden', e.target.checked)}
-                                className="w-4 h-4 rounded border border-border bg-card"
+                                className="w-4 h-4 rounded border border-line bg-surface"
                             />
-                            <span className="text-sm text-foreground">{t('admin.hidden')}</span>
+                            <span className="text-sm text-ink">{t('admin.hidden')}</span>
                         </label>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-3 pt-4 border-t border-border">
+                    <div className="flex gap-3 pt-4 border-t border-line">
                         <Button variant="outline" onClick={onClose} disabled={isLoading}>
                             {t('admin.cancel')}
                         </Button>

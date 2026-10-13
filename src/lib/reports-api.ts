@@ -1,10 +1,10 @@
 import type { CreateReportPayload, Report, ResolveReportPayload } from "@/api/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+import { API_BASE_URL as API_BASE_URL, apiFetch } from "./http";
 
 export const reportsApi = {
     async createReport(payload: CreateReportPayload, token: string): Promise<Report> {
-        const response = await fetch(`${API_BASE_URL}/api/reports`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/reports`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -25,7 +25,7 @@ export const reportsApi = {
         const params = new URLSearchParams();
         if (filters?.status) params.append("status", filters.status);
 
-        const response = await fetch(`${API_BASE_URL}/api/admin/reports?${params}`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/admin/reports?${params}`, {
             headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -38,7 +38,7 @@ export const reportsApi = {
     },
 
     async resolveReport(reportId: string, payload: ResolveReportPayload, token: string): Promise<Report> {
-        const response = await fetch(`${API_BASE_URL}/api/admin/reports/${reportId}`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/admin/reports/${reportId}`, {
             method: "PATCH",
             headers: {
                 "Content-Type": "application/json",

@@ -70,13 +70,13 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
 
   const buttonClass = (active: boolean) =>
     cn(
-      "flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted transition hover:bg-muted",
-      active && "bg-brand-soft text-brand"
+      "flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted transition hover:bg-sunken",
+      active && "bg-primary-soft text-primary"
     );
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-outline bg-white">
-      <div className="flex flex-wrap items-center gap-1 border-b border-outline bg-[#f7fbfc] p-2">
+    <div className="overflow-hidden rounded-2xl border border-line bg-white">
+      <div className="flex flex-wrap items-center gap-1 border-b border-line bg-surface p-2">
         <button
           type="button"
           title={t("richText.heading1")}
@@ -101,7 +101,7 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         >
           <Heading3 className="h-4 w-4" />
         </button>
-        <div className="mx-1 h-5 w-px bg-outline" />
+        <div className="mx-1 h-5 w-px bg-line" />
         <button
           type="button"
           title={t("richText.bold")}
@@ -134,7 +134,7 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         >
           <Strikethrough className="h-4 w-4" />
         </button>
-        <div className="mx-1 h-5 w-px bg-outline" />
+        <div className="mx-1 h-5 w-px bg-line" />
         <button
           type="button"
           title={t("richText.bulletList")}
@@ -159,7 +159,7 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         >
           <Quote className="h-4 w-4" />
         </button>
-        <div className="mx-1 h-5 w-px bg-outline" />
+        <div className="mx-1 h-5 w-px bg-line" />
         <button
           type="button"
           title={t("richText.link")}

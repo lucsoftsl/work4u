@@ -35,7 +35,7 @@ export default function AdminDashboard() {
             description: t('adminUsers.subtitle'),
             icon: Users,
             href: '/admin/users',
-            color: 'from-primary to-accent',
+            color: 'from-primary to-ember',
         },
         {
             title: t('adminReports.title'),
@@ -57,42 +57,42 @@ export default function AdminDashboard() {
             description: t('adminBlog.subtitle'),
             icon: Newspaper,
             href: '/admin/blog',
-            color: 'from-primary to-accent',
+            color: 'from-primary to-ember',
         },
         {
             title: t('adminContact.title'),
             description: t('adminContact.subtitle'),
             icon: Phone,
             href: '/admin/contact',
-            color: 'from-secondary to-primary',
+            color: 'from-sunken to-primary',
         },
         {
             title: t('admin.achievements'),
             description: t('admin.achievementsDesc'),
             icon: Trophy,
             href: '/admin/achievements',
-            color: 'from-primary to-secondary',
+            color: 'from-primary to-sunken',
         },
         {
             title: t('admin.quests'),
             description: t('admin.questsDesc'),
             icon: Scroll,
             href: '/admin/quests',
-            color: 'from-secondary to-accent',
+            color: 'from-sunken to-ember',
         },
         {
             title: t('adminTranslations.title'),
             description: t('adminTranslations.subtitle'),
             icon: Languages,
             href: '/admin/translations',
-            color: 'from-accent to-secondary',
+            color: 'from-ember to-sunken',
         },
         {
             title: t('admin.analytics'),
             description: t('admin.analyticsDesc'),
             icon: BarChart3,
             href: '/admin/analytics',
-            color: 'from-accent to-primary',
+            color: 'from-ember to-primary',
             disabled: true,
         },
         {
@@ -100,18 +100,17 @@ export default function AdminDashboard() {
             description: t('admin.settingsDesc'),
             icon: Settings,
             href: '/admin/settings',
-            color: 'from-primary via-secondary to-accent',
-            disabled: true,
+            color: 'from-primary via-sunken to-ember',
         },
     ];
 
     return (
-        <div className="min-h-screen bg-card">
+        <div className="min-h-screen bg-surface">
             <div className="max-w-7xl mx-auto px-4 py-16">
                 {/* Header */}
                 <div className="mb-16">
-                    <h1 className="text-5xl font-bold text-foreground mb-4">{t('admin.dashboard')}</h1>
-                    <p className="text-xl text-muted-foreground">
+                    <h1 className="text-5xl font-bold text-ink mb-4">{t('admin.dashboard')}</h1>
+                    <p className="text-xl text-ink-muted">
                         {t('adminDashboard.subtitle')}
                     </p>
                 </div>
@@ -144,7 +143,7 @@ export default function AdminDashboard() {
                             >
                                 <div
                                     className={`
-                    relative h-full rounded-xl border border-border p-8
+                    relative h-full rounded-xl border border-line p-8
                     bg-gradient-to-br ${module.color} bg-opacity-5
                     hover:border-primary/50 hover:bg-opacity-10
                     transition-all duration-300 group
@@ -170,8 +169,8 @@ export default function AdminDashboard() {
                                         )}
                                     </div>
 
-                                    <h3 className="text-xl font-bold text-foreground mb-2">{module.title}</h3>
-                                    <p className="text-sm text-muted-foreground mb-4">{module.description}</p>
+                                    <h3 className="text-xl font-bold text-ink mb-2">{module.title}</h3>
+                                    <p className="text-sm text-ink-muted mb-4">{module.description}</p>
 
                                     {module.disabled && (
                                         <span className="text-xs px-2 py-1 bg-yellow-900/20 text-yellow-400 rounded">
@@ -185,36 +184,36 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Platform Overview */}
-                <div className="bg-background border border-border rounded-xl p-8 mb-8">
-                    <h2 className="text-2xl font-bold text-foreground mb-6">{t('adminDashboard.platformOverview')}</h2>
+                <div className="bg-canvas border border-line rounded-xl p-8 mb-8">
+                    <h2 className="text-2xl font-bold text-ink mb-6">{t('adminDashboard.platformOverview')}</h2>
                     {statsLoading ? (
                         <div className="grid md:grid-cols-4 gap-6">
                             {[0, 1, 2, 3].map((i) => (
-                                <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />
+                                <div key={i} className="h-16 animate-pulse rounded-lg bg-sunken" />
                             ))}
                         </div>
                     ) : (
                         <div className="grid md:grid-cols-4 gap-6">
                             <div className="text-center">
                                 <div className="text-3xl font-bold text-primary mb-2">{totalUsers}</div>
-                                <p className="text-sm text-muted-foreground">{t('adminDashboard.totalUsers')}</p>
-                                <p className="text-xs text-muted-foreground mt-1">+{stats?.users.newLast7Days ?? 0} {t('adminDashboard.newThisWeek')}</p>
+                                <p className="text-sm text-ink-muted">{t('adminDashboard.totalUsers')}</p>
+                                <p className="text-xs text-ink-muted mt-1">+{stats?.users.newLast7Days ?? 0} {t('adminDashboard.newThisWeek')}</p>
                             </div>
                             <div className="text-center">
-                                <div className="text-3xl font-bold text-secondary mb-2">{totalJobs}</div>
-                                <p className="text-sm text-muted-foreground">{t('adminDashboard.marketplaceJobs')}</p>
-                                <p className="text-xs text-muted-foreground mt-1">
+                                <div className="text-3xl font-bold text-ink mb-2">{totalJobs}</div>
+                                <p className="text-sm text-ink-muted">{t('adminDashboard.marketplaceJobs')}</p>
+                                <p className="text-xs text-ink-muted mt-1">
                                     {stats?.jobs.byLifecycleStatus.IN_PROGRESS ?? 0} {t('adminDashboard.inProgress')}
                                 </p>
                             </div>
                             <div className="text-center">
-                                <div className="text-3xl font-bold text-accent mb-2">{stats?.business.companies ?? 0}</div>
-                                <p className="text-sm text-muted-foreground">{t('adminDashboard.businessAccounts')}</p>
-                                <p className="text-xs text-muted-foreground mt-1">{stats?.business.shifts ?? 0} {t('adminDashboard.shiftsScheduled')}</p>
+                                <div className="text-3xl font-bold text-ember-text mb-2">{stats?.business.companies ?? 0}</div>
+                                <p className="text-sm text-ink-muted">{t('adminDashboard.businessAccounts')}</p>
+                                <p className="text-xs text-ink-muted mt-1">{stats?.business.shifts ?? 0} {t('adminDashboard.shiftsScheduled')}</p>
                             </div>
                             <div className="text-center">
-                                <div className="text-3xl font-bold text-secondary mb-2">{stats?.proSubscribers ?? 0}</div>
-                                <p className="text-sm text-muted-foreground">{t('adminDashboard.proSubscribers')}</p>
+                                <div className="text-3xl font-bold text-ink mb-2">{stats?.proSubscribers ?? 0}</div>
+                                <p className="text-sm text-ink-muted">{t('adminDashboard.proSubscribers')}</p>
                             </div>
                         </div>
                     )}
@@ -230,7 +229,7 @@ export default function AdminDashboard() {
                 <div className="flex flex-wrap gap-3">
                     <Link
                         href="/business"
-                        className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+                        className="inline-flex items-center gap-2 rounded-full border border-line bg-canvas px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-sunken"
                     >
                         <Building2 className="h-4 w-4 text-primary" />
                         {t('adminDashboard.work4uForBusiness')}

@@ -14,7 +14,7 @@ export function PlayerStats() {
             label: t('gamification.gold'),
             value: player.gold.toLocaleString(),
             icon: Coins,
-            color: 'text-secondary',
+            color: 'text-ink',
         },
         {
             label: t('gamification.level'),
@@ -26,7 +26,7 @@ export function PlayerStats() {
             label: t('gamification.quests'),
             value: `${player.activeQuests}/${player.completedQuests}`,
             icon: Target,
-            color: 'text-accent',
+            color: 'text-ember-text',
         },
         {
             label: t('gamification.achievements'),
@@ -38,13 +38,13 @@ export function PlayerStats() {
             label: t('gamification.streak'),
             value: `${player.streak} ${t('gamification.streakDays')}`,
             icon: Flame,
-            color: 'text-orange-500',
+            color: 'text-ember-text',
         },
         {
             label: t('gamification.jobsCompleted'),
             value: player.completedJobs,
             icon: Briefcase,
-            color: 'text-emerald-600',
+            color: 'text-success',
         },
     ];
 
@@ -55,11 +55,11 @@ export function PlayerStats() {
                 return (
                     <div
                         key={stat.label}
-                        className="bg-card border border-border rounded-2xl p-3 flex items-center gap-2 shadow-soft transition-all hover:scale-105"
+                        className="bg-surface border border-line rounded-2xl p-3 flex items-center gap-2 shadow-stamp transition-all hover:scale-105"
                     >
                         <Icon className={`w-5 h-5 ${stat.color}`} />
                         <div>
-                            <p className="text-xs text-muted-foreground">{stat.label}</p>
+                            <p className="text-xs text-ink-muted">{stat.label}</p>
                             <p className={`text-lg font-bold ${stat.color}`}>{stat.value}</p>
                         </div>
                     </div>

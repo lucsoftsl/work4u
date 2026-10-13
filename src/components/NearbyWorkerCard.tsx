@@ -8,9 +8,9 @@ import { useTranslation } from "@/lib/i18n";
 import { getCategoryName } from "@/lib/category-utils";
 
 const AVAILABILITY_STYLES: Record<NearbyWorkerListing["availability"], { key: string; dot: string; badge: string }> = {
-  AVAILABLE: { key: "workers.availableNow", dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700" },
-  BUSY: { key: "workers.busy", dot: "bg-amber-500", badge: "bg-amber-50 text-amber-700" },
-  PAUSED: { key: "workers.paused", dot: "bg-slate-400", badge: "bg-slate-100 text-slate-600" },
+  AVAILABLE: { key: "workers.availableNow", dot: "bg-emerald-500", badge: "bg-emerald-50 text-success" },
+  BUSY: { key: "workers.busy", dot: "bg-amber-500", badge: "bg-amber-50 text-warning" },
+  PAUSED: { key: "workers.paused", dot: "bg-slate-400", badge: "bg-slate-100 text-ink-muted" },
 };
 
 function formatRate(amount: number, currency: string, pricingModel: "HOURLY" | "FIXED") {
@@ -42,7 +42,7 @@ export function NearbyWorkerCard({ listing, isActive, onHoverChange, onInvite }:
 
   return (
     <article
-      className={`surface-panel p-5 transition ${isActive ? "border-brand/50 shadow-soft" : ""}`}
+      className={`rounded-card border border-line bg-surface p-5 transition ${isActive ? "border-primary/50 shadow-stamp" : ""}`}
       onMouseEnter={() => onHoverChange?.(listing.id)}
       onMouseLeave={() => onHoverChange?.(null)}
     >
@@ -50,7 +50,7 @@ export function NearbyWorkerCard({ listing, isActive, onHoverChange, onInvite }:
         {worker?.image ? (
           <Image src={worker.image} alt={worker.name} width={56} height={56} className="h-14 w-14 shrink-0 rounded-full object-cover" />
         ) : (
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#dce9ef] text-lg font-black text-brand">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary-soft text-lg font-black text-primary">
             {worker?.name?.charAt(0) ?? "?"}
           </div>
         )}
@@ -65,14 +65,14 @@ export function NearbyWorkerCard({ listing, isActive, onHoverChange, onInvite }:
           </div>
 
           <p className="mt-1 inline-flex items-center gap-1 text-xs text-ink-muted">
-            <Star className="h-3.5 w-3.5 fill-[#f5b33f] text-[#f5b33f]" />
+            <Star className="h-3.5 w-3.5 fill-money text-money" />
             {(worker?.rating ?? 0).toFixed(1)} ({worker?.reviews ?? 0} {t("jobDetail.reviews")})
           </p>
 
           <p className="mt-2 truncate text-sm font-semibold text-ink">{listing.title}</p>
 
           <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-ink-muted">
-            <span className="eyebrow">{getCategoryName(listing.category, t)}</span>
+            <span className="inline-flex items-center rounded-control bg-primary-soft px-2.5 py-1 text-micro uppercase text-primary">{getCategoryName(listing.category, t)}</span>
             <span className="inline-flex items-center gap-1">
               <MapPin className="h-3.5 w-3.5" />
               {distanceLabel}
@@ -81,15 +81,15 @@ export function NearbyWorkerCard({ listing, isActive, onHoverChange, onInvite }:
         </div>
 
         <div className="shrink-0 text-right">
-          <p className="text-lg font-black text-brand">{formatRate(listing.rate, listing.rateCurrency, listing.pricingModel)}</p>
+          <p className="text-lg font-black text-primary">{formatRate(listing.rate, listing.rateCurrency, listing.pricingModel)}</p>
         </div>
       </div>
 
-      <div className="mt-4 flex items-center gap-2 border-t border-outline pt-4">
-        <Link href={`/workers/${listing.workerId}`} className="secondary-cta flex-1 py-2 text-sm">
+      <div className="mt-4 flex items-center gap-2 border-t border-line pt-4">
+        <Link href={`/workers/${listing.workerId}`} className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-control border border-ink/80 bg-surface px-5 py-2.5 text-label text-ink transition-colors duration-fast hover:bg-sunken active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45 flex-1 py-2 text-sm">
           {t("common.viewProfile")}
         </Link>
-        <button type="button" onClick={() => onInvite(listing)} className="primary-cta flex-1 py-2 text-sm">
+        <button type="button" onClick={() => onInvite(listing)} className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-control bg-primary px-5 py-2.5 text-label text-on-fill transition-colors duration-fast hover:bg-primary-strong active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45 flex-1 py-2 text-sm">
           {t("workers.inviteAction")}
         </button>
       </div>

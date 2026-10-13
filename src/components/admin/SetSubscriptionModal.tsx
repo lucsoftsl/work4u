@@ -50,32 +50,32 @@ export function SetSubscriptionModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-card border border-border rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-                <div className="sticky top-0 flex items-center justify-between bg-card border-b border-border p-6">
-                    <h2 className="text-xl font-bold text-foreground">
+            <div className="bg-surface border border-line rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <div className="sticky top-0 flex items-center justify-between bg-surface border-b border-line p-6">
+                    <h2 className="text-xl font-bold text-ink">
                         {t('adminUsers.setPlanModalTitle')}
                     </h2>
                     <button
                         onClick={onClose}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        className="text-ink-muted hover:text-ink transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                    <p className="text-sm text-muted-foreground truncate">
+                    <p className="text-sm text-ink-muted truncate">
                         {user.displayName || user.email}
                     </p>
 
                     <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
+                        <label className="block text-sm font-medium text-ink mb-2">
                             {t('adminUsers.planLabel')}
                         </label>
                         <select
                             value={plan}
                             onChange={(e) => setPlan(e.target.value as AdminGrantablePlan)}
-                            className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                         >
                             {GRANTABLE_PLANS.map((p) => (
                                 <option key={p} value={p}>
@@ -87,48 +87,48 @@ export function SetSubscriptionModal({
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-foreground mb-2">
+                            <label className="block text-sm font-medium text-ink mb-2">
                                 {t('adminUsers.activeFromLabel')}
                             </label>
                             <input
                                 type="date"
                                 value={activeFrom}
                                 onChange={(e) => setActiveFrom(e.target.value)}
-                                className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-foreground mb-2">
+                            <label className="block text-sm font-medium text-ink mb-2">
                                 {t('adminUsers.activeToLabel')}
                             </label>
                             <input
                                 type="date"
                                 value={activeTo}
                                 onChange={(e) => setActiveTo(e.target.value)}
-                                className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                             />
                         </div>
                     </div>
-                    <p className="text-xs text-muted-foreground -mt-2">
+                    <p className="text-xs text-ink-muted -mt-2">
                         {t('adminUsers.activeWindowHint')}
                     </p>
 
                     <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
+                        <label className="block text-sm font-medium text-ink mb-2">
                             {t('adminUsers.reasonLabel')}
                         </label>
                         <input
                             type="text"
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
-                            className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="w-full px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                             placeholder={t('adminUsers.reasonPlaceholder')}
                         />
                     </div>
 
                     {error && <p className="text-sm text-red-600">{error}</p>}
 
-                    <div className="flex gap-3 pt-4 border-t border-border">
+                    <div className="flex gap-3 pt-4 border-t border-line">
                         <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
                             {t('admin.cancel')}
                         </Button>

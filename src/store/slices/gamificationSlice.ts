@@ -28,7 +28,39 @@ const initialPlayerStats: PlayerStats = {
     title: 'Novice Worker',
 };
 
-const initialState: GamificationState = {
+/** Lifecycle of the server-side player state; the UI only shows progress once `loaded`. */
+export type GamificationServerStatus = 'idle' | 'loading' | 'loaded' | 'error';
+
+/** Player stats as returned by GET /api/gamification/state/:userId (work4u-api). */
+export interface ServerPlayerStats {
+    level: number;
+    xp: number;
+    /** XP still needed to reach the next level. */
+    xpToNextLevel: number;
+    totalXp: number;
+    gold: number;
+    title?: string | null;
+    streak: number;
+    achievements: number;
+    activeQuests: number;
+    completedQuests: number;
+}
+
+// Mirrors work4u-api's flat curve (src/controllers/gamification.ts): 1000 XP per level.
+const SERVER_XP_PER_LEVEL = 1000;
+
+export interface GamificationSliceState extends GamificationState {
+    serverStatus: GamificationServerStatus;
+    /** Owner of the loaded player state, so a refetch knows whom to ask for. */
+    userId: string | null;
+}
+
+const toNumber = (value: unknown, fallback = 0): number =>
+    typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+
+const initialState: GamificationSliceState = {
+    serverStatus: 'idle',
+    userId: null,
     player: initialPlayerStats,
     quests: [],
     achievements: [],
@@ -42,6 +74,51 @@ const gamificationSlice = createSlice({
     name: 'gamification',
     initialState,
     reducers: {
+        // Server sync
+        gamificationLoadStarted: (state, action: PayloadAction<string>) => {
+            if (state.userId !== action.payload) {
+                state.player = initialPlayerStats;
+                state.serverStatus = 'loading';
+            }
+            state.userId = action.payload;
+        },
+
+        gamificationLoaded: (state, action: PayloadAction<{ userId: string; player: ServerPlayerStats }>) => {
+            const server = action.payload.player;
+            const level = Math.max(1, toNumber(server.level, 1));
+            const remaining = Math.max(0, toNumber(server.xpToNextLevel, SERVER_XP_PER_LEVEL));
+            state.userId = action.payload.userId;
+            state.serverStatus = 'loaded';
+            state.player = {
+                ...state.player,
+                level,
+                totalXP: Math.max(0, toNumber(server.totalXp)),
+                xpToNextLevel: SERVER_XP_PER_LEVEL,
+                currentXP: Math.min(SERVER_XP_PER_LEVEL, Math.max(0, SERVER_XP_PER_LEVEL - remaining)),
+                gold: toNumber(server.gold),
+                streak: toNumber(server.streak),
+                achievements: toNumber(server.achievements),
+                activeQuests: toNumber(server.activeQuests),
+                completedQuests: toNumber(server.completedQuests),
+                title: typeof server.title === 'string' ? server.title : '',
+            };
+        },
+
+        gamificationLoadFailed: (state) => {
+            state.serverStatus = 'error';
+        },
+
+        // Keeps the static achievement/quest catalogue; drops everything player-specific.
+        resetGamification: (state) => {
+            state.serverStatus = 'idle';
+            state.userId = null;
+            state.player = initialPlayerStats;
+            state.inventory = [];
+            state.titles = [];
+            state.notifications = [];
+            state.dailyChallenges = [];
+        },
+
         // XP and Leveling
         gainXP: (state, action: PayloadAction<number>) => {
             const xpGained = action.payload;
@@ -264,6 +341,10 @@ const gamificationSlice = createSlice({
 });
 
 export const {
+    gamificationLoadStarted,
+    gamificationLoaded,
+    gamificationLoadFailed,
+    resetGamification,
     gainXP,
     gainGold,
     spendGold,

@@ -117,14 +117,14 @@ export default function AdminJobsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-card">
+        <div className="min-h-screen bg-surface">
             <div className="max-w-5xl mx-auto px-4 py-16">
                 <Link href="/admin" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
                     <ArrowLeft className="w-4 h-4" />
                     {t("admin.backToDashboard")}
                 </Link>
-                <h1 className="mt-4 text-4xl font-bold text-foreground mb-2">{t("adminJobs.title")}</h1>
-                <p className="text-muted-foreground mb-6">
+                <h1 className="mt-4 text-4xl font-bold text-ink mb-2">{t("adminJobs.title")}</h1>
+                <p className="text-ink-muted mb-6">
                     {t("adminJobs.subtitle")}
                 </p>
 
@@ -135,8 +135,8 @@ export default function AdminJobsPage() {
                             onClick={() => setFilter(f.value)}
                             className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
                                 filter === f.value
-                                    ? "bg-primary text-primary-foreground"
-                                    : "border border-border text-foreground hover:bg-muted"
+                                    ? "bg-primary text-on-fill"
+                                    : "border border-line text-ink hover:bg-sunken"
                             }`}
                         >
                             {f.label}
@@ -145,22 +145,22 @@ export default function AdminJobsPage() {
                 </div>
 
                 {loading ? (
-                    <p className="text-muted-foreground">{t("adminJobs.loading")}</p>
+                    <p className="text-ink-muted">{t("adminJobs.loading")}</p>
                 ) : error ? (
                     <p className="text-red-600 font-semibold">{error}</p>
                 ) : jobs.length === 0 ? (
-                    <p className="text-muted-foreground">{t("adminJobs.empty")}</p>
+                    <p className="text-ink-muted">{t("adminJobs.empty")}</p>
                 ) : (
-                    <div className="border border-border rounded-xl divide-y divide-border overflow-hidden">
+                    <div className="border border-line rounded-xl divide-y divide-line overflow-hidden">
                         {jobs.map((job) => (
-                            <div key={job.id} className="flex flex-wrap items-center justify-between gap-4 p-4 bg-background">
+                            <div key={job.id} className="flex flex-wrap items-center justify-between gap-4 p-4 bg-canvas">
                                 <div className="min-w-0">
-                                    <p className="font-semibold text-foreground truncate">{job.title}</p>
-                                    <p className="text-sm text-muted-foreground truncate">
+                                    <p className="font-semibold text-ink truncate">{job.title}</p>
+                                    <p className="text-sm text-ink-muted truncate">
                                         {job.category} · {job.createdBy?.name ?? job.createdByUserId} · {job.location}
                                     </p>
                                     {job.moderationNote && (
-                                        <p className="text-xs text-muted-foreground mt-1 italic truncate">
+                                        <p className="text-xs text-ink-muted mt-1 italic truncate">
                                             {t("adminJobs.notePrefix")} {job.moderationNote}
                                         </p>
                                     )}
@@ -183,7 +183,7 @@ export default function AdminJobsPage() {
                                             e.target.value = "";
                                             if (status) handleSetModeration(job, status);
                                         }}
-                                        className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground bg-background hover:bg-muted disabled:opacity-50"
+                                        className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink bg-canvas hover:bg-sunken disabled:opacity-50"
                                     >
                                         <option value="" disabled>
                                             {t("adminJobs.setStatusPlaceholder")}
@@ -197,7 +197,7 @@ export default function AdminJobsPage() {
                                     <button
                                         onClick={() => handleScheduleDeletion(job)}
                                         disabled={actingOnId === job.id}
-                                        className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-50"
+                                        className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:bg-sunken disabled:opacity-50"
                                     >
                                         {t("adminJobs.scheduleDeletion")}
                                     </button>

@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useInitializeGamification } from '@/hooks/useInitializeGamification';
 import { captureReferralCodeFromUrl } from '@/lib/referral';
 import { updateUserProfile } from '@/lib/auth-service';
+import { ToastProvider } from '@/components/ui/Toast';
 
 function GamificationInitializer({ children }: { children: ReactNode }) {
     useInitializeGamification();
@@ -49,7 +50,7 @@ export default function Providers({ children }: { children: ReactNode }) {
                         <GamificationInitializer>
                             <ReferralCapture>
                                 <LocaleSync>
-                                    {children}
+                                    <ToastProvider>{children}</ToastProvider>
                                 </LocaleSync>
                             </ReferralCapture>
                         </GamificationInitializer>

@@ -1,6 +1,6 @@
 import type { ContactInfo, UpdateContactInfoPayload, DeploySettings } from "@/api/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+import { API_BASE_URL as API_BASE_URL, apiFetch } from "./http";
 
 async function handle<T>(response: Response, fallbackError: string): Promise<T> {
   if (!response.ok) {
@@ -12,12 +12,12 @@ async function handle<T>(response: Response, fallbackError: string): Promise<T> 
 
 export const siteSettingsApi = {
   async getContactInfo(): Promise<ContactInfo> {
-    const response = await fetch(`${API_BASE_URL}/api/site/contact`);
+    const response = await apiFetch(`${API_BASE_URL}/api/site/contact`);
     return handle(response, "Failed to load contact info");
   },
 
   async adminUpsertContactInfo(payload: UpdateContactInfoPayload, token: string): Promise<ContactInfo> {
-    const response = await fetch(`${API_BASE_URL}/api/admin/site/contact`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/admin/site/contact`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
@@ -26,7 +26,7 @@ export const siteSettingsApi = {
   },
 
   async adminGetDeploySettings(token: string): Promise<DeploySettings> {
-    const response = await fetch(`${API_BASE_URL}/api/admin/site/deploy-settings`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/admin/site/deploy-settings`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return handle(response, "Failed to load deploy settings");
@@ -36,7 +36,7 @@ export const siteSettingsApi = {
     payload: DeploySettings,
     token: string
   ): Promise<DeploySettings> {
-    const response = await fetch(`${API_BASE_URL}/api/admin/site/deploy-settings`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/admin/site/deploy-settings`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),

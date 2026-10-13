@@ -2,20 +2,21 @@
 
 import { Suspense } from "react";
 import WorkersPageContent from "./workers-content";
+import { ListSkeleton } from "@/components/ui/QueryState";
 import { useTranslation } from "@/lib/i18n";
 
 export default function WorkersPage() {
   const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen bg-background">
-      <Suspense fallback={
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">{t('workers.loading')}</p>
+    <Suspense
+      fallback={
+        <div className="mx-auto w-full max-w-content px-[var(--gutter)] py-10">
+          <ListSkeleton rows={4} label={t("workers.loading")} />
         </div>
-      }>
-        <WorkersPageContent />
-      </Suspense>
-    </div>
+      }
+    >
+      <WorkersPageContent />
+    </Suspense>
   );
 }

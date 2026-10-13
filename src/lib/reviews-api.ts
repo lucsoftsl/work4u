@@ -1,6 +1,6 @@
 import type { CreateReviewPayload, Review } from "@/api/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+import { API_BASE_URL as API_BASE_URL, apiFetch } from "./http";
 
 export const reviewsApi = {
     async listReviews(params: { userId?: string; jobId?: string; createdByUserId?: string }): Promise<Review[]> {
@@ -9,7 +9,7 @@ export const reviewsApi = {
         if (params.jobId) queryParams.append("jobId", params.jobId);
         if (params.createdByUserId) queryParams.append("createdByUserId", params.createdByUserId);
 
-        const response = await fetch(`${API_BASE_URL}/api/reviews?${queryParams}`);
+        const response = await apiFetch(`${API_BASE_URL}/api/reviews?${queryParams}`);
 
         if (!response.ok) {
             throw new Error(`Failed to fetch reviews: ${response.statusText}`);
@@ -19,7 +19,7 @@ export const reviewsApi = {
     },
 
     async createReview(payload: CreateReviewPayload, token: string): Promise<Review> {
-        const response = await fetch(`${API_BASE_URL}/api/reviews`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/reviews`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

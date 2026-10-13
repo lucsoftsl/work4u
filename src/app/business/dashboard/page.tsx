@@ -22,13 +22,13 @@ import {
 } from "lucide-react";
 
 const STATUS_STYLES: Record<string, string> = {
-  COMPLETED: "bg-emerald-50 text-emerald-700",
-  IN_PROGRESS: "bg-blue-50 text-blue-700",
-  OPEN: "bg-amber-50 text-amber-700",
-  CANCELLED: "bg-red-50 text-red-700",
-  DISPUTED: "bg-red-50 text-red-700",
+  COMPLETED: "bg-emerald-50 text-success",
+  IN_PROGRESS: "bg-blue-50 text-info",
+  OPEN: "bg-amber-50 text-warning",
+  CANCELLED: "bg-red-50 text-danger",
+  DISPUTED: "bg-red-50 text-danger",
 };
-const DEFAULT_STATUS_STYLE = "bg-amber-50 text-amber-700";
+const DEFAULT_STATUS_STYLE = "bg-amber-50 text-warning";
 
 function startOfDay(date: Date): Date {
   const copy = new Date(date);
@@ -215,8 +215,8 @@ export default function BusinessDashboardPage() {
 
   if (authLoading || !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="h-10 w-10 rounded-full border-2 border-[hsl(var(--brand))] border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-canvas flex items-center justify-center">
+        <div className="h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -243,21 +243,21 @@ export default function BusinessDashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="max-w-5xl mx-auto px-4 py-10 sm:py-14">
+    <div className="min-h-screen bg-canvas">
+      <div className="max-w-5xl mx-auto px-4 py-10 sm:py-14">
         {companyLoading || subStatusLoading ? (
           <div className="space-y-4">
-            <div className="h-8 w-64 rounded-lg bg-muted animate-pulse" />
+            <div className="h-8 w-64 rounded-lg bg-sunken animate-pulse" />
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="h-24 rounded-2xl bg-muted animate-pulse" />
+                <div key={i} className="h-24 rounded-2xl bg-sunken animate-pulse" />
               ))}
             </div>
           </div>
         ) : !company && !hasBusinessPlan ? (
-          <div className="max-w-md mx-auto rounded-2xl border border-outline bg-card p-8 shadow-soft text-center">
-            <div className="w-10 h-10 rounded-xl bg-brand-soft flex items-center justify-center mb-4 mx-auto">
-              <Building2 size={18} className="text-brand" />
+          <div className="max-w-md mx-auto rounded-2xl border border-line bg-surface p-8 shadow-stamp text-center">
+            <div className="w-10 h-10 rounded-xl bg-primary-soft flex items-center justify-center mb-4 mx-auto">
+              <Building2 size={18} className="text-primary" />
             </div>
             <h1 className="text-xl font-bold text-ink mb-1.5">{t('biz.subscribeTitle')}</h1>
             <p className="text-sm text-ink-muted mb-6">
@@ -268,9 +268,9 @@ export default function BusinessDashboardPage() {
             </Button>
           </div>
         ) : !company ? (
-          <div className="max-w-md mx-auto rounded-2xl border border-outline bg-card p-8 shadow-soft">
-            <div className="w-10 h-10 rounded-xl bg-brand-soft flex items-center justify-center mb-4">
-              <Building2 size={18} className="text-brand" />
+          <div className="max-w-md mx-auto rounded-2xl border border-line bg-surface p-8 shadow-stamp">
+            <div className="w-10 h-10 rounded-xl bg-primary-soft flex items-center justify-center mb-4">
+              <Building2 size={18} className="text-primary" />
             </div>
             <h1 className="text-xl font-bold text-ink mb-1.5">{t('biz.createCompanyTitle')}</h1>
             <p className="text-sm text-ink-muted mb-6">
@@ -291,7 +291,7 @@ export default function BusinessDashboardPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={t('biz.companyNamePlaceholder')}
-                  className="field-shell w-full"
+                  className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-full"
                 />
               </div>
               <div>
@@ -307,10 +307,10 @@ export default function BusinessDashboardPage() {
                   value={industry}
                   onChange={(e) => setIndustry(e.target.value)}
                   placeholder={t('biz.industryPlaceholder')}
-                  className="field-shell w-full"
+                  className="min-h-[48px] rounded-control border border-line-strong bg-surface px-3 py-2.5 text-body text-ink transition-colors hover:border-ink-muted focus-within:border-primary focus-within:shadow-focus w-full"
                 />
               </div>
-              {createError && <p className="text-xs text-red-600">{createError}</p>}
+              {createError && <p className="text-xs text-danger">{createError}</p>}
               <Button type="submit" size="lg" className="w-full" disabled={creating || !name.trim()}>
                 {creating ? t('biz.creating') : t('biz.createCompanyButton')}
               </Button>
@@ -320,7 +320,7 @@ export default function BusinessDashboardPage() {
           <>
             {/* Header */}
             <div className="mb-8">
-              <p className="text-sm font-semibold text-brand uppercase tracking-wider mb-1">
+              <p className="text-sm font-semibold text-primary uppercase tracking-wider mb-1">
                 {t('business.badge')}
               </p>
               <h1 className="text-3xl font-bold text-ink">{company.name}</h1>
@@ -330,9 +330,9 @@ export default function BusinessDashboardPage() {
             {/* Quick stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
               {STATS.map(({ label, value, icon: Icon }) => (
-                <div key={label} className="rounded-2xl border border-outline bg-card p-5 flex flex-col gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-brand-soft flex items-center justify-center">
-                    <Icon size={16} className="text-brand" />
+                <div key={label} className="rounded-2xl border border-line bg-surface p-5 flex flex-col gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-primary-soft flex items-center justify-center">
+                    <Icon size={16} className="text-primary" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-ink">{statsLoading ? "–" : value}</p>
@@ -346,7 +346,7 @@ export default function BusinessDashboardPage() {
             <section className="mb-10">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-ink">{t('biz.todaysShifts')}</h2>
-                <Link href="/business/schedule" className="text-sm font-semibold text-brand hover:underline">
+                <Link href="/business/schedule" className="text-sm font-semibold text-primary hover:underline">
                   {t('biz.viewFullCalendar')}
                 </Link>
               </div>
@@ -354,13 +354,13 @@ export default function BusinessDashboardPage() {
               {statsLoading ? (
                 <div className="space-y-2">
                   {[0, 1, 2].map((i) => (
-                    <div key={i} className="h-16 rounded-2xl bg-muted animate-pulse" />
+                    <div key={i} className="h-16 rounded-2xl bg-sunken animate-pulse" />
                   ))}
                 </div>
               ) : shiftsToday.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-outline bg-card py-14 text-center px-4">
-                  <div className="w-12 h-12 rounded-2xl bg-brand-soft flex items-center justify-center">
-                    <CalendarDays size={20} className="text-brand" />
+                <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-line bg-surface py-14 text-center px-4">
+                  <div className="w-12 h-12 rounded-2xl bg-primary-soft flex items-center justify-center">
+                    <CalendarDays size={20} className="text-primary" />
                   </div>
                   <p className="text-sm font-semibold text-ink">{t('biz.noShiftsToday')}</p>
                   <p className="text-xs text-ink-muted max-w-xs">
@@ -368,14 +368,14 @@ export default function BusinessDashboardPage() {
                   </p>
                 </div>
               ) : (
-                <div className="rounded-2xl border border-outline bg-card divide-y divide-[hsl(var(--outline))] overflow-hidden">
+                <div className="rounded-2xl border border-line bg-surface divide-y divide-line overflow-hidden">
                   {shiftsToday.map((shift) => (
                     <div
                       key={shift.id}
                       className="flex flex-col sm:flex-row sm:items-center gap-3 p-4"
                     >
                       <div className="flex items-center gap-3 sm:w-52 shrink-0">
-                        <div className="w-9 h-9 rounded-full bg-brand-soft flex items-center justify-center text-xs font-bold text-brand shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-primary-soft flex items-center justify-center text-xs font-bold text-primary shrink-0">
                           {getInitials(shift.worker?.name)}
                         </div>
                         <div className="min-w-0">
@@ -418,10 +418,10 @@ export default function BusinessDashboardPage() {
                   <Link
                     key={`${href}-${i}`}
                     href={href}
-                    className="group flex items-start gap-3.5 rounded-2xl border border-outline bg-card p-5 transition-colors hover:border-[hsl(var(--brand))]"
+                    className="group flex items-start gap-3.5 rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-primary"
                   >
-                    <div className="shrink-0 mt-0.5 w-9 h-9 rounded-xl bg-brand-soft flex items-center justify-center">
-                      <Icon size={16} className="text-brand" />
+                    <div className="shrink-0 mt-0.5 w-9 h-9 rounded-xl bg-primary-soft flex items-center justify-center">
+                      <Icon size={16} className="text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-ink mb-0.5">{title}</p>
@@ -429,7 +429,7 @@ export default function BusinessDashboardPage() {
                     </div>
                     <ArrowRight
                       size={14}
-                      className="mt-1 shrink-0 text-ink-subtle transition-transform group-hover:translate-x-0.5 group-hover:text-brand"
+                      className="mt-1 shrink-0 text-ink-subtle transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
                     />
                   </Link>
                 ))}
@@ -437,7 +437,7 @@ export default function BusinessDashboardPage() {
             </section>
           </>
         )}
-      </main>
+      </div>
     </div>
   );
 }

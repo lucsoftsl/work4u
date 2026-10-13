@@ -14,17 +14,25 @@ interface LevelUpModalProps {
 
 export function LevelUpModal({ onClose }: LevelUpModalProps) {
     const { t } = useTranslation();
-    const { player } = useSelector((state: RootState) => state.gamification);
+    const { player, serverStatus, userId } = useSelector((state: RootState) => state.gamification);
     const [isOpen, setIsOpen] = useState(false);
-    const previousLevelRef = useRef(player.level);
+    // Baseline is the first server-loaded level per user, so loading persisted
+    // progress on page load never looks like a level-up.
+    const baselineRef = useRef<{ userId: string; level: number } | null>(null);
 
     useEffect(() => {
-        if (player.level > previousLevelRef.current) {
-            previousLevelRef.current = player.level;
+        if (serverStatus !== 'loaded' || !userId) return;
+        const baseline = baselineRef.current;
+        if (!baseline || baseline.userId !== userId) {
+            baselineRef.current = { userId, level: player.level };
+            return;
+        }
+        if (player.level > baseline.level) {
+            baselineRef.current = { userId, level: player.level };
             // Using requestAnimationFrame to defer setState
             requestAnimationFrame(() => setIsOpen(true));
         }
-    }, [player.level]);
+    }, [player.level, serverStatus, userId]);
 
     const handleClose = () => {
         setIsOpen(false);
@@ -35,20 +43,20 @@ export function LevelUpModal({ onClose }: LevelUpModalProps) {
 
     const rewards = [
         { icon: Star, label: t('gamification.newAbilities'), color: 'text-primary' },
-        { icon: Gift, label: t('gamification.bonusRewards'), color: 'text-secondary' },
-        { icon: TrendingUp, label: t('gamification.increasedEarning'), color: 'text-accent' },
+        { icon: Gift, label: t('gamification.bonusRewards'), color: 'text-ink' },
+        { icon: TrendingUp, label: t('gamification.increasedEarning'), color: 'text-ember-text' },
     ];
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
             <div className="relative max-w-md w-full mx-4 animate-level-up">
                 {/* Glow effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/50 via-secondary/50 to-primary/50 rounded-2xl blur-xl animate-pulse" />
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/50 via-sunken/50 to-primary/50 rounded-2xl blur-xl animate-pulse" />
 
-                <div className="relative bg-card border-2 border-primary rounded-2xl p-8 shadow-2xl">
+                <div className="relative bg-surface border-2 border-primary rounded-2xl p-8 shadow-2xl">
                     <button
                         onClick={handleClose}
-                        className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+                        className="absolute top-4 right-4 text-ink-muted hover:text-ink transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -56,13 +64,13 @@ export function LevelUpModal({ onClose }: LevelUpModalProps) {
                     {/* Animated sparkles */}
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
                         <div className="relative">
-                            <Sparkles className="w-16 h-16 text-secondary animate-float" />
-                            <div className="absolute inset-0 bg-secondary/30 rounded-full blur-xl animate-pulse" />
+                            <Sparkles className="w-16 h-16 text-ink animate-float" />
+                            <div className="absolute inset-0 bg-sunken/30 rounded-full blur-xl animate-pulse" />
                         </div>
                     </div>
 
                     <div className="text-center mt-8">
-                        <h2 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent">
+                        <h2 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary via-sunken to-primary bg-clip-text text-transparent">
                             {t('gamification.levelUp')}
                         </h2>
 
@@ -71,7 +79,7 @@ export function LevelUpModal({ onClose }: LevelUpModalProps) {
                             <span className="text-5xl font-bold text-primary">{player.level}</span>
                         </div>
 
-                        <p className="text-xl font-bold text-secondary mb-6">
+                        <p className="text-xl font-bold text-ink mb-6">
                             {t(getPlayerTitleKey(player.title))}
                         </p>
 
@@ -81,10 +89,10 @@ export function LevelUpModal({ onClose }: LevelUpModalProps) {
                                 return (
                                     <div
                                         key={index}
-                                        className="flex items-center gap-3 bg-muted/50 rounded-lg p-3 border border-border"
+                                        className="flex items-center gap-3 bg-sunken/50 rounded-lg p-3 border border-line"
                                     >
                                         <Icon className={`w-5 h-5 ${reward.color}`} />
-                                        <span className="text-sm text-muted-foreground">{reward.label}</span>
+                                        <span className="text-sm text-ink-muted">{reward.label}</span>
                                     </div>
                                 );
                             })}
@@ -92,7 +100,7 @@ export function LevelUpModal({ onClose }: LevelUpModalProps) {
 
                         <Button
                             onClick={handleClose}
-                            className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+                            className="w-full bg-gradient-to-r from-primary to-sunken hover:opacity-90 transition-opacity"
                         >
                             {t('gamification.continueAdventure')}
                         </Button>

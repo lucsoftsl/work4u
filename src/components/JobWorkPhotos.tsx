@@ -2,11 +2,15 @@
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
-import { Camera, Trash2, ImageOff } from "lucide-react";
+import { AlertCircle, Camera, ImageOff, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
+import { errorMessage } from "@/lib/http";
 import { uploadApi } from "@/lib/upload-api";
 import type { JobWorkPhoto } from "@/api/types";
 import { useTranslation } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/QueryState";
 
 interface JobWorkPhotosProps {
   jobId: string;
@@ -29,14 +33,17 @@ export function JobWorkPhotos({ jobId, firebaseToken, currentUserId }: JobWorkPh
       .then((data) => {
         if (!cancelled) setPhotos(data);
       })
-      .catch((err) => console.error("Failed to load job photos:", err))
+      .catch((err) => {
+        console.error("Failed to load job photos:", err);
+        if (!cancelled) setError(t("workPhotos.errorLoad"));
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [jobId, firebaseToken]);
+  }, [jobId, firebaseToken, t]);
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -50,78 +57,80 @@ export function JobWorkPhotos({ jobId, firebaseToken, currentUserId }: JobWorkPh
       const photo = await api.addJobWorkPhoto(jobId, uploaded.url, firebaseToken);
       setPhotos((prev) => [photo, ...prev]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload photo");
+      setError(errorMessage(err, t("workPhotos.errorUpload")));
     } finally {
       setUploading(false);
     }
   }
 
   async function handleDelete(photoId: string) {
+    setError(null);
     try {
       await api.deleteJobWorkPhoto(jobId, photoId, firebaseToken);
       setPhotos((prev) => prev.filter((p) => p.id !== photoId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete photo");
+      setError(errorMessage(err, t("workPhotos.errorDelete")));
     }
   }
 
   return (
-    <div className="rounded-2xl border border-outline bg-card p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Camera size={18} className="text-brand" />
-          <h3 className="text-sm font-bold text-ink">{t("workPhotos.title", "Work Photos")}</h3>
-        </div>
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="rounded-full bg-brand-soft px-3 py-1.5 text-xs font-bold text-brand transition hover:bg-brand hover:text-white disabled:opacity-60"
-        >
-          {uploading ? t("workPhotos.uploading", "Uploading...") : t("workPhotos.addPhoto", "Add photo")}
-        </button>
-        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+    <section aria-labelledby="work-photos-title" className="rounded-card border border-line bg-surface p-4 md:p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h2 id="work-photos-title" className="font-display text-h3 text-ink">
+          {t("workPhotos.title")}
+        </h2>
+        <Button variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()} loading={uploading}>
+          {!uploading ? <Camera className="h-4 w-4" aria-hidden="true" /> : null}
+          {uploading ? t("workPhotos.uploading") : t("workPhotos.addPhoto")}
+        </Button>
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" tabIndex={-1} aria-hidden="true" onChange={handleFileChange} />
       </div>
 
-      {error && <p className="mb-3 text-xs text-red-600">{error}</p>}
+      {error ? (
+        <p role="alert" className="mb-3 flex items-start gap-2 rounded-control bg-danger-soft p-3 text-label font-normal text-ink">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden="true" />
+          {error}
+        </p>
+      ) : null}
 
       {loading ? (
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4" aria-hidden="true">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="aspect-square animate-pulse rounded-xl bg-muted" />
+            <Skeleton key={i} className="aspect-square rounded-card" />
           ))}
         </div>
       ) : photos.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl bg-muted/50 py-8 text-center">
-          <ImageOff size={20} className="text-ink-subtle" />
-          <p className="text-xs text-ink-muted">
-            {t("workPhotos.empty", "No photos yet. Add one to show progress or finished work.")}
-          </p>
+        <div className="flex flex-col items-center gap-2 rounded-card border border-dashed border-line-strong bg-canvas px-4 py-8 text-center">
+          <ImageOff className="h-6 w-6 text-ink-subtle" aria-hidden="true" />
+          <p className="text-label font-normal text-ink-muted">{t("workPhotos.empty")}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {photos.map((photo) => (
-            <div key={photo.id} className="group relative aspect-square overflow-hidden rounded-xl bg-muted">
-              <Image src={photo.imageUrl} alt={photo.caption || "Work photo"} fill sizes="200px" className="object-cover" />
+            <li key={photo.id} className="relative aspect-square overflow-hidden rounded-card bg-sunken">
+              <Image src={photo.imageUrl} alt={photo.caption || t("workPhotos.alt")} fill sizes="(min-width: 1024px) 200px, 45vw" className="object-cover" />
               <span
-                className={`absolute left-1 top-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                  photo.role === "WORKER" ? "bg-brand text-white" : "bg-white/90 text-ink"
-                }`}
+                className={cn(
+                  "absolute left-1.5 top-1.5 rounded-control px-1.5 py-0.5 text-micro",
+                  photo.role === "WORKER" ? "bg-primary text-on-fill" : "bg-surface text-ink"
+                )}
               >
-                {photo.role === "WORKER" ? t("workPhotos.roleWorker", "Worker") : t("workPhotos.rolePoster", "Poster")}
+                {photo.role === "WORKER" ? t("workPhotos.roleWorker") : t("workPhotos.rolePoster")}
               </span>
-              {photo.uploadedByUserId === currentUserId && (
+              {photo.uploadedByUserId === currentUserId ? (
                 <button
+                  type="button"
                   onClick={() => handleDelete(photo.id)}
-                  aria-label={t("workPhotos.removeAria", "Remove photo")}
-                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                  aria-label={t("workPhotos.removeAria")}
+                  className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-control bg-ink/70 text-surface transition-colors duration-fast hover:bg-danger"
                 >
-                  <Trash2 size={12} />
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </button>
-              )}
-            </div>
+              ) : null}
+            </li>
           ))}
-        </div>
+        </ul>
       )}
-    </div>
+    </section>
   );
 }

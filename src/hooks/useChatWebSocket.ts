@@ -1,6 +1,12 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useRef, useState } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any -- socket and history payloads are untyped JSON */
+import { useCallback, useEffect, useRef, useState } from "react";
+import { apiJson, errorMessage, getFreshToken } from "@/lib/http";
+import { OutboxSendError, createOutbox, type Outbox, type OutboxItem, type OutboxPayload } from "@/lib/chat-outbox";
+import {
+    chatSocketProtocols, chatSocketUrl, dedupeSorted, isRetryableSendError, reconnectDelay, CLOSE_ACCOUNT_INACTIVE,
+} from "@/lib/chat-socket";
+import { loadOutbox, saveOutbox } from "@/lib/chat-outbox-storage";
+import { useAuth } from "@/context/AuthContext";
 
 export interface ChatMessage {
     id: string;
@@ -18,39 +24,40 @@ export interface ChatMessage {
         title?: string;
     };
     dateTimeCreated: string;
+    /** Idempotency key echoed by the API; lets a reloaded thread match a pending outbox item. */
+    clientId?: string | null;
     isSent: boolean;
     isRead: boolean;
 }
 
-function dedupeById(messages: ChatMessage[]) {
-    return Array.from(new Map(messages.map((m) => [m.id, m])).values());
-}
+export type { OutboxItem } from "@/lib/chat-outbox";
+export { chatSocketProtocols, chatSocketUrl, compareMessages, isRetryableSendError, reconnectDelay } from "@/lib/chat-socket";
 
 export function useChatWebSocket(firebaseToken: string | null, otherUserId?: string) {
     const [isConnected, setIsConnected] = useState(false);
+    const [isReconnecting, setIsReconnecting] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [outboxItems, setOutboxItems] = useState<OutboxItem[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const [historyError, setHistoryError] = useState<string | null>(null);
 
     const ws = useRef<WebSocket | null>(null);
-
-    // The authenticated userId as reported by WS "ready"
     const readyUserIdRef = useRef<string | null>(null);
+    const outboxRef = useRef<Outbox<ChatMessage | null> | null>(null);
+    const signedIn = !!firebaseToken;
+    const { user } = useAuth();
+    const userId = user?.id;
 
-    const normalizeMessage = (raw: any): ChatMessage | null => {
+    const normalizeMessage = useCallback((raw: any): ChatMessage | null => {
         if (!raw) return null;
-
-        const msg: any = raw?.message ? raw : raw?.message; // handle both shapes if any
+        const msg: any = raw?.message ? raw : raw?.message;
         const fromUserId = msg?.fromUserId;
         const toUserId = msg?.toUserId;
         const id = msg?.id;
-
         if (!id || !fromUserId || !toUserId) return null;
 
         const readyUserId = readyUserIdRef.current;
-        const derivedIsSent =
-            typeof readyUserId === "string" ? fromUserId === readyUserId : !!msg?.isSent;
-
         return {
             id,
             fromUserId,
@@ -64,182 +71,220 @@ export function useChatWebSocket(firebaseToken: string | null, otherUserId?: str
             },
             jobData: msg?.jobData ?? msg?.message?.jobData ?? undefined,
             dateTimeCreated: msg?.dateTimeCreated ?? new Date().toISOString(),
-            isSent: derivedIsSent,
+            clientId: msg?.clientId ?? null,
+            isSent: typeof readyUserId === "string" ? fromUserId === readyUserId : !!msg?.isSent,
             isRead: !!msg?.isRead,
         };
-    };
+    }, []);
 
-    // Fetch chat history when connected
-    const fetchChatHistory = async (userId: string) => {
-        if (!firebaseToken) return;
+    const appendMessages = useCallback((incoming: ChatMessage[]) => {
+        if (incoming.length === 0) return;
+        setMessages((prev) => dedupeSorted([...prev, ...incoming]));
+    }, []);
+
+    // Outbox: every outgoing message goes over HTTP POST, which returns the saved message (the ack).
+    // The socket only receives. This avoids the "socket open but not yet authenticated" window in
+    // which a frame could be dropped silently, and gives an exact per-message ack.
+    useEffect(() => {
+        if (!signedIn) return;
+        const outbox = createOutbox<ChatMessage | null>({
+            send: async (item) => {
+                try {
+                    const raw = await apiJson<any>(`/api/messages`, {
+                        method: "POST",
+                        auth: true,
+                        // clientId makes retries idempotent: the API answers 200 with the original message when it already saved it.
+                        json: { toUserId: item.toUserId, text: item.text, imageUrl: item.imageUrl, jobData: item.jobData, clientId: item.clientId },
+                    });
+                    return normalizeMessage(raw);
+                } catch (err) {
+                    throw new OutboxSendError(errorMessage(err, "Failed to send message."), isRetryableSendError(err));
+                }
+            },
+            onAck: (_clientId, ack) => {
+                if (ack) appendMessages([{ ...ack, isSent: true }]);
+            },
+            initialItems: userId ? loadOutbox(userId) : [],
+            onChange: (items) => {
+                if (userId) saveOutbox(userId, items);
+                setOutboxItems(items);
+                const failed = items.find((i) => i.status === "failed");
+                setError(failed ? failed.error ?? "Failed to send message." : null);
+            },
+            isOnline: () => typeof navigator === "undefined" || navigator.onLine !== false,
+        });
+        outboxRef.current = outbox;
+        return () => {
+            outbox.dispose();
+            if (outboxRef.current === outbox) outboxRef.current = null;
+            setOutboxItems([]);
+        };
+    }, [signedIn, userId, normalizeMessage, appendMessages]);
+
+    // History loads over HTTP whether or not the socket is up. The API returns the newest page.
+    const loadHistory = useCallback(async (userId: string) => {
+        setIsLoadingHistory(true);
+        setHistoryError(null);
         try {
-            setIsLoadingHistory(true);
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-            const response = await fetch(`${apiUrl}/api/messages?withUserId=${userId}&limit=50`, {
-                headers: { Authorization: `Bearer ${firebaseToken}` },
-            });
-
-            if (response.ok) {
-                const historyRaw: any[] = await response.json();
-                const normalized = historyRaw
-                    .map((m) => normalizeMessage(m))
-                    .filter(Boolean) as ChatMessage[];
-
-                normalized.sort(
-                    (a, b) =>
-                        new Date(a.dateTimeCreated).getTime() - new Date(b.dateTimeCreated).getTime()
-                );
-
-                setMessages(normalized);
-            }
+            const params = new URLSearchParams({ withUserId: userId });
+            const historyRaw = await apiJson<any[]>(`/api/messages?${params.toString()}`, { auth: true, cache: "no-store" });
+            const normalized = (Array.isArray(historyRaw) ? historyRaw : [])
+                .map((m) => normalizeMessage(m))
+                .filter(Boolean) as ChatMessage[];
+            // Merge, don't replace: live messages that arrived while the request was in flight stay.
+            setMessages((prev) => dedupeSorted([...prev, ...normalized]));
         } catch (err) {
-            console.error("Failed to fetch chat history:", err);
+            setHistoryError(errorMessage(err, "Couldn't load messages."));
         } finally {
             setIsLoadingHistory(false);
         }
-    };
+    }, [normalizeMessage]);
 
     useEffect(() => {
-        if (!firebaseToken) return;
+        if (!signedIn || !otherUserId) return;
+        setMessages([]);
+        void loadHistory(otherUserId);
+    }, [signedIn, otherUserId, loadHistory]);
 
-        const wsUrl = `ws://localhost:3001/api/messages/ws?token=${firebaseToken}`;
-        ws.current = new WebSocket(wsUrl);
+    // Socket lifecycle: connect with a fresh token in the subprotocol, "connected" only after `ready`.
+    useEffect(() => {
+        if (!signedIn) return;
+        let disposed = false;
+        let attempt = 0;
+        let timer: ReturnType<typeof setTimeout> | null = null;
 
-        ws.current.onopen = () => {
-            console.log("WebSocket connected");
-            setIsConnected(true);
-            setError(null);
-
-            if (otherUserId) {
-                fetchChatHistory(otherUserId);
-            }
+        const scheduleReconnect = () => {
+            if (disposed || timer) return;
+            setIsReconnecting(true);
+            timer = setTimeout(() => {
+                timer = null;
+                void connect();
+            }, reconnectDelay(attempt));
+            attempt += 1;
         };
 
-        ws.current.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
+        const connect = async () => {
+            if (disposed) return;
+            const current = ws.current;
+            if (current && (current.readyState === WebSocket.OPEN || current.readyState === WebSocket.CONNECTING)) return;
+            const token = await getFreshToken(attempt > 0);
+            if (disposed) return;
+            if (!token) {
+                scheduleReconnect();
+                return;
+            }
+            const socket = new WebSocket(chatSocketUrl(), chatSocketProtocols(token));
+            ws.current = socket;
 
+            socket.onmessage = (event) => {
+                let data: any;
+                try {
+                    data = JSON.parse(event.data);
+                } catch {
+                    return;
+                }
                 if (data.type === "ready") {
-                    // ✅ This is crucial for correct isSent computation on the receiver side
                     readyUserIdRef.current = data.userId ?? null;
-                    console.log("Connected as user:", readyUserIdRef.current);
-                    return;
-                }
-
-                if (data.type === "message") {
+                    attempt = 0;
+                    setIsConnected(true);
+                    setIsReconnecting(false);
+                    // Back online: deliver anything queued and catch up on what we missed while down.
+                    void outboxRef.current?.flushNow();
+                    if (otherUserIdRef.current) void loadHistoryRef.current(otherUserIdRef.current);
+                } else if (data.type === "message") {
                     const normalized = normalizeMessage(data.message);
-                    if (!normalized) return;
-
-                    setMessages((prev) => {
-                        const next = dedupeById([...prev, normalized]);
-                        next.sort(
-                            (a, b) =>
-                                new Date(a.dateTimeCreated).getTime() - new Date(b.dateTimeCreated).getTime()
-                        );
-                        return next;
-                    });
+                    if (normalized) appendMessages([normalized]);
+                } else if (data.type === "messageRead") {
+                    setMessages((prev) => prev.map((m) => (m.id === data.messageId ? { ...m, isRead: true } : m)));
+                }
+                // {type:"error"} frames only concern WS sends, which this client no longer makes.
+            };
+            socket.onclose = (event) => {
+                if (ws.current === socket) ws.current = null;
+                setIsConnected(false);
+                if (event.code === CLOSE_ACCOUNT_INACTIVE) {
+                    setIsReconnecting(false);
                     return;
                 }
+                scheduleReconnect();
+            };
+            // onerror is always followed by onclose; reconnect is handled there.
+        };
 
-                if (data.type === "messageRead") {
-                    setMessages((prev) =>
-                        prev.map((m) => (m.id === data.messageId ? { ...m, isRead: true } : m))
-                    );
-                    return;
-                }
-
-                if (data.type === "error") {
-                    console.error("Chat error:", data.error);
-                    setError(data.error);
-                    return;
-                }
-            } catch (err) {
-                console.error("Error parsing WebSocket message:", err);
+        const reconnectNow = () => {
+            if (document.visibilityState === "hidden") return;
+            void outboxRef.current?.flushNow();
+            if (timer) {
+                clearTimeout(timer);
+                timer = null;
             }
+            attempt = 0;
+            void connect();
         };
 
-        ws.current.onerror = (err) => {
-            console.error("WebSocket error:", err);
-            setError("Connection error. Please try again.");
-        };
-
-        ws.current.onclose = () => {
-            console.log("WebSocket disconnected");
-            setIsConnected(false);
-        };
+        void connect();
+        window.addEventListener("online", reconnectNow);
+        document.addEventListener("visibilitychange", reconnectNow);
 
         return () => {
-            ws.current?.close();
+            disposed = true;
+            if (timer) clearTimeout(timer);
+            window.removeEventListener("online", reconnectNow);
+            document.removeEventListener("visibilitychange", reconnectNow);
+            const socket = ws.current;
+            ws.current = null;
+            if (socket) {
+                socket.onclose = null;
+                socket.close();
+            }
+            setIsConnected(false);
+            setIsReconnecting(false);
         };
-    }, [firebaseToken, otherUserId]);
+    }, [signedIn, normalizeMessage, appendMessages]);
 
-    const sendMessage = async ({
-        toUserId,
-        text,
-        imageUrl,
-        jobData,
-    }: {
-        toUserId: string;
-        text?: string;
-        imageUrl?: string;
-        jobData?: { id?: string; title?: string };
-    }) => {
-        // WebSocket
-        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-            ws.current.send(
-                JSON.stringify({
-                    action: "sendMessage",
-                    toUserId,
-                    text,
-                    imageUrl,
-                    jobData,
-                })
-            );
-            return;
+    // Latest values for the socket handler without reconnecting when they change.
+    const otherUserIdRef = useRef(otherUserId);
+    const loadHistoryRef = useRef(loadHistory);
+    useEffect(() => {
+        otherUserIdRef.current = otherUserId;
+        loadHistoryRef.current = loadHistory;
+    }, [otherUserId, loadHistory]);
+
+    /** Queues a message for delivery and returns its client id; never blocks on connectivity. */
+    const sendMessage = useCallback((payload: OutboxPayload): string | null => {
+        const outbox = outboxRef.current;
+        if (!outbox) {
+            setError("Not signed in");
+            return null;
         }
+        return outbox.enqueue(payload);
+    }, []);
 
-        // Fallback HTTP
-        if (!firebaseToken) {
-            console.error("Not authenticated");
-            setError("Not authenticated");
-            return;
-        }
+    const retryMessage = useCallback((clientId: string) => outboxRef.current?.retry(clientId), []);
+    const discardMessage = useCallback((clientId: string) => outboxRef.current?.discard(clientId), []);
 
-        try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-            const response = await fetch(`${apiUrl}/api/messages`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${firebaseToken}`,
-                },
-                body: JSON.stringify({ toUserId, text, imageUrl, jobData }),
-            });
+    const markAsRead = useCallback((messageId: string) => {
+        const socket = ws.current;
+        if (!socket || socket.readyState !== WebSocket.OPEN) return;
+        socket.send(JSON.stringify({ action: "markAsRead", messageId }));
+    }, []);
 
-            if (!response.ok) throw new Error("Failed to send message");
+    const retryHistory = useCallback(() => {
+        if (otherUserId) void loadHistory(otherUserId);
+    }, [otherUserId, loadHistory]);
 
-            const raw = await response.json();
-            const normalized = normalizeMessage(raw);
-            if (!normalized) return;
-
-            setMessages((prev) => {
-                const next = dedupeById([...prev, normalized]);
-                next.sort(
-                    (a, b) =>
-                        new Date(a.dateTimeCreated).getTime() - new Date(b.dateTimeCreated).getTime()
-                );
-                return next;
-            });
-        } catch (err) {
-            console.error("Failed to send message via HTTP:", err);
-            setError("Failed to send message. Please try again.");
-        }
+    return {
+        isConnected,
+        isReconnecting,
+        messages,
+        outbox: outboxItems,
+        sendMessage,
+        retryMessage,
+        discardMessage,
+        markAsRead,
+        error,
+        isLoadingHistory,
+        historyError,
+        retryHistory,
     };
-
-    const markAsRead = (messageId: string) => {
-        if (!ws.current || ws.current.readyState !== WebSocket.OPEN) return;
-        ws.current.send(JSON.stringify({ action: "markAsRead", messageId }));
-    };
-
-    return { isConnected, messages, sendMessage, markAsRead, error, isLoadingHistory };
 }

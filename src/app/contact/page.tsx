@@ -37,22 +37,22 @@ export default function ContactPage() {
     <div className="min-h-screen">
       <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-8 text-center">
-          <h1 className="section-heading">{t("contact.title")}</h1>
+          <h1 className="font-display text-h1 text-ink">{t("contact.title")}</h1>
           <p className="mt-3 text-sm leading-6 text-ink-muted">{t("contact.subtitle")}</p>
         </div>
 
         {loading ? (
-          <div className="surface-panel p-10 text-center text-ink-muted">{t("common.loading")}</div>
+          <div className="rounded-card border border-line bg-surface p-10 text-center text-ink-muted">{t("common.loading")}</div>
         ) : !hasAnyInfo ? (
-          <div className="surface-panel p-10 text-center text-ink-muted">{t("contact.notConfigured")}</div>
+          <div className="rounded-card border border-line bg-surface p-10 text-center text-ink-muted">{t("contact.notConfigured")}</div>
         ) : (
-          <div className="surface-card space-y-5 p-6 md:p-8">
+          <div className="rounded-card border border-line bg-surface shadow-stamp space-y-5 p-6 md:p-8">
             {info?.phone && (
               <a
                 href={`tel:${info.phone}`}
-                className="flex items-center gap-4 rounded-2xl border border-outline bg-white p-4 transition hover:border-brand/35"
+                className="flex items-center gap-4 rounded-2xl border border-line bg-white p-4 transition hover:border-primary/35"
               >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-brand">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary">
                   <Phone className="h-5 w-5" />
                 </span>
                 <span>
@@ -66,9 +66,9 @@ export default function ContactPage() {
             {info?.email && (
               <a
                 href={`mailto:${info.email}`}
-                className="flex items-center gap-4 rounded-2xl border border-outline bg-white p-4 transition hover:border-brand/35"
+                className="flex items-center gap-4 rounded-2xl border border-line bg-white p-4 transition hover:border-primary/35"
               >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-brand">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary">
                   <Mail className="h-5 w-5" />
                 </span>
                 <span>
@@ -80,8 +80,8 @@ export default function ContactPage() {
               </a>
             )}
             {info?.address && (
-              <div className="flex items-center gap-4 rounded-2xl border border-outline bg-white p-4">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-brand">
+              <div className="flex items-center gap-4 rounded-2xl border border-line bg-white p-4">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary">
                   <MapPin className="h-5 w-5" />
                 </span>
                 <span>

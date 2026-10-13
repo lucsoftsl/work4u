@@ -1,17 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import CurrencyInput from "react-currency-input-field";
-import { ArrowLeft, ArrowRight, CheckCircle2, Circle } from "lucide-react";
-import { CurrencySelector } from "@/components/CurrencySelector";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { CategorySelector } from "@/components/CategorySelector";
+import { Button, buttonClasses } from "@/components/ui/Button";
+import { Input, Select, Textarea } from "@/components/ui/Field";
 import { LocationPicker } from "@/components/ui/LocationPicker";
+import { formatMoney } from "@/components/ui/MoneyPlate";
+import { MoneyField } from "@/components/ui/MoneyField";
+import { Skeleton } from "@/components/ui/QueryState";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { ReviewList, Stepper, WizardActionBar, WizardAlert } from "@/components/ui/Stepper";
 import { BUDGET_TYPES, DURATIONS, EXPERIENCE_LEVELS } from "@/data/categories";
 import { getCategoriesWithTranslations, getCategoryName, getExperienceLevelLabel, getBudgetTypeLabel, getDurationLabel } from "@/lib/category-utils";
 import { useTranslation } from "@/lib/i18n";
 import { api } from "@/lib/api";
+import { getSubscriptionStatus } from "@/api/subscriptions";
+import { currentPath, signInPath } from "@/lib/auth-redirect";
+import { geocodeAddress } from "@/lib/geocode";
+import { clearDraft, defaultCurrencyForLocale, firstErrorKey, focusFieldById, hasRealCoordinates, loadDraft, parsePositiveAmount, saveDraft } from "@/lib/wizard";
 import { useAuth } from "@/context/AuthContext";
 
 type JobFormState = {
@@ -20,6 +29,7 @@ type JobFormState = {
   category: string;
   budget: string;
   budgetType: string;
+  /** Empty = follow the locale default until the user picks one. */
   budgetCurrency: string;
   duration: string;
   skillsRequired: string;
@@ -30,13 +40,16 @@ type JobFormState = {
   remote: boolean;
 };
 
+type FieldKey = "title" | "category" | "description" | "budget" | "location";
+type FieldErrors = Partial<Record<FieldKey, string>>;
+
 const INITIAL_FORM: JobFormState = {
   title: "",
   description: "",
   category: "",
   budget: "",
   budgetType: "FIXED",
-  budgetCurrency: "USD",
+  budgetCurrency: "",
   duration: "",
   skillsRequired: "",
   experienceLevel: "BEGINNER",
@@ -46,360 +59,419 @@ const INITIAL_FORM: JobFormState = {
   remote: true,
 };
 
+const TOTAL_STEPS = 3;
+const FREE_POST_LIMIT = 3;
+const DRAFT_KEY = "w4u:draft:post-job";
+const IDS: Record<FieldKey, string> = {
+  title: "pj-title",
+  category: "pj-category",
+  description: "pj-description",
+  budget: "pj-budget",
+  location: "pj-location",
+};
+const STEP_FIELDS: Record<number, readonly FieldKey[]> = {
+  1: ["title", "category", "description"],
+  2: ["budget"],
+  3: ["location"],
+};
+
+/** Existing labels carry a trailing " *"; Field adds its own required marker. */
+const plain = (label: string) => label.replace(/\s*\*\s*$/, "");
+
 export default function PostJobPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const router = useRouter();
-  const { firebaseToken } = useAuth();
+  const { firebaseToken, user, loading: authLoading } = useAuth();
 
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FieldErrors>({});
   const [formData, setFormData] = useState<JobFormState>(INITIAL_FORM);
+  const [draftReady, setDraftReady] = useState(false);
+  const [usage, setUsage] = useState<{ active: number; isPro: boolean } | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const stepMounted = useRef(false);
+  // Coordinates found by the geocode fallback in validateStep (state is stale inside the same submit).
+  const geocodedRef = useRef<{ lat: number; lng: number } | null>(null);
 
+  const currency = formData.budgetCurrency || defaultCurrencyForLocale(locale);
   const categories = useMemo(() => getCategoriesWithTranslations(t), [t]);
-  const STEPS = useMemo(
+  const steps = useMemo(
     () => [
-      { title: t('post.step1Title'), description: t('post.step1Desc') },
-      { title: t('post.step2Title'), description: t('post.step2Desc') },
-      { title: t('post.step3Title'), description: t('post.step3Desc') },
+      { title: t("post.step1Title"), description: t("post.step1Desc") },
+      { title: t("post.step2Title"), description: t("post.step2Desc") },
+      { title: t("post.step3Title"), description: t("post.step3Desc") },
     ],
     [t]
   );
 
-  const updateField = <K extends keyof JobFormState>(key: K, value: JobFormState[K]) => {
+  // Auth gate: wait for auth to resolve, then send guests to sign-in and back here.
+  useEffect(() => {
+    if (authLoading) return;
+    if (!firebaseToken) router.replace(signInPath(currentPath()));
+  }, [authLoading, firebaseToken, router]);
+
+  // Restore a draft saved before a sign-in redirect.
+  useEffect(() => {
+    const draft = loadDraft<{ form: JobFormState; step: number }>(DRAFT_KEY);
+    if (draft?.form) {
+      setFormData({ ...INITIAL_FORM, ...draft.form });
+      if (draft.step >= 1 && draft.step <= TOTAL_STEPS) setStep(draft.step);
+    }
+    setDraftReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (draftReady) saveDraft(DRAFT_KEY, { form: formData, step });
+  }, [draftReady, formData, step]);
+
+  // Plan usage, when the data is available; failures are silent.
+  useEffect(() => {
+    if (authLoading || !firebaseToken || !user?.id) return;
+    let cancelled = false;
+    Promise.all([api.getMyJobs(user.id, firebaseToken), getSubscriptionStatus(firebaseToken)])
+      .then(([jobs, sub]) => {
+        if (cancelled) return;
+        const now = new Date();
+        const active = jobs.filter((j) => !j.expiresAt || new Date(j.expiresAt) > now).length;
+        setUsage({ active, isPro: sub.plan === "pro" && sub.status === "active" });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, firebaseToken, user?.id]);
+
+  // Move focus to the step heading when the step changes (not on first render).
+  useEffect(() => {
+    if (!stepMounted.current) {
+      stepMounted.current = true;
+      return;
+    }
+    headingRef.current?.focus();
+    window.scrollTo({ top: 0 });
+  }, [step]);
+
+  const updateField = useCallback(<K extends keyof JobFormState>(key: K, value: JobFormState[K], clears?: FieldKey) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
+    if (clears) setErrors((prev) => (prev[clears] ? { ...prev, [clears]: undefined } : prev));
+  }, []);
+
+  const showErrors = (next: FieldErrors, order: readonly FieldKey[]) => {
+    setErrors(next);
+    const first = firstErrorKey(order, next);
+    if (first) focusFieldById(IDS[first]);
   };
 
-  const validateStep = () => {
+  /** Returns true when the current step is valid. May geocode a typed address. */
+  const validateStep = async (): Promise<boolean> => {
+    const next: FieldErrors = {};
+    geocodedRef.current = null;
     if (step === 1) {
-      if (!formData.title.trim() || !formData.category.trim() || !formData.description.trim()) {
-        setError(t('post.validationStep1'));
-        return false;
+      if (!formData.title.trim()) next.title = t("wizard.titleRequired");
+      if (!formData.category.trim()) next.category = t("wizard.categoryRequired");
+      if (!formData.description.trim()) next.description = t("wizard.descriptionRequired");
+    } else if (step === 2) {
+      if (parsePositiveAmount(formData.budget) === null) next.budget = t("wizard.budgetPositive");
+    } else if (!formData.remote) {
+      if (!formData.location.trim()) {
+        next.location = t("post.validationStep3");
+      } else if (!hasRealCoordinates(formData.latitude, formData.longitude)) {
+        const point = await geocodeAddress(formData.location);
+        if (point && hasRealCoordinates(point.lat, point.lng)) {
+          geocodedRef.current = point;
+          setFormData((prev) => ({ ...prev, latitude: point.lat, longitude: point.lng }));
+        } else {
+          next.location = t("wizard.locationNotFound");
+        }
       }
     }
-
-    if (step === 2) {
-      if (!formData.budget || !formData.duration || !formData.experienceLevel) {
-        setError(t('post.validationStep2'));
-        return false;
-      }
-    }
-
-    if (step === 3) {
-      if (!formData.remote && !formData.location.trim()) {
-        setError(t('post.validationStep3'));
-        return false;
-      }
-    }
-
-    setError(null);
-    return true;
+    showErrors(next, STEP_FIELDS[step]);
+    return Object.keys(next).length === 0;
   };
 
-  const handleContinue = async () => {
-    if (!validateStep()) return;
-
-    if (step < STEPS.length) {
-      setStep((prev) => prev + 1);
-      return;
-    }
-
-    if (!firebaseToken) {
-      router.push("/signin");
-      return;
-    }
-
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (submitting) return;
+    setFormError(null);
     setSubmitting(true);
     try {
-      const location = formData.remote ? "Remote" : formData.location.trim();
+      if (!(await validateStep())) return;
+      if (step < TOTAL_STEPS) {
+        setStep((prev) => prev + 1);
+        return;
+      }
+      if (!firebaseToken) {
+        router.push(signInPath(currentPath()));
+        return;
+      }
+
+      const onSite = !formData.remote;
+      const latitude = onSite ? (geocodedRef.current?.lat ?? formData.latitude) : null;
+      const longitude = onSite ? (geocodedRef.current?.lng ?? formData.longitude) : null;
+      if (onSite && !hasRealCoordinates(latitude, longitude)) {
+        showErrors({ location: t("wizard.locationNotFound") }, STEP_FIELDS[3]);
+        return;
+      }
 
       const created = await api.createJob(
         {
           title: formData.title.trim(),
           description: formData.description.trim(),
           category: formData.category,
-          budget: Number(formData.budget),
+          budget: parsePositiveAmount(formData.budget),
           budgetType: formData.budgetType,
-          budgetCurrency: formData.budgetCurrency,
-          duration: formData.duration,
+          budgetCurrency: currency,
+          duration: formData.duration || undefined,
           experienceLevel: formData.experienceLevel,
           skillsRequired: formData.skillsRequired,
-          location,
-          latitude: formData.remote ? null : formData.latitude,
-          longitude: formData.remote ? null : formData.longitude,
+          location: onSite ? formData.location.trim() : "Remote",
+          latitude,
+          longitude,
           remote: formData.remote,
         },
         firebaseToken
       );
 
-      // Remote jobs have no location to search "nearby" against — the
-      // discovery map only makes sense for on-site work.
+      clearDraft(DRAFT_KEY);
+      // Remote jobs have no location to search "nearby" against.
       router.push(formData.remote ? "/my-jobs" : `/jobs/${created.id}/nearby-pros`);
     } catch (err) {
       console.error("Error creating job:", err);
-      setError(err instanceof Error ? err.message : t('post.createError'));
+      setFormError(err instanceof Error && err.message ? err.message : t("post.createError"));
     } finally {
       setSubmitting(false);
     }
   };
 
-  return (
-    <div className="min-h-screen">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <section className="surface-card overflow-hidden p-6 md:p-8">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-semibold text-brand">
-                <ArrowLeft className="h-4 w-4" />
-                {t("nav.backToDashboard")}
-              </Link>
-              <span className="eyebrow mt-4">{t('post.eyebrow')}</span>
-              <h1 className="mt-4 section-heading">{t('post.heading')}</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted">
-                {t('post.subtitle')}
-              </p>
-            </div>
-            <div className="rounded-[24px] bg-[#eff7fa] px-5 py-4 text-sm text-ink">
-              <p className="font-semibold text-ink-subtle">{t('post.currentStep')}</p>
-              <p className="mt-1 text-lg font-black">{step} / {STEPS.length}</p>
-            </div>
-          </div>
-        </section>
+  // Enter inside the address combobox picks a suggestion; it must never publish the job.
+  const blockEnterOnLocation = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" && (event.target as HTMLElement).id === IDS.location) event.preventDefault();
+  };
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-[320px_minmax(0,1fr)]">
-          <aside className="surface-panel p-5">
-            <div className="space-y-4">
-              {STEPS.map((item, index) => {
-                const currentStep = index + 1;
-                const isActive = currentStep === step;
-                const isComplete = currentStep < step;
-
-                return (
-                  <div key={item.title} className={`rounded-[24px] border p-4 ${isActive ? "border-brand bg-brand-soft" : "border-outline bg-white"}`}>
-                    <div className="flex items-start gap-3">
-                      <span className="mt-0.5">
-                        {isComplete ? (
-                          <CheckCircle2 className="h-5 w-5 text-brand" />
-                        ) : isActive ? (
-                          <Circle className="h-5 w-5 fill-brand text-brand" />
-                        ) : (
-                          <Circle className="h-5 w-5 text-ink-subtle" />
-                        )}
-                      </span>
-                      <div>
-                        <p className="text-sm font-black uppercase tracking-[0.16em] text-ink-subtle">{t('dashboard.step')} {currentStep}</p>
-                        <h2 className="mt-1 text-base font-bold text-ink">{item.title}</h2>
-                        <p className="mt-1 text-sm leading-6 text-ink-muted">{item.description}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </aside>
-
-          <section className="surface-card p-6 md:p-8">
-            {error ? (
-              <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                {error}
-              </div>
-            ) : null}
-
-            {step === 1 ? (
-              <div className="space-y-6">
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-ink">{t('post.labels.jobTitle')}</label>
-                  <input
-                    value={formData.title}
-                    onChange={(event) => updateField("title", event.target.value)}
-                    placeholder={t('post.titlePlaceholder')}
-                    className="field-shell w-full"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-ink">{t('post.labels.category')}</label>
-                  <CategorySelector
-                    value={formData.category}
-                    onChange={(categoryId) => updateField("category", categoryId)}
-                    categories={categories}
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-ink">{t('post.labels.description')}</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(event) => updateField("description", event.target.value)}
-                    rows={8}
-                    placeholder={t('post.descPlaceholder')}
-                    className="field-shell min-h-[220px] w-full resize-y"
-                  />
-                </div>
-              </div>
-            ) : null}
-
-            {step === 2 ? (
-              <div className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-sm font-semibold text-ink">{t('post.labels.budgetType')}</label>
-                    <select
-                      value={formData.budgetType}
-                      onChange={(event) => updateField("budgetType", event.target.value)}
-                      className="field-shell w-full"
-                    >
-                      {BUDGET_TYPES.map((type) => (
-                        <option key={type.value} value={type.value}>{getBudgetTypeLabel(type.value, t)}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-semibold text-ink">{t('post.labels.duration')}</label>
-                    <select
-                      value={formData.duration}
-                      onChange={(event) => updateField("duration", event.target.value)}
-                      className="field-shell w-full"
-                    >
-                      <option value="">{t('post.selectDuration')}</option>
-                      {DURATIONS.map((duration) => (
-                        <option key={duration.value} value={duration.value}>{getDurationLabel(duration.value, t)}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-ink">{t('post.labels.budget')}</label>
-                  <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
-                    <CurrencyInput
-                      value={formData.budget}
-                      onValueChange={(value) => updateField("budget", value || "")}
-                      decimalsLimit={2}
-                      placeholder="0"
-                      className="field-shell w-full"
-                    />
-                    <CurrencySelector
-                      value={formData.budgetCurrency}
-                      onChange={(currency) => updateField("budgetCurrency", currency)}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-sm font-semibold text-ink">{t('post.labels.experience')}</label>
-                    <select
-                      value={formData.experienceLevel}
-                      onChange={(event) => updateField("experienceLevel", event.target.value)}
-                      className="field-shell w-full"
-                    >
-                      {EXPERIENCE_LEVELS.map((level) => (
-                        <option key={level.value} value={level.value}>{getExperienceLevelLabel(level.value, t)}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-semibold text-ink">{t('post.labels.skills')}</label>
-                    <input
-                      value={formData.skillsRequired}
-                      onChange={(event) => updateField("skillsRequired", event.target.value)}
-                      placeholder={t('post.skillsPlaceholder')}
-                      className="field-shell w-full"
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            {step === 3 ? (
-              <div className="space-y-6">
-                <div className="rounded-[24px] bg-[#f7fbfc] p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-black uppercase tracking-[0.16em] text-ink-subtle">{t('post.workSetting')}</p>
-                      <h2 className="mt-2 text-xl font-black text-ink">{formData.remote ? t('post.remoteFirst') : t('post.onSiteDelivery')}</h2>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => updateField("remote", !formData.remote)}
-                      className="secondary-cta"
-                    >
-                      {t('post.switchTo')} {formData.remote ? t('jobs.onSite') : t('jobDetail.remote')}
-                    </button>
-                  </div>
-                </div>
-
-                {!formData.remote ? (
-                  <div>
-                    <label className="mb-2 block text-sm font-semibold text-ink">{t('jobDetail.location')}</label>
-                    <LocationPicker
-                      value={{ lat: formData.latitude ?? 0, lng: formData.longitude ?? 0, address: formData.location }}
-                      onChange={({ lat, lng, address }) => {
-                        setFormData((prev) => ({ ...prev, location: address, latitude: lat, longitude: lng }));
-                      }}
-                      addressPlaceholder={t('common.searchAddress')}
-                    />
-                  </div>
-                ) : null}
-
-                <div className="rounded-[28px] border border-outline bg-white p-6">
-                  <p className="text-sm font-black uppercase tracking-[0.18em] text-ink-subtle">{t('common.review')}</p>
-                  <dl className="mt-5 grid gap-4 md:grid-cols-2">
-                    <div>
-                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">{t('common.title')}</dt>
-                      <dd className="mt-1 text-base font-semibold text-ink">{formData.title || t('dashboard.notSet')}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">{t('jobs.category')}</dt>
-                      <dd className="mt-1 text-base font-semibold text-ink">{formData.category ? getCategoryName(formData.category, t) : t('dashboard.notSet')}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">{t('jobDetail.budget')}</dt>
-                      <dd className="mt-1 text-base font-semibold text-ink">{formData.budget || "0"} {formData.budgetCurrency}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">{t('common.duration')}</dt>
-                      <dd className="mt-1 text-base font-semibold text-ink">{formData.duration ? getDurationLabel(formData.duration, t) : t('dashboard.notSet')}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">{t('post.experienceLevelLabel')}</dt>
-                      <dd className="mt-1 text-base font-semibold text-ink">{getExperienceLevelLabel(formData.experienceLevel, t)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-bold uppercase tracking-[0.16em] text-ink-subtle">{t('post.deliveryLabel')}</dt>
-                      <dd className="mt-1 text-base font-semibold text-ink">{formData.remote ? t('jobDetail.remote') : formData.location || t('post.locationPending')}</dd>
-                    </div>
-                  </dl>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-outline pt-6">
-              <button
-                type="button"
-                onClick={() => setStep((prev) => Math.max(1, prev - 1))}
-                disabled={step === 1}
-                className="secondary-cta disabled:opacity-50"
-              >
-                {t('common.previous')}
-              </button>
-              <button
-                type="button"
-                onClick={handleContinue}
-                disabled={submitting}
-                className="primary-cta disabled:opacity-60"
-              >
-                {step === STEPS.length ? (submitting ? t('post.publishing') : t('post.publishJob')) : t('common.continue')}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </button>
-            </div>
-          </section>
-        </div>
+  if (authLoading || !firebaseToken) {
+    return (
+      <div className="mx-auto w-full max-w-content px-[var(--gutter)] py-10" role="status" aria-busy="true">
+        <span className="sr-only">{t("common.loading")}</span>
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="mt-6 h-64 w-full" />
       </div>
+    );
+  }
 
+  const freeLeft = usage && !usage.isPro ? Math.max(0, FREE_POST_LIMIT - usage.active) : null;
+
+  return (
+    <div className="mx-auto w-full max-w-content px-[var(--gutter)] py-6 md:py-10">
+      <Link href="/dashboard" className="inline-flex min-h-[44px] items-center gap-2 text-label text-primary hover:underline">
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        {t("nav.backToDashboard")}
+      </Link>
+      <h1 className="mt-1 font-display text-h1 text-ink">{t("post.title")}</h1>
+      <p className="mt-2 max-w-2xl text-body text-ink-muted">{t("wizard.postJobSubtitle")}</p>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-10">
+        <Stepper steps={steps} current={step} label={t("wizard.postJobProgress")} className="lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] lg:self-start" />
+
+        <form
+          noValidate
+          onSubmit={handleSubmit}
+          aria-busy={submitting || undefined}
+          className="min-w-0 md:rounded-card md:border md:border-line md:bg-surface md:p-8 md:shadow-stamp lg:max-w-[680px]"
+        >
+          {freeLeft !== null ? (
+            freeLeft > 0 ? (
+              <WizardAlert tone="info" className="mb-6">
+                {t("wizard.freePostsLeft").replace("{left}", String(freeLeft)).replace("{limit}", String(FREE_POST_LIMIT))}
+              </WizardAlert>
+            ) : (
+              <WizardAlert tone="warning" className="mb-6">
+                <p className="font-bold">{t("myJobs.limitReachedTitle")}</p>
+                <p className="mt-0.5">{t("myJobs.limitReachedBody")}</p>
+                <Link href="/pricing" className="mt-2 inline-flex min-h-[44px] items-center font-bold text-primary underline">
+                  {t("wizard.viewPlans")}
+                </Link>
+              </WizardAlert>
+            )
+          ) : null}
+
+          {formError ? <WizardAlert tone="error" className="mb-6">{formError}</WizardAlert> : null}
+
+          <h2 ref={headingRef} tabIndex={-1} className="font-display text-h2 text-ink focus:outline-none">
+            {steps[step - 1].title}
+          </h2>
+          <p className="mb-6 mt-1 text-body text-ink-muted">{steps[step - 1].description}</p>
+
+          {step === 1 ? (
+            <div className="space-y-6">
+              <Input
+                id={IDS.title}
+                label={plain(t("post.labels.jobTitle"))}
+                required
+                value={formData.title}
+                onChange={(e) => updateField("title", e.target.value, "title")}
+                error={errors.title}
+                placeholder={t("post.titlePlaceholder")}
+                autoComplete="off"
+              />
+              <CategorySelector
+                id={IDS.category}
+                label={plain(t("post.labels.category"))}
+                required
+                value={formData.category}
+                onChange={(categoryId) => updateField("category", categoryId, "category")}
+                categories={categories}
+                error={errors.category}
+              />
+              <Textarea
+                id={IDS.description}
+                label={plain(t("post.labels.description"))}
+                required
+                rows={8}
+                value={formData.description}
+                onChange={(e) => updateField("description", e.target.value, "description")}
+                error={errors.description}
+                placeholder={t("post.descPlaceholder")}
+              />
+            </div>
+          ) : null}
+
+          {step === 2 ? (
+            <div className="space-y-6">
+              <div className="space-y-1.5">
+                <span aria-hidden="true" className="block text-label text-ink">{plain(t("post.labels.budgetType"))}</span>
+                <SegmentedControl
+                  label={plain(t("post.labels.budgetType"))}
+                  value={formData.budgetType}
+                  onChange={(value) => updateField("budgetType", value)}
+                  options={BUDGET_TYPES.map((type) => ({ value: type.value, label: getBudgetTypeLabel(type.value, t) }))}
+                  className="w-full [&>button]:flex-1"
+                />
+              </div>
+
+              <MoneyField
+                id={IDS.budget}
+                label={plain(t("post.labels.budget"))}
+                currencyLabel={t("post.labels.currency")}
+                required
+                amount={formData.budget}
+                onAmountChange={(value) => updateField("budget", value, "budget")}
+                currency={currency}
+                onCurrencyChange={(value) => updateField("budgetCurrency", value)}
+                error={errors.budget}
+              />
+
+              <Select
+                label={`${plain(t("post.labels.duration"))} ${t("biz.optional")}`}
+                value={formData.duration}
+                onChange={(e) => updateField("duration", e.target.value)}
+              >
+                <option value="">{t("post.selectDuration")}</option>
+                {DURATIONS.map((duration) => (
+                  <option key={duration.value} value={duration.value}>{getDurationLabel(duration.value, t)}</option>
+                ))}
+              </Select>
+
+              <div className="space-y-1.5">
+                <span aria-hidden="true" className="block text-label text-ink">{plain(t("post.labels.experience"))}</span>
+                <SegmentedControl
+                  label={plain(t("post.labels.experience"))}
+                  value={formData.experienceLevel}
+                  onChange={(value) => updateField("experienceLevel", value)}
+                  options={EXPERIENCE_LEVELS.map((level) => ({ value: level.value, label: getExperienceLevelLabel(level.value, t) }))}
+                  className="w-full [&>button]:flex-1"
+                />
+              </div>
+
+              <Input
+                label={t("post.labels.skills")}
+                value={formData.skillsRequired}
+                onChange={(e) => updateField("skillsRequired", e.target.value)}
+                placeholder={t("post.skillsPlaceholder")}
+                autoComplete="off"
+              />
+            </div>
+          ) : null}
+
+          {step === 3 ? (
+            <div className="space-y-6" onKeyDown={blockEnterOnLocation}>
+              <div className="space-y-1.5">
+                <span aria-hidden="true" className="block text-label text-ink">{t("post.workSetting")}</span>
+                <SegmentedControl
+                  label={t("post.workSetting")}
+                  value={formData.remote ? "remote" : "onsite"}
+                  onChange={(value) => {
+                    updateField("remote", value === "remote");
+                    setErrors((prev) => ({ ...prev, location: undefined }));
+                  }}
+                  options={[
+                    { value: "remote", label: t("jobDetail.remote") },
+                    { value: "onsite", label: t("jobs.onSite") },
+                  ]}
+                  className="w-full [&>button]:flex-1"
+                />
+              </div>
+
+              {!formData.remote ? (
+                <LocationPicker
+                  id={IDS.location}
+                  label={t("jobDetail.location")}
+                  required
+                  error={errors.location}
+                  value={{ lat: formData.latitude ?? 0, lng: formData.longitude ?? 0, address: formData.location }}
+                  onChange={({ lat, lng, address }) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      location: address,
+                      latitude: hasRealCoordinates(lat, lng) ? lat : null,
+                      longitude: hasRealCoordinates(lat, lng) ? lng : null,
+                    }));
+                    setErrors((prev) => (prev.location ? { ...prev, location: undefined } : prev));
+                  }}
+                  addressPlaceholder={t("common.searchAddress")}
+                />
+              ) : null}
+
+              <ReviewList
+                title={t("common.review")}
+                items={[
+                  { label: t("common.title"), value: formData.title || t("dashboard.notSet") },
+                  { label: t("jobs.category"), value: formData.category ? getCategoryName(formData.category, t) : t("dashboard.notSet") },
+                  {
+                    label: t("jobDetail.budget"),
+                    value: (
+                      <span className="font-display tabular-nums text-money">
+                        {formatMoney(Number(formData.budget) || 0, currency, locale)}
+                        {formData.budgetType === "HOURLY" ? ` ${t("jobDetail.hourly")}` : ""}
+                      </span>
+                    ),
+                  },
+                  { label: t("common.duration"), value: formData.duration ? getDurationLabel(formData.duration, t) : t("dashboard.notSet") },
+                  { label: t("post.experienceLevelLabel"), value: getExperienceLevelLabel(formData.experienceLevel, t) },
+                  { label: t("post.deliveryLabel"), value: formData.remote ? t("jobDetail.remote") : formData.location || t("post.locationPending") },
+                ]}
+              />
+            </div>
+          ) : null}
+
+          <WizardActionBar>
+            {step > 1 ? (
+              <Button type="button" variant="secondary" onClick={() => setStep((prev) => Math.max(1, prev - 1))} disabled={submitting}>
+                {t("post.actions.back")}
+              </Button>
+            ) : (
+              <Link href="/dashboard" className={buttonClasses("secondary")}>
+                {t("common.cancel")}
+              </Link>
+            )}
+            <Button type="submit" loading={submitting} className="min-w-[8rem] flex-1 sm:flex-none">
+              {step === TOTAL_STEPS ? (submitting ? t("post.publishing") : t("post.publishJob")) : t("common.continue")}
+              {step < TOTAL_STEPS ? <ArrowRight className="h-4 w-4" aria-hidden="true" /> : null}
+            </Button>
+          </WizardActionBar>
+        </form>
+      </div>
     </div>
   );
 }

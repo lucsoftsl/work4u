@@ -22,7 +22,7 @@ function RadiusChips({ radiusKm, onChange }: { radiusKm: number; onChange: (km: 
           type="button"
           onClick={() => onChange(km)}
           className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
-            km === radiusKm ? "bg-brand text-white" : "bg-white text-ink-muted hover:text-ink"
+            km === radiusKm ? "bg-primary text-white" : "bg-white text-ink-muted hover:text-ink"
           }`}
         >
           {km}km
@@ -101,21 +101,32 @@ export default function NearbyProsPage() {
     [job, router]
   );
 
+  const markerLabel = useCallback(
+    (listing: NearbyWorkerListing) => {
+      const km = listing.distanceKm;
+      const distance = km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)}km`;
+      return t('nearbyPros.markerLabel')
+        .replace('{name}', listing.worker?.name || t('common.worker'))
+        .replace('{distance}', distance);
+    },
+    [t]
+  );
+
   const center = job?.latitude != null && job?.longitude != null ? { lat: job.latitude, lng: job.longitude } : null;
 
   if (jobLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#eef1f4]">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center bg-canvas">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
   }
 
   if (!job) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[#eef1f4] px-4 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-canvas px-4 text-center">
         <p className="text-lg font-bold text-ink">{t('jobDetail.jobNotFound')}</p>
-        <button type="button" onClick={() => router.push("/my-jobs")} className="primary-cta">
+        <button type="button" onClick={() => router.push("/my-jobs")} className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-control bg-primary px-5 py-2.5 text-label text-on-fill transition-colors duration-fast hover:bg-primary-strong active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45">
           {t('workers.backToMyJobs')}
         </button>
       </div>
@@ -124,12 +135,12 @@ export default function NearbyProsPage() {
 
   if (!center) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[#eef1f4] px-6 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-canvas px-6 text-center">
         <p className="text-lg font-bold text-ink">{t('nearbyPros.locationErrorTitle')}</p>
         <p className="max-w-sm text-sm text-ink-muted">
           {t('nearbyPros.locationErrorDesc')}
         </p>
-        <button type="button" onClick={() => router.push(`/jobs/${job.id}`)} className="primary-cta">
+        <button type="button" onClick={() => router.push(`/jobs/${job.id}`)} className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-control bg-primary px-5 py-2.5 text-label text-on-fill transition-colors duration-fast hover:bg-primary-strong active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45">
           {t('nearbyPros.backToJob')}
         </button>
       </div>
@@ -137,7 +148,7 @@ export default function NearbyProsPage() {
   }
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-[#eef1f4] lg:h-auto lg:overflow-visible">
+    <div className="h-screen w-full overflow-hidden bg-canvas lg:h-auto lg:overflow-visible">
       {/* Mobile: full-bleed map + floating chrome + bottom sheet */}
       <div className="relative h-screen lg:hidden">
         <div className={mobileView === "map" ? "absolute inset-0" : "hidden"}>
@@ -148,32 +159,35 @@ export default function NearbyProsPage() {
             activeListingId={activeListingId}
             onMarkerClick={setActiveListingId}
             onMarkerHover={setActiveListingId}
+            getMarkerLabel={markerLabel}
           />
         </div>
 
         <div className="absolute inset-x-0 top-0 z-10 flex flex-col gap-2 p-4">
+          <h1 className="sr-only">{t('nearbyPros.titleFor')} {job.title}</h1>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => router.push(`/jobs/${job.id}`)}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-soft"
+              aria-label={t('nearbyPros.backToJob')}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-stamp"
             >
-              <ArrowLeft className="h-5 w-5 text-ink" />
+              <ArrowLeft className="h-5 w-5 text-ink" aria-hidden="true" />
             </button>
-            <div className="flex-1 rounded-full bg-white/95 px-4 py-2 text-sm font-bold text-ink shadow-soft backdrop-blur">
+            <div aria-hidden="true" className="flex-1 rounded-full bg-white/95 px-4 py-2 text-sm font-bold text-ink shadow-stamp backdrop-blur">
               {t('nearbyPros.titleFor')} {job.title}
             </div>
           </div>
           <div className="flex items-center justify-between gap-2">
-            <div className="rounded-full bg-white/95 p-1 shadow-soft backdrop-blur">
+            <div className="rounded-full bg-white/95 p-1 shadow-stamp backdrop-blur">
               <RadiusChips radiusKm={radiusKm} onChange={setRadiusKm} />
             </div>
-            <div className="flex shrink-0 rounded-full bg-white/95 p-1 shadow-soft backdrop-blur">
+            <div className="flex shrink-0 rounded-full bg-white/95 p-1 shadow-stamp backdrop-blur">
               <button
                 type="button"
                 onClick={() => setMobileView("map")}
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${
-                  mobileView === "map" ? "bg-brand text-white" : "text-ink-muted"
+                  mobileView === "map" ? "bg-primary text-white" : "text-ink-muted"
                 }`}
               >
                 <MapIcon className="h-3.5 w-3.5" /> {t('common.map')}
@@ -182,7 +196,7 @@ export default function NearbyProsPage() {
                 type="button"
                 onClick={() => setMobileView("list")}
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${
-                  mobileView === "list" ? "bg-brand text-white" : "text-ink-muted"
+                  mobileView === "list" ? "bg-primary text-white" : "text-ink-muted"
                 }`}
               >
                 <List className="h-3.5 w-3.5" /> {t('common.list')}
@@ -192,8 +206,8 @@ export default function NearbyProsPage() {
         </div>
 
         {mobileView === "map" ? (
-          <div className="absolute inset-x-0 bottom-0 z-10 max-h-[42vh] overflow-hidden rounded-t-3xl bg-[#eef1f4] pb-4 pt-3 shadow-[0_-12px_30px_rgba(15,23,42,0.12)]">
-            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-outline" />
+          <div className="absolute inset-x-0 bottom-0 z-10 max-h-[42vh] overflow-hidden rounded-t-3xl bg-canvas pb-4 pt-3 shadow-[0_-12px_30px_rgba(15,23,42,0.12)]">
+            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-line" />
             {listingsLoading ? (
               <p className="px-4 text-sm text-ink-muted">{t('nearbyPros.finding')}</p>
             ) : listings.length === 0 ? (
@@ -244,7 +258,7 @@ export default function NearbyProsPage() {
               <button
                 type="button"
                 onClick={() => router.push(`/jobs/${job.id}`)}
-                className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-brand"
+                className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-primary"
               >
                 <ArrowLeft className="h-4 w-4" /> {t('nearbyPros.backToJob')}
               </button>
@@ -255,7 +269,7 @@ export default function NearbyProsPage() {
                   : `${listings.length} ${listings.length === 1 ? t('nearbyPros.pro') : t('nearbyPros.pros')} ${t('nearbyPros.within')} ${radiusKm}km, ${t('nearbyPros.sortedByDistance')}`}
               </p>
             </div>
-            <div className="flex items-center gap-2 rounded-full border border-outline bg-white px-3 py-2">
+            <div className="flex items-center gap-2 rounded-full border border-line bg-white px-3 py-2">
               <SlidersHorizontal className="h-4 w-4 text-ink-muted" />
               <RadiusChips radiusKm={radiusKm} onChange={setRadiusKm} />
             </div>
@@ -280,7 +294,7 @@ export default function NearbyProsPage() {
               )}
             </div>
 
-            <div className="sticky top-8 h-[calc(100vh-220px)] overflow-hidden rounded-3xl shadow-soft">
+            <div className="sticky top-8 h-[calc(100vh-220px)] overflow-hidden rounded-3xl shadow-stamp">
               <NearbyWorkersMap
                 center={center}
                 radiusKm={radiusKm}
@@ -288,6 +302,7 @@ export default function NearbyProsPage() {
                 activeListingId={activeListingId}
                 onMarkerClick={setActiveListingId}
                 onMarkerHover={setActiveListingId}
+                getMarkerLabel={markerLabel}
               />
             </div>
           </div>

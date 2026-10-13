@@ -36,14 +36,14 @@ export default function BlogPage() {
     <div className="min-h-screen">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="section-heading">{t("blog.title")}</h1>
+          <h1 className="font-display text-h1 text-ink">{t("blog.title")}</h1>
           <p className="mt-3 text-sm leading-6 text-ink-muted">{t("blog.subtitle")}</p>
         </div>
 
         {loading ? (
-          <div className="surface-panel p-10 text-center text-ink-muted">{t("blog.loading")}</div>
+          <div className="rounded-card border border-line bg-surface p-10 text-center text-ink-muted">{t("blog.loading")}</div>
         ) : articles.length === 0 ? (
-          <div className="surface-panel p-10 text-center">
+          <div className="rounded-card border border-line bg-surface p-10 text-center">
             <Newspaper className="mx-auto mb-3 h-8 w-8 text-ink-subtle" />
             <p className="text-base font-semibold text-ink">{t("blog.emptyTitle")}</p>
             <p className="mt-2 text-sm text-ink-muted">{t("blog.emptyDesc")}</p>

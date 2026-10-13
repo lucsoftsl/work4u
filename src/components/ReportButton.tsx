@@ -4,6 +4,10 @@ import { useState } from "react";
 import { Flag } from "lucide-react";
 import { reportsApi } from "@/lib/reports-api";
 import { useTranslation } from "@/lib/i18n";
+import { errorMessage } from "@/lib/http";
+import { Button } from "@/components/ui/Button";
+import { Select, Textarea } from "@/components/ui/Field";
+import { cn } from "@/lib/utils";
 import type { ReportReason } from "@/api/types";
 
 const REASON_KEYS: Record<ReportReason, string> = {
@@ -37,17 +41,28 @@ export function ReportButton({ reportedUserId, reportedUserName, jobId, firebase
   if (!firebaseToken) return null;
 
   if (submitted) {
-    return <p className={`text-sm text-muted-foreground ${className ?? ""}`}>{t('report.submitted')}</p>;
+    return (
+      <p role="status" className={cn("text-label font-normal text-ink-muted", className)}>
+        {t("report.submitted")}
+      </p>
+    );
   }
+
+  const title = jobId ? `${t("report.disputeJobWith")} ${reportedUserName}` : `${t("report.reportAction")} ${reportedUserName}`;
 
   if (!open) {
     return (
       <button
+        type="button"
         onClick={() => setOpen(true)}
-        className={`inline-flex items-center gap-1.5 text-sm font-semibold text-red-600 hover:underline ${className ?? ""}`}
+        aria-expanded={false}
+        className={cn(
+          "inline-flex min-h-[44px] min-w-[44px] items-center gap-2 rounded-control px-3 text-label text-danger hover:bg-danger-soft",
+          className
+        )}
       >
-        <Flag size={14} />
-        {jobId ? t('report.disputeJob') : `${t('report.reportAction')} ${reportedUserName}`}
+        <Flag className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span className="min-w-0 truncate">{jobId ? t("report.disputeJob") : title}</span>
       </button>
     );
   }
@@ -56,62 +71,51 @@ export function ReportButton({ reportedUserId, reportedUserName, jobId, firebase
     setSubmitting(true);
     setError(null);
     try {
-      await reportsApi.createReport(
-        { reportedUserId, jobId, reason, description: description.trim() || undefined },
-        firebaseToken
-      );
+      await reportsApi.createReport({ reportedUserId, jobId, reason, description: description.trim() || undefined }, firebaseToken);
       setSubmitted(true);
       setOpen(false);
       onSubmitted?.();
     } catch (err) {
       console.error("Failed to submit report:", err);
-      setError(err instanceof Error ? err.message : t('report.submitError'));
+      setError(errorMessage(err, t("report.submitError")));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className={`rounded-2xl border border-red-200 bg-red-50 p-4 space-y-3 ${className ?? ""}`}>
-      <p className="text-sm font-semibold text-red-800">
-        {jobId ? `${t('report.disputeJobWith')} ${reportedUserName}` : `${t('report.reportAction')} ${reportedUserName}`}
-      </p>
+    <div className={cn("space-y-3 rounded-card border border-danger/20 border-l-4 border-l-danger bg-danger-soft p-4", className)}>
+      <p className="text-label text-ink">{title}</p>
 
-      <select
-        value={reason}
-        onChange={(e) => setReason(e.target.value as ReportReason)}
-        className="w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm"
-      >
+      <Select label={t("report.reasonLabel")} value={reason} onChange={(e) => setReason(e.target.value as ReportReason)}>
         {Object.entries(REASON_KEYS).map(([value, key]) => (
-          <option key={value} value={value}>{t(key)}</option>
+          <option key={value} value={value}>
+            {t(key)}
+          </option>
         ))}
-      </select>
+      </Select>
 
-      <textarea
+      <Textarea
+        label={t("report.descLabel")}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         rows={3}
-        placeholder={t('report.descPlaceholder')}
-        className="w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm"
+        placeholder={t("report.descPlaceholder")}
       />
 
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error ? (
+        <p role="alert" className="text-label font-bold text-danger">
+          {error}
+        </p>
+      ) : null}
 
-      <div className="flex gap-2">
-        <button
-          onClick={() => setOpen(false)}
-          disabled={submitting}
-          className="flex-1 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-800"
-        >
-          {t('jobDetail.cancel')}
-        </button>
-        <button
-          onClick={handleSubmit}
-          disabled={submitting}
-          className="flex-1 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {submitting ? t('report.submitting') : t('report.submit')}
-        </button>
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button variant="secondary" onClick={() => setOpen(false)} disabled={submitting}>
+          {t("jobDetail.cancel")}
+        </Button>
+        <Button variant="destructive" onClick={handleSubmit} loading={submitting}>
+          {submitting ? t("report.submitting") : t("report.submit")}
+        </Button>
       </div>
     </div>
   );

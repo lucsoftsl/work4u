@@ -7,10 +7,8 @@ import {
   Palette,
   Code2,
   PenLine,
-  Home,
-  Compass,
-  MessageSquare,
-  User,
+  Zap,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 
@@ -25,14 +23,10 @@ const categoryIconMap: Record<string, LucideIcon> = {
   labor: Hammer,
   gardening: Sprout,
   delivery: Truck,
+  moving: Truck,
   cleaning: Paintbrush,
-};
-
-const navIconMap: Record<string, LucideIcon> = {
-  home: Home,
-  explore: Compass,
-  messages: MessageSquare,
-  profile: User,
+  electrical: Zap,
+  repairs: Wrench,
 };
 
 export function normalizeIconKey(key: string): string {
@@ -43,32 +37,32 @@ export function resolveCategoryIcon(iconKey: string): LucideIcon {
   return categoryIconMap[normalizeIconKey(iconKey)] || Brush;
 }
 
-export function resolveBottomNavIcon(iconKey: string): LucideIcon {
-  return navIconMap[normalizeIconKey(iconKey)] || Home;
-}
+type JobTone = "cleaning" | "assembly" | "delivery" | "neutral";
+type TagTone = "success" | "info" | "warning" | "neutral";
 
-export function resolveJobToneClass(tone: "cleaning" | "assembly" | "delivery" | "neutral"): string {
+/** Category tag on a job row: soft tone background + full tone text (all pairs are AA, design-tokens §7.1). */
+export function resolveJobToneClass(tone: JobTone): string {
   switch (tone) {
     case "cleaning":
-      return "bg-sky-100 text-sky-700";
+      return "bg-info-soft text-info";
     case "assembly":
-      return "bg-orange-100 text-orange-700";
+      return "bg-warning-soft text-warning";
     case "delivery":
-      return "bg-emerald-100 text-emerald-700";
+      return "bg-success-soft text-success";
     default:
-      return "bg-slate-100 text-slate-700";
+      return "bg-sunken text-ink-muted";
   }
 }
 
-export function resolveMobileTagClass(tone: "success" | "info" | "warning" | "neutral"): string {
+export function resolveMobileTagClass(tone: TagTone): string {
   switch (tone) {
     case "success":
-      return "bg-emerald-100 text-emerald-700";
+      return "bg-success-soft text-success";
     case "info":
-      return "bg-blue-100 text-blue-700";
+      return "bg-info-soft text-info";
     case "warning":
-      return "bg-amber-100 text-amber-700";
+      return "bg-warning-soft text-warning";
     default:
-      return "bg-slate-100 text-slate-700";
+      return "bg-sunken text-ink-muted";
   }
 }

@@ -11,8 +11,8 @@ export function ArticleCard({ article }: { article: Article }) {
 
   return (
     <Link href={`/blog/${article.id}`} className="block">
-      <article className="surface-panel h-full overflow-hidden transition hover:-translate-y-0.5 hover:border-brand/35">
-        <div className="relative aspect-[16/9] w-full bg-[#eff7fa]">
+      <article className="rounded-card border border-line bg-surface h-full overflow-hidden transition hover:-translate-y-0.5 hover:border-primary/35">
+        <div className="relative aspect-[16/9] w-full bg-primary-soft">
           {article.coverImageUrl ? (
             <Image
               src={article.coverImageUrl}
@@ -22,7 +22,7 @@ export function ArticleCard({ article }: { article: Article }) {
               className="object-cover"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-brand/40">
+            <div className="flex h-full w-full items-center justify-center text-primary/40">
               <Newspaper className="h-10 w-10" />
             </div>
           )}
@@ -35,7 +35,7 @@ export function ArticleCard({ article }: { article: Article }) {
           {article.excerpt && (
             <p className="mt-2 line-clamp-3 text-sm leading-6 text-ink-muted">{article.excerpt}</p>
           )}
-          <span className="mt-4 inline-block text-sm font-semibold text-brand">{t("blog.readMore")} →</span>
+          <span className="mt-4 inline-block text-sm font-semibold text-primary">{t("blog.readMore")} →</span>
         </div>
       </article>
     </Link>

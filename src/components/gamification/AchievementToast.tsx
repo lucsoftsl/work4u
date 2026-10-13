@@ -80,7 +80,7 @@ export function AchievementToast() {
                         key={notification.id}
                         className={`
               ${getRarityClass(notification.type)}
-              bg-card border-2 rounded-lg p-4 
+              bg-surface border-2 rounded-lg p-4 
               transition-all duration-500 transform
               ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}
               animate-achievement
@@ -89,25 +89,25 @@ export function AchievementToast() {
                         <div className="flex items-start gap-3">
                             <div className={`
                 p-2 rounded-full 
-                ${notification.type === 'achievement' ? 'bg-secondary/20' : ''}
+                ${notification.type === 'achievement' ? 'bg-sunken/20' : ''}
                 ${notification.type === 'level_up' ? 'bg-primary/20' : ''}
-                ${notification.type === 'quest_complete' ? 'bg-accent/20' : ''}
+                ${notification.type === 'quest_complete' ? 'bg-ember/20' : ''}
                 animate-pulse
               `}>
                                 <Icon className={`
                   w-6 h-6
-                  ${notification.type === 'achievement' ? 'text-secondary' : ''}
+                  ${notification.type === 'achievement' ? 'text-ink' : ''}
                   ${notification.type === 'level_up' ? 'text-primary' : ''}
-                  ${notification.type === 'quest_complete' ? 'text-accent' : ''}
+                  ${notification.type === 'quest_complete' ? 'text-ember-text' : ''}
                 `} />
                             </div>
                             <div className="flex-1">
                                 <h4 className="font-bold text-sm mb-1">{notification.title}</h4>
-                                <p className="text-xs text-muted-foreground">{notification.message}</p>
+                                <p className="text-xs text-ink-muted">{notification.message}</p>
                             </div>
                             <button
                                 onClick={() => handleDismiss(notification.id)}
-                                className="text-muted-foreground hover:text-foreground transition-colors"
+                                className="text-ink-muted hover:text-ink transition-colors"
                             >
                                 <X className="w-4 h-4" />
                             </button>

@@ -108,13 +108,13 @@ export default function AdminQuestsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-card">
+        <div className="min-h-screen bg-surface">
             <div className="max-w-7xl mx-auto px-4 py-8">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h1 className="text-4xl font-bold text-foreground mb-2">{t('admin.quests')}</h1>
-                        <p className="text-muted-foreground">{t('admin.questsDesc')}</p>
+                        <h1 className="text-4xl font-bold text-ink mb-2">{t('admin.quests')}</h1>
+                        <p className="text-ink-muted">{t('admin.questsDesc')}</p>
                     </div>
                     <Button
                         onClick={() => handleOpenModal()}
@@ -126,17 +126,17 @@ export default function AdminQuestsPage() {
                 </div>
 
                 {/* Filters & Search */}
-                <div className="bg-background border border-border rounded-lg p-4 mb-6 space-y-4">
+                <div className="bg-canvas border border-line rounded-lg p-4 mb-6 space-y-4">
                     <div className="flex gap-4">
                         <div className="flex-1">
                             <div className="relative">
-                                <Search className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
+                                <Search className="absolute left-3 top-3 w-5 h-5 text-ink-muted" />
                                 <input
                                     type="text"
                                     placeholder={t('admin.searchQuests')}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                                    className="w-full pl-10 pr-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-ink-muted"
                                 />
                             </div>
                         </div>
@@ -146,7 +146,7 @@ export default function AdminQuestsPage() {
                         <select
                             value={filters.type}
                             onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-                            className="px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                         >
                             <option value="">{t('admin.allTypes')}</option>
                             {TYPES.map((type) => (
@@ -159,7 +159,7 @@ export default function AdminQuestsPage() {
                         <select
                             value={filters.difficulty}
                             onChange={(e) => setFilters({ ...filters, difficulty: e.target.value })}
-                            className="px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                         >
                             <option value="">{t('admin.allDifficulties')}</option>
                             {DIFFICULTIES.map((difficulty) => (
@@ -174,11 +174,11 @@ export default function AdminQuestsPage() {
                 {/* Quests Table */}
                 {isLoading ? (
                     <div className="text-center py-12">
-                        <p className="text-muted-foreground">{t('admin.loadingQuests')}</p>
+                        <p className="text-ink-muted">{t('admin.loadingQuests')}</p>
                     </div>
                 ) : filteredQuests.length === 0 ? (
-                    <div className="text-center py-12 bg-background border border-border rounded-lg">
-                        <p className="text-muted-foreground mb-4">{t('admin.noQuests')}</p>
+                    <div className="text-center py-12 bg-canvas border border-line rounded-lg">
+                        <p className="text-ink-muted mb-4">{t('admin.noQuests')}</p>
                         <Button onClick={() => handleOpenModal()}>{t('admin.createFirstQuest')}</Button>
                     </div>
                 ) : (
@@ -186,11 +186,11 @@ export default function AdminQuestsPage() {
                         {filteredQuests.map((quest) => (
                             <div
                                 key={quest.id}
-                                className="bg-background border border-border rounded-lg p-4 flex items-center justify-between hover:border-primary/50 transition-colors"
+                                className="bg-canvas border border-line rounded-lg p-4 flex items-center justify-between hover:border-primary/50 transition-colors"
                             >
                                 <div className="flex-1">
-                                    <h3 className="text-lg font-bold text-foreground">{quest.title.en}</h3>
-                                    <p className="text-sm text-muted-foreground mb-2">{quest.description.en}</p>
+                                    <h3 className="text-lg font-bold text-ink">{quest.title.en}</h3>
+                                    <p className="text-sm text-ink-muted mb-2">{quest.description.en}</p>
                                     <div className="flex items-center gap-3 text-xs">
                                         <span className="px-2 py-1 bg-primary/10 text-primary rounded">
                                             {quest.type}
@@ -198,11 +198,11 @@ export default function AdminQuestsPage() {
                                         <span className={`px-2 py-1 rounded text-white bg-rarity-${quest.difficulty}`}>
                                             {quest.difficulty}
                                         </span>
-                                        <span className="text-muted-foreground">
+                                        <span className="text-ink-muted">
                                             {quest.maxProgress} {t('admin.progress')} • {quest.rewards.xp} {t('admin.xp')} • {quest.rewards.gold} {t('admin.gold')}
                                         </span>
                                         {quest.duration && (
-                                            <span className="text-muted-foreground">{t('admin.durationPrefix')} {quest.duration}</span>
+                                            <span className="text-ink-muted">{t('admin.durationPrefix')} {quest.duration}</span>
                                         )}
                                         {!quest.enabled && (
                                             <span className="px-2 py-1 bg-red-900/20 text-red-400 rounded">
@@ -215,7 +215,7 @@ export default function AdminQuestsPage() {
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => handleOpenModal(quest)}
-                                        className="p-2 hover:bg-muted rounded-lg transition-colors text-foreground"
+                                        className="p-2 hover:bg-sunken rounded-lg transition-colors text-ink"
                                     >
                                         <Edit2 className="w-5 h-5" />
                                     </button>

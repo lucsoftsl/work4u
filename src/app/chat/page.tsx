@@ -3,13 +3,22 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Send, AlertCircle, CornerDownRight, Check, CheckCheck } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { ArrowLeft, Send, AlertCircle, CornerDownRight, Check, CheckCheck, Clock, MessageSquare } from "lucide-react";
+import { Button, buttonClasses } from "@/components/ui/Button";
+import { CountBadge } from "@/components/ui/StatusChip";
 import { useAuth } from "@/context/AuthContext";
 import { useChatWebSocket } from "@/hooks/useChatWebSocket";
 import { fetchConversations, fetchMessagesWithUser, markMessageRead } from "@/api";
+import { errorMessage } from "@/lib/http";
+import { signInPath } from "@/lib/auth-redirect";
+import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/QueryState";
 import { useTranslation } from "@/lib/i18n";
 import { ReportButton } from "@/components/ReportButton";
+import { StatusChip } from "@/components/ui/StatusChip";
+import { api } from "@/lib/api";
+import { setChatThreadOpen } from "@/lib/chat-chrome";
+import { conversationPreview, initialOf, latestConversationPreview } from "@/lib/chat-preview";
+import { NO_JOB_KEY, jobKeyOf, pickJobKey } from "@/lib/chat-thread";
 
 type JobKey = string; // jobId or "nojob"
 
@@ -25,6 +34,7 @@ type UserThread = {
   messages: any[];
   lastMessageTime?: string;
   lastMessageText?: string;
+  lastJobTitle?: string;
   unreadCount?: number;
 };
 
@@ -89,9 +99,13 @@ function getJobData(msg: any) {
     msg?.payload?.job ??
     null;
 
-  const id = jd?.id ?? jd?.jobId ?? null;
+  const id = jd?.id || jd?.jobId || null;
   const title = jd?.title ?? jd?.jobTitle ?? null;
   return { id, title };
+}
+
+function getJobKey(msg: any): JobKey {
+  return jobKeyOf(getJobData(msg).id, msg?.jobKey);
 }
 
 function getMessageText(msg: any) {
@@ -119,7 +133,7 @@ function dedupeById(messages: any[]) {
 }
 
 export default function ChatPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const QUICK_REPLIES = [
     t('chat.quickReply1'),
     t('chat.quickReply2'),
@@ -128,12 +142,24 @@ export default function ChatPage() {
     t('chat.quickReply5'),
     t('chat.quickReply6'),
   ];
-  const { firebaseToken, user } = useAuth();
-  const { isConnected, messages: wsMessages, sendMessage, error: wsError } = useChatWebSocket(firebaseToken, "");
-  const pendingSendRef = useRef<{ tempId: string; otherUserId: string } | null>(null);
+  const { firebaseToken, user, loading: authLoading } = useAuth();
+  const {
+    isConnected,
+    isReconnecting,
+    messages: wsMessages,
+    outbox,
+    sendMessage,
+    retryMessage,
+    discardMessage,
+  } = useChatWebSocket(firebaseToken, "");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [conversationsError, setConversationsError] = useState<string | null>(null);
+  const [messagesError, setMessagesError] = useState<string | null>(null);
+  const [conversationsReload, setConversationsReload] = useState(0);
+  const [messagesReload, setMessagesReload] = useState(0);
 
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedJobKey, setSelectedJobKey] = useState<JobKey | null>(null);
@@ -145,7 +171,13 @@ export default function ChatPage() {
   const [pendingJobContext, setPendingJobContext] = useState<{ id: string; title?: string } | null>(null);
 
   const [threadsByUser, setThreadsByUser] = useState<Map<string, UserThread>>(new Map());
+  // Fetch gate for history requests (cleared to force a reload, e.g. after a reconnect).
   const loadedUsersRef = useRef<Set<string>>(new Set());
+  // Users whose history has been fetched at least once — drives job-thread picking, so a
+  // placeholder "General" pick is never locked in before the real threads are known.
+  const [historyLoadedUsers, setHistoryLoadedUsers] = useState<ReadonlySet<string>>(new Set());
+  // Job key from a ?jobId= deep link; kept selected even if it has no messages yet.
+  const explicitJobKeyRef = useRef<string | null>(null);
   const markedReadRef = useRef<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -153,45 +185,69 @@ export default function ChatPage() {
    * 1) Load conversation list (users you have chats with)
    */
   useEffect(() => {
+    let cancelled = false;
     const loadConversations = async () => {
       if (!firebaseToken) {
-        setLoadingConversations(false);
+        // Still restoring the session: stay in the loading state so the deep link below waits.
+        if (!authLoading) {
+          setLoadingConversations(false);
+          // Signed out: drop the previous account's threads so they can't leak into the next session.
+          setThreadsByUser(new Map());
+          setHistoryLoadedUsers(new Set());
+          loadedUsersRef.current = new Set();
+        }
         return;
       }
 
       setLoadingConversations(true);
+      setConversationsError(null);
       try {
         const list: any[] = await fetchConversations(firebaseToken);
+        if (cancelled) return;
 
-        const next = new Map<string, UserThread>();
-        for (const item of list) {
-          const other = item?.otherUserData;
-          if (!other?.id) continue;
+        // Merge, never replace: this effect re-runs (auth settling, locale change, retry) and a
+        // later response must not wipe message history that was already loaded for a thread —
+        // loadedUsersRef would still say "loaded", so it would never be fetched again (QA S4.6).
+        setThreadsByUser((prev) => {
+          const next = new Map(prev);
+          for (const item of list) {
+            const other = item?.otherUserData;
+            if (!other?.id) continue;
 
-          next.set(other.id, {
-            otherUser: {
-              id: other.id,
-              name: other.name || other.email || t('chat.unknownUser'),
-              email: other.email,
-              image: other.image,
-            },
-            messages: [],
-            lastMessageTime: item?.lastMessageDate,
-            lastMessageText: "",
-            unreadCount: item?.unreadCount ?? 0,
-          });
-        }
-
-        setThreadsByUser(next);
+            const existing = prev.get(other.id);
+            const preview = conversationPreview(item);
+            next.set(other.id, {
+              otherUser: {
+                id: other.id,
+                name: other.name || other.email || existing?.otherUser.name || t('chat.unknownUser'),
+                email: other.email,
+                image: other.image,
+              },
+              messages: existing?.messages ?? [],
+              ...latestConversationPreview(existing, item?.lastMessageDate,
+                `${preview.fromSelf ? `${t('chat.youPrefix')} ` : ''}${preview.lastText || (preview.hasImage ? t('chat.photo') : '')}`.trim()),
+              lastJobTitle: existing?.lastJobTitle ?? preview.jobTitle,
+              unreadCount: item?.unreadCount ?? existing?.unreadCount ?? 0,
+            });
+          }
+          return next;
+        });
       } catch (e) {
+        if (cancelled) return;
         console.error("Failed to load conversations:", e);
+        setConversationsError(errorMessage(e, t('common.loadError')));
       } finally {
-        setLoadingConversations(false);
+        if (!cancelled) setLoadingConversations(false);
       }
     };
 
     loadConversations();
-  }, [firebaseToken, t]);
+    return () => {
+      cancelled = true;
+    };
+    // firebaseToken changes hourly on refresh; reload only when signed-in state flips or on retry
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!firebaseToken, authLoading, t, conversationsReload]);
 
   /**
    * 1b) Deep link support: ?userId=&jobId=&jobTitle=&userName= (used by the
@@ -200,12 +256,14 @@ export default function ChatPage() {
    * above. If the user already has a real thread, this just selects it —
    * jobsForSelectedUser then derives the job list from actual history.
    */
+  const deepLinkAppliedRef = useRef(false);
   useEffect(() => {
-    if (loadingConversations) return;
+    if (loadingConversations || !firebaseToken || deepLinkAppliedRef.current) return;
 
     const searchParams = new URLSearchParams(window.location.search);
     const userId = searchParams.get("userId");
     if (!userId) return;
+    deepLinkAppliedRef.current = true;
 
     const jobId = searchParams.get("jobId") || undefined;
     const jobTitle = searchParams.get("jobTitle") || undefined;
@@ -223,9 +281,13 @@ export default function ChatPage() {
     });
 
     if (jobId) setPendingJobContext({ id: jobId, title: jobTitle });
+    explicitJobKeyRef.current = jobId ?? null;
+    // Without ?jobId= nothing is picked yet: the job-picking effect chooses the thread that
+    // actually holds the messages once this user's history has loaded.
     setSelectedJobKey(jobId ?? null);
     setSelectedUserId(userId);
-  }, [loadingConversations, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingConversations, !!firebaseToken, t]);
 
   /**
    * 2) Merge websocket messages into threadsByUser (user-level only)
@@ -259,6 +321,7 @@ export default function ChatPage() {
               messages: merged,
               lastMessageTime: getMessageTime(last) ?? existing?.lastMessageTime,
               lastMessageText: getMessageText(last) || existing?.lastMessageText || "",
+              lastJobTitle: getJobData(last).title ?? existing?.lastJobTitle,
               unreadCount: existing?.unreadCount ?? 0,
             });
           }
@@ -271,8 +334,8 @@ export default function ChatPage() {
         const otherUserId = getOtherUserId(msg, user?.id);
         if (!otherUserId) continue;
 
-        const { id: jobId, title: jobTitle } = getJobData(msg);
-        const jobKey: JobKey = jobId ?? (msg as any)?.jobKey ?? "nojob";
+        const { title: jobTitle } = getJobData(msg);
+        const jobKey = getJobKey(msg);
 
         // always carry jobKey for filtering even if jobData is missing in some variants
         const enrichedMsg = {
@@ -280,7 +343,7 @@ export default function ChatPage() {
           jobKey,
           jobData:
             msg?.jobData ??
-            (jobKey !== "nojob" ? { id: jobKey, title: jobTitle ?? undefined } : undefined),
+            (jobKey !== NO_JOB_KEY ? { id: jobKey, title: jobTitle ?? undefined } : undefined),
         };
 
         const existingThread = next.get(otherUserId);
@@ -350,6 +413,7 @@ export default function ChatPage() {
           messages: mergedMessages,
           lastMessageTime: lastTime ?? undefined,
           lastMessageText: lastText ?? "",
+          lastJobTitle: getJobData(last).title ?? existingThread?.lastJobTitle,
           unreadCount: unread,
         });
       }
@@ -409,6 +473,7 @@ export default function ChatPage() {
 
     const run = async () => {
       setLoadingMessages(true);
+      setMessagesError(null);
       try {
         const history = await fetchMessagesWithUser(firebaseToken, selectedUserId);
 
@@ -428,6 +493,7 @@ export default function ChatPage() {
             messages: merged,
             lastMessageTime: (lastTime as string) ?? existing?.lastMessageTime,
             lastMessageText: lastText ?? existing?.lastMessageText,
+            lastJobTitle: getJobData(last).title ?? existing?.lastJobTitle,
             unreadCount: existing?.unreadCount ?? 0,
           });
 
@@ -435,15 +501,18 @@ export default function ChatPage() {
         });
 
         loadedUsersRef.current.add(selectedUserId);
+        setHistoryLoadedUsers((prev) => (prev.has(selectedUserId) ? prev : new Set([...prev, selectedUserId])));
       } catch (e) {
         console.error("Failed to load messages:", e);
+        setMessagesError(errorMessage(e, t('common.loadError')));
       } finally {
         setLoadingMessages(false);
       }
     };
 
     run();
-  }, [firebaseToken, selectedUserId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!firebaseToken, selectedUserId, messagesReload]);
 
   /**
    * Derived: sorted users list
@@ -469,7 +538,7 @@ export default function ChatPage() {
 
     for (const msg of selectedThread.messages) {
       const { id: jobId, title: jobTitle } = getJobData(msg);
-      const key: JobKey = jobId ?? (msg as any)?.jobKey ?? "nojob";
+      const key = getJobKey(msg);
 
       const existing =
         grouped.get(key) ??
@@ -506,8 +575,36 @@ export default function ChatPage() {
     return list;
   }, [selectedThread]);
 
+  // Tell the shell whether a thread is open so the mobile tab bar shows on the inbox list only.
+  useEffect(() => {
+    setChatThreadOpen(!!selectedUserId);
+    return () => setChatThreadOpen(false);
+  }, [selectedUserId]);
+
+  const contextJobId =
+    selectedJobKey && selectedJobKey !== NO_JOB_KEY
+      ? (jobsForSelectedUser.find((j) => j.jobKey === selectedJobKey)?.jobId ??
+        (pendingJobContext?.id === selectedJobKey ? pendingJobContext.id : undefined))
+      : undefined;
+  const [contextJob, setContextJob] = useState<{ id: string; status?: string } | null>(null);
+  useEffect(() => {
+    if (!contextJobId) return;
+    let active = true;
+    api
+      .getJob(contextJobId)
+      .then((job) => {
+        if (active) setContextJob({ id: contextJobId, status: job?.status });
+      })
+      .catch(() => {
+        if (active) setContextJob({ id: contextJobId });
+      });
+    return () => {
+      active = false;
+    };
+  }, [contextJobId]);
+
   const selectedJob = useMemo(() => {
-    if (!selectedJobKey || selectedJobKey === "nojob") return undefined;
+    if (!selectedJobKey || selectedJobKey === NO_JOB_KEY) return undefined;
     return jobsForSelectedUser.find((j) => j.jobKey === selectedJobKey);
   }, [jobsForSelectedUser, selectedJobKey]);
 
@@ -517,11 +614,7 @@ export default function ChatPage() {
   const messagesForSelectedJob = useMemo(() => {
     if (!selectedThread || !selectedJobKey) return [];
 
-    const filtered = selectedThread.messages.filter((msg) => {
-      const { id: jobId } = getJobData(msg);
-      const key: JobKey = jobId ?? (msg as any)?.jobKey ?? "nojob";
-      return key === selectedJobKey;
-    });
+    const filtered = selectedThread.messages.filter((msg) => getJobKey(msg) === selectedJobKey);
 
     filtered.sort((a, b) => safeDate(getMessageTime(a)) - safeDate(getMessageTime(b)));
     return filtered;
@@ -579,404 +672,405 @@ export default function ChatPage() {
   };
 
   /**
-   * Optimistic send so message appears immediately
+   * Send: the message goes into the hook's outbox (client id, retries, failure state) and is
+   * rendered from there until the server acknowledges it; then the saved message replaces it.
    */
   const handleSend = () => {
-    if (!input.trim() || !selectedUserId) return;
-
-    const nowIso = new Date().toISOString();
-    const tempId = `tmp_${nowIso}_${Math.random().toString(16).slice(2)}`;
+    const text = input.trim();
+    if (!text || !selectedUserId) return;
 
     const job =
-      selectedJobKey && selectedJobKey !== "nojob"
+      selectedJobKey && selectedJobKey !== NO_JOB_KEY
         ? (jobsForSelectedUser.find((j) => j.jobKey === selectedJobKey) ??
           (pendingJobContext && pendingJobContext.id === selectedJobKey
             ? { jobId: pendingJobContext.id, jobTitle: pendingJobContext.title }
             : null))
         : null;
 
-    const optimisticMsg = {
-      id: tempId,
-      fromUserId: user?.id,
-      toUserId: selectedUserId,
-      dateTimeCreated: nowIso,
-      isSent: true,
-      message: { text: input.trim() },
-      jobData: job?.jobId ? { id: job.jobId, title: job.jobTitle } : undefined,
-      jobKey: selectedJobKey ?? "nojob",
-    };
-
+    // Make sure a brand-new conversation shows up in the list straight away.
     setThreadsByUser((prev) => {
+      if (prev.has(selectedUserId)) return prev;
       const next = new Map(prev);
-      const existing = next.get(selectedUserId);
-
-      const baseThread: UserThread =
-        existing ??
-        ({
-          otherUser: { id: selectedUserId, name: t('chat.unknownUser') },
-          messages: [],
-          unreadCount: 0,
-        } as UserThread);
-
-      const merged = dedupeById([...(baseThread.messages ?? []), optimisticMsg]).sort(
-        (a, b) => safeDate(getMessageTime(a)) - safeDate(getMessageTime(b))
-      );
-
       next.set(selectedUserId, {
-        ...baseThread,
-        messages: merged,
-        lastMessageTime: nowIso,
-        lastMessageText: input.trim(),
-      });
-
+        otherUser: { id: selectedUserId, name: t('chat.unknownUser') },
+        messages: [],
+        unreadCount: 0,
+      } as UserThread);
       return next;
     });
-
-    pendingSendRef.current = { tempId, otherUserId: selectedUserId };
 
     sendMessage({
       toUserId: selectedUserId,
-      text: input.trim(),
+      text,
       jobData: job?.jobId ? { id: job.jobId, title: job.jobTitle } : undefined,
     });
-
     setInput("");
   };
 
-  /**
-   * If the server rejects the last-sent message (e.g. a WS "error" event), surface it
-   * instead of leaving the optimistic bubble looking like it sent successfully.
-   */
+  /** Outgoing messages for the open thread that the server hasn't confirmed yet. */
+  const pendingForSelectedJob = useMemo(
+    () =>
+      outbox.filter(
+        (item) => item.toUserId === selectedUserId && jobKeyOf(item.jobData?.id) === (selectedJobKey ?? NO_JOB_KEY)
+      ),
+    [outbox, selectedUserId, selectedJobKey]
+  );
+
+  // Keep the newest message in view: on thread switch, after history loads, and as messages arrive.
   useEffect(() => {
-    if (!wsError || !pendingSendRef.current) return;
+    messagesEndRef.current?.scrollIntoView({ block: "end" });
+  }, [selectedUserId, selectedJobKey, loadingMessages, messagesForSelectedJob.length, pendingForSelectedJob.length]);
 
-    const { tempId, otherUserId } = pendingSendRef.current;
-    pendingSendRef.current = null;
+  const retryHistory = () => {
+    if (selectedUserId) loadedUsersRef.current.delete(selectedUserId);
+    setMessagesReload((n) => n + 1);
+  };
 
-    setThreadsByUser((prev) => {
-      const existing = prev.get(otherUserId);
-      if (!existing) return prev;
+  // After a reconnect, reload the open thread so messages sent while we were offline appear.
+  const wasConnectedRef = useRef(false);
+  useEffect(() => {
+    if (isConnected && !wasConnectedRef.current && selectedUserId && loadedUsersRef.current.has(selectedUserId)) {
+      loadedUsersRef.current.delete(selectedUserId);
+      setMessagesReload((n) => n + 1);
+    }
+    wasConnectedRef.current = isConnected;
+  }, [isConnected, selectedUserId]);
 
-      const next = new Map(prev);
-      next.set(otherUserId, {
-        ...existing,
-        messages: existing.messages.map((m) => (m.id === tempId ? { ...m, failed: true } : m)),
-      });
-      return next;
-    });
-  }, [wsError]);
-
-  // UX: when selecting a new user, pick most recent job if none selected yet
+  // Pick the job thread to open: on user switch, once that user's history has loaded, and when
+  // the thread list changes. Deliberately not keyed on selectedJobKey, so the mobile "back to
+  // jobs" button (which clears it) isn't immediately overridden.
+  const historyLoadedForSelected = !!selectedUserId && historyLoadedUsers.has(selectedUserId);
   useEffect(() => {
     if (!selectedUserId) return;
-    setSelectedJobKey((prev) => {
-      if (prev) return prev;
-      return jobsForSelectedUser[0]?.jobKey ?? "nojob";
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedUserId]);
+    setSelectedJobKey((prev) =>
+      pickJobKey({
+        currentKey: prev,
+        jobs: jobsForSelectedUser,
+        historyLoaded: historyLoadedForSelected,
+        explicitKey: explicitJobKeyRef.current,
+      })
+    );
+  }, [jobsForSelectedUser, selectedUserId, historyLoadedForSelected]);
 
-  // Ensure selected job exists after jobs list changes
-  useEffect(() => {
-    if (!selectedUserId) return;
-    if (!jobsForSelectedUser.length) return;
+  // Pending bubbles disappear as soon as the saved message (same clientId) is in the thread.
+  const deliveredClientIds = new Set<string>();
+  for (const m of selectedThread?.messages ?? []) {
+    const cid = (m as any)?.clientId;
+    if (typeof cid === "string") deliveredClientIds.add(cid);
+  }
+  const visiblePending = pendingForSelectedJob.filter((item) => !deliveredClientIds.has(item.clientId));
 
-    setSelectedJobKey((prev) => {
-      if (!prev) return jobsForSelectedUser[0].jobKey;
-      const exists = jobsForSelectedUser.some((j) => j.jobKey === prev);
-      return exists ? prev : jobsForSelectedUser[0].jobKey;
-    });
-  }, [jobsForSelectedUser, selectedUserId]);
+  const dayKey = (iso?: string | null) => (iso ? new Date(iso).toDateString() : "");
+  const dayLabel = (iso: string) => {
+    const date = new Date(iso);
+    const today = new Date();
+    const yesterday = new Date(today.getTime() - 86_400_000);
+    if (date.toDateString() === today.toDateString()) return t("chat.today");
+    if (date.toDateString() === yesterday.toDateString()) return t("chat.yesterday");
+    return date.toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" });
+  };
+  const clock = (iso?: string | null) =>
+    iso ? new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) : "";
 
-  if (!firebaseToken) {
+  if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted px-4">
-        <div className="bg-card rounded-2xl shadow-lg p-8 text-center space-y-4 max-w-md w-full">
-          <p className="text-lg font-semibold text-foreground">{t('chat.signInToChat')}</p>
-          <p className="text-muted-foreground">{t('chat.signInToChatDesc')}</p>
-          <Button asChild className="w-full">
-            <Link href="/signin">{t('nav.signIn')}</Link>
-          </Button>
-        </div>
+      <div role="status" className="mx-auto max-w-content p-[var(--gutter)]">
+        <ListSkeleton rows={3} />
       </div>
     );
   }
 
+  if (!firebaseToken) {
+    return (
+      <div className="mx-auto flex max-w-md flex-col items-center gap-4 px-4 py-16 text-center">
+        <h1 className="font-display text-h2 text-ink">{t("chat.signInToChat")}</h1>
+        <p className="text-body text-ink-muted">{t("chat.signInToChatDesc")}</p>
+        <Link href={signInPath("/chat")} className={buttonClasses("primary", "lg", "w-full")}>
+          {t("nav.signIn")}
+        </Link>
+      </div>
+    );
+  }
+
+  const timeOf = (thread: { lastMessageTime?: string | null }) => clock(thread.lastMessageTime ?? null);
+
   return (
-    <div className="h-full bg-muted">
-      <div className="h-full flex min-h-0">
-        {/* Column 1 — Users */}
+    <div
+      className={`bg-canvas md:h-[calc(100dvh-var(--header-h))] ${
+        selectedUserId
+          ? "h-[calc(100dvh-3.5rem)]"
+          : "h-[calc(100dvh-3.5rem-var(--tabbar-h)-env(safe-area-inset-bottom))]"
+      }`}
+    >
+      <div className="mx-auto flex h-full min-h-0 max-w-content">
+        {/* Inbox */}
         <aside
-          className={`w-full md:w-96 bg-card border-r border-border flex flex-col ${selectedUserId ? "hidden md:flex" : ""
-            }`}
+          aria-label={t("chat.usersLabel")}
+          className={`flex w-full min-w-0 flex-col border-line bg-surface md:w-[320px] md:shrink-0 md:border-r xl:w-[360px] ${selectedUserId ? "hidden md:flex" : ""}`}
         >
-          <div className="border-b border-border p-4">
-            <h1 className="text-2xl font-bold text-foreground">{t('chat.messagesAria')}</h1>
-            <p className="text-xs text-muted-foreground mt-1">{t('chat.usersLabel')}</p>
+          <div className="border-b border-line p-4">
+            <h1 className="font-display text-h2 text-ink">{t("chat.messagesAria")}</h1>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             {loadingConversations ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="animate-spin">
-                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full" />
-                </div>
+              <div className="p-4">
+                <ListSkeleton rows={4} />
+              </div>
+            ) : conversationsError ? (
+              <div className="p-4">
+                <ErrorState message={conversationsError} onRetry={() => setConversationsReload((n) => n + 1)} />
               </div>
             ) : usersList.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                <p>{t('chat.noConversations')}</p>
+              <div className="p-4">
+                <EmptyState icon={MessageSquare} title={t("chat.noConversations")} description={t("chat.noConversationsHint")} />
               </div>
             ) : (
-              usersList.map((thread) => {
-                const active = selectedUserId === thread.otherUser.id;
-                const isSelectedUser = active;
-
-                return (
-                  <div key={thread.otherUser.id} className="border-b border-gray-100">
-                    <button
-                      onClick={() => {
-                        setSelectedUserId(thread.otherUser.id);
-                        setSelectedJobKey(null);
-                      }}
-                      className={`w-full p-4 hover:bg-muted transition-colors text-left ${active ? "bg-primary/10" : ""
-                        }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-foreground truncate">{thread.otherUser.name}</p>
-                          <p className="text-sm text-muted-foreground truncate">{thread.lastMessageText || "—"}</p>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="text-xs text-muted-foreground">
-                            {thread.lastMessageTime
-                              ? new Date(thread.lastMessageTime).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                              : ""}
-                          </span>
-                          {!!thread.unreadCount && thread.unreadCount > 0 && (
-                            <span className="inline-flex items-center justify-center text-[11px] font-semibold rounded-full bg-blue-600 text-white min-w-5 h-5 px-2">
-                              {thread.unreadCount}
-                            </span>
+              <ul>
+                {usersList.map((thread) => {
+                  const active = selectedUserId === thread.otherUser.id;
+                  return (
+                    <li key={thread.otherUser.id} className="border-b border-line">
+                      <button
+                        type="button"
+                        aria-current={active ? "true" : undefined}
+                        onClick={() => {
+                          explicitJobKeyRef.current = null;
+                          setSelectedUserId(thread.otherUser.id);
+                          setSelectedJobKey(null);
+                        }}
+                        className={`flex min-h-[64px] w-full items-start justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-sunken ${active ? "bg-primary-soft" : ""}`}
+                      >
+                        <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-soft text-label text-primary">
+                          {thread.otherUser.image ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={thread.otherUser.image} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            initialOf(thread.otherUser.name)
                           )}
-                        </div>
-                      </div>
-                    </button>
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-body text-ink">{thread.otherUser.name}</span>
+                          {thread.lastJobTitle ? (
+                            <span className="block truncate text-caption text-primary">{thread.lastJobTitle}</span>
+                          ) : null}
+                          <span className="block truncate text-label font-normal text-ink-muted">
+                            {thread.lastMessageText || t("chat.noMessagesYet")}
+                          </span>
+                        </span>
+                        <span className="flex shrink-0 flex-col items-end gap-1">
+                          <span className="text-caption font-normal text-ink-subtle tabular">{timeOf(thread)}</span>
+                          <CountBadge
+                            count={thread.unreadCount ?? 0}
+                            label={t("chat.unreadCount").replace("{count}", String(thread.unreadCount ?? 0))}
+                          />
+                        </span>
+                      </button>
 
-                    {/* Nested jobs list for selected user (desktop only) */}
-                    {isSelectedUser && !loadingMessages && jobsForSelectedUser.length > 0 && (
-                      <div className="hidden md:block px-4 pb-3">
-                        <p className="text-xs text-muted-foreground mb-2">{t('chat.jobsLabel')}</p>
-                        <div className="space-y-1">
-                          {jobsForSelectedUser.map((j) => {
-                            const jobActive = selectedJobKey === j.jobKey;
-                            return (
-                              <button
-                                key={j.jobKey}
-                                onClick={() => setSelectedJobKey(j.jobKey)}
-                                className={`w-full flex items-center gap-2 rounded-lg px-2 py-2 text-left hover:bg-muted ${jobActive ? "bg-primary/10" : ""
-                                  }`}
-                              >
-                                <CornerDownRight size={16} className="text-muted-foreground flex-shrink-0" />
-                                <div className="min-w-0 flex-1">
-                                  {j.jobId ? (
-                                    <Link
-                                      href={`/jobs/${j.jobId}`}
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="text-sm font-medium text-blue-600 hover:underline truncate block"
-                                    >
-                                      {j.jobTitle || `${t('chat.jobFallback')} ${j.jobId}`}
-                                    </Link>
-                                  ) : (
-                                    <p className="text-sm font-medium text-foreground truncate">{t('chat.general')}</p>
-                                  )}
-                                  <p className="text-xs text-muted-foreground truncate">{j.lastText || "—"}</p>
-                                </div>
-                                <span className="text-[11px] text-muted-foreground">
-                                  {j.lastTime
-                                    ? new Date(j.lastTime).toLocaleTimeString([], {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })
-                                    : ""}
-                                </span>
-                              </button>
-                            );
-                          })}
+                      {active && !loadingMessages && jobsForSelectedUser.length > 1 ? (
+                        <div className="hidden px-4 pb-3 md:block">
+                          <p className="mb-1 text-micro uppercase text-ink-muted">{t("chat.jobsLabel")}</p>
+                          <ul className="space-y-1">
+                            {jobsForSelectedUser.map((j) => {
+                              const jobActive = selectedJobKey === j.jobKey;
+                              return (
+                                <li key={j.jobKey}>
+                                  <button
+                                    type="button"
+                                    aria-current={jobActive ? "true" : undefined}
+                                    onClick={() => setSelectedJobKey(j.jobKey)}
+                                    className={`flex min-h-[44px] w-full items-center gap-2 rounded-control px-2 text-left hover:bg-sunken ${jobActive ? "bg-surface shadow-stamp" : ""}`}
+                                  >
+                                    <CornerDownRight size={16} className="shrink-0 text-ink-subtle" aria-hidden="true" />
+                                    <span className="min-w-0 flex-1 truncate text-label text-ink">
+                                      {j.jobId ? j.jobTitle || `${t("chat.jobFallback")} ${j.jobId}` : t("chat.general")}
+                                    </span>
+                                    <span className="text-caption font-normal text-ink-subtle tabular">{clock(j.lastTime)}</span>
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </div>
         </aside>
 
-        {/* Column 2 — Jobs for selected user (mobile only) */}
+        {/* Job threads of the selected person (mobile only, when there is more than one thread) */}
         <aside
-          className={`w-full bg-card border-r border-border flex flex-col md:hidden ${selectedUserId ? "" : "hidden"
-            } ${selectedJobKey ? "hidden" : ""}`}
+          className={`flex w-full min-w-0 flex-col bg-surface md:hidden ${selectedUserId ? "" : "hidden"} ${selectedJobKey ? "hidden" : ""}`}
         >
-          <div className="border-b border-border p-4 flex items-center gap-3">
+          <div className="flex items-center gap-2 border-b border-line p-2">
             <Button
               variant="ghost"
-              size="sm"
-              className="md:hidden"
+              size="icon"
+              aria-label={t("chat.backToConversations")}
               onClick={() => {
+                explicitJobKeyRef.current = null;
                 setSelectedUserId(null);
                 setSelectedJobKey(null);
               }}
             >
-              <ArrowLeft size={18} />
+              <ArrowLeft size={20} aria-hidden="true" />
             </Button>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">{t('chat.jobsWith')}</p>
-              <p className="font-semibold text-foreground truncate">
-                {selectedThread?.otherUser.name ?? "—"}
-              </p>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`} />
-              <span className="text-xs text-muted-foreground">{isConnected ? t('common.online') : t('common.offline')}</span>
+              <p className="text-caption font-normal text-ink-muted">{t("chat.jobsWith")}</p>
+              <p className="truncate text-body text-ink">{selectedThread?.otherUser.name ?? "—"}</p>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
-            {!selectedUserId ? (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                <p>{t('chat.selectUser')}</p>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {!selectedUserId ? null : loadingMessages ? (
+              <div className="p-4">
+                <ListSkeleton rows={3} />
               </div>
-            ) : loadingMessages ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="animate-spin">
-                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full" />
-                </div>
+            ) : messagesError && jobsForSelectedUser.length === 0 ? (
+              <div className="p-4">
+                <ErrorState message={messagesError} onRetry={retryHistory} />
               </div>
             ) : jobsForSelectedUser.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                <p>{t('chat.noJobThreads')}</p>
+              <div className="p-4">
+                <EmptyState icon={MessageSquare} title={t("chat.noJobThreads")} />
               </div>
             ) : (
-              jobsForSelectedUser.map((j) => {
-                const active = selectedJobKey === j.jobKey;
-                return (
-                  <button
-                    key={j.jobKey}
-                    onClick={() => setSelectedJobKey(j.jobKey)}
-                    className={`w-full p-4 border-b border-gray-100 hover:bg-muted transition-colors text-left ${active ? "bg-primary/10" : ""
-                      }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        {j.jobId ? (
-                          <Link
-                            href={`/jobs/${j.jobId}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-sm font-semibold text-blue-600 hover:underline truncate block"
-                          >
-                            {j.jobTitle || `${t('chat.jobFallback')} ${j.jobId}`}
-                          </Link>
-                        ) : (
-                          <p className="text-sm font-semibold text-foreground truncate">{t('chat.general')}</p>
-                        )}
-                        <p className="text-sm text-muted-foreground truncate">{j.lastText || "—"}</p>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {j.lastTime
-                          ? new Date(j.lastTime).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                          : ""}
+              <ul>
+                {jobsForSelectedUser.map((j) => (
+                  <li key={j.jobKey} className="border-b border-line">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedJobKey(j.jobKey)}
+                      className="flex min-h-[64px] w-full items-start justify-between gap-3 px-4 py-3 text-left hover:bg-sunken"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-body text-ink">
+                          {j.jobId ? j.jobTitle || `${t("chat.jobFallback")} ${j.jobId}` : t("chat.general")}
+                        </span>
+                        <span className="block truncate text-label font-normal text-ink-muted">{j.lastText || "—"}</span>
                       </span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground mt-1">{j.count} {t('gamification.messages')}</p>
-                  </button>
-                );
-              })
+                      <span className="shrink-0 text-caption font-normal text-ink-subtle tabular">{clock(j.lastTime)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         </aside>
 
-        {/* Column 3 — Chat */}
-        <main className={`flex-1 flex flex-col ${selectedJobKey ? "" : "hidden md:flex"}`}>
-          {!selectedUserId || !selectedJobKey ? (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              <p>{t('chat.selectUserAndJob')}</p>
+        {/* Thread */}
+        <section
+          aria-label={t("chat.messagesAria")}
+          className={`flex min-w-0 flex-1 flex-col bg-canvas ${selectedJobKey ? "" : "hidden md:flex"}`}
+        >
+          {selectedUserId && !selectedJobKey && loadingMessages ? (
+            <div className="p-4">
+              <ListSkeleton rows={3} />
+            </div>
+          ) : selectedUserId && !selectedJobKey && messagesError ? (
+            <div className="p-4">
+              <ErrorState message={messagesError} onRetry={retryHistory} />
+            </div>
+          ) : !selectedUserId || !selectedJobKey ? (
+            <div className="flex h-full items-center justify-center p-6">
+              <EmptyState icon={MessageSquare} title={t("chat.selectUserAndJob")} />
             </div>
           ) : (
             <>
-              {/* Header */}
-              <div className="bg-card border-b border-border p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3 min-w-0">
+              {/* Header: back, person, job context, connection status, report */}
+              <div className="flex items-center justify-between gap-2 border-b border-line bg-surface p-2 md:px-4">
+                <div className="flex min-w-0 items-center gap-1">
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     className="md:hidden"
-                    onClick={() => setSelectedJobKey(null)}
+                    aria-label={jobsForSelectedUser.length > 1 ? t("chat.backToJobThreads") : t("chat.backToConversations")}
+                    onClick={() => {
+                      if (jobsForSelectedUser.length > 1) setSelectedJobKey(null);
+                      else {
+                        explicitJobKeyRef.current = null;
+                        setSelectedUserId(null);
+                        setSelectedJobKey(null);
+                      }
+                    }}
                   >
-                    <ArrowLeft size={18} />
+                    <ArrowLeft size={20} aria-hidden="true" />
                   </Button>
-
                   <div className="min-w-0">
-                    <p className="font-semibold text-foreground truncate">
-                      {selectedThread?.otherUser.name ?? "—"}
-                    </p>
-
-                    {selectedJobKey !== "nojob" ? (
-                      selectedJob?.jobId ? (
-                        <Link
-                          href={`/jobs/${selectedJob.jobId}`}
-                          className="text-xs text-blue-600 hover:underline truncate block"
-                        >
-                          {selectedJob.jobTitle || `${t('chat.jobFallback')} ${selectedJob.jobId}`}
-                        </Link>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">{t('chat.jobFallback')}</p>
-                      )
+                    <h1 className="sr-only md:hidden">{selectedThread?.otherUser.name ?? t("chat.messagesAria")}</h1>
+                    <h2 className="truncate font-display text-h3 text-ink">{selectedThread?.otherUser.name ?? "—"}</h2>
+                    {selectedJobKey !== NO_JOB_KEY && selectedJob?.jobId ? (
+                      <Link href={`/jobs/${selectedJob.jobId}`} className="block truncate text-caption text-primary hover:underline">
+                        {selectedJob.jobTitle || `${t("chat.jobFallback")} ${selectedJob.jobId}`}
+                      </Link>
                     ) : (
-                      <p className="text-xs text-muted-foreground">{t('chat.general')}</p>
+                      <p className="truncate text-caption font-normal text-ink-muted">{t("chat.general")}</p>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`} />
-                  <span className="text-xs text-muted-foreground">{isConnected ? t('common.online') : t('common.offline')}</span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span
+                    role="status"
+                    className={`inline-flex h-7 items-center gap-1.5 rounded-control px-2 text-caption ${isConnected ? "bg-success-soft text-success" : "bg-sunken text-ink-muted"}`}
+                  >
+                    <span aria-hidden="true" className={`h-2 w-2 rounded-full ${isConnected ? "bg-success" : "bg-ink-subtle"}`} />
+                    {isConnected ? t("common.online") : t("common.offline")}
+                  </span>
+                  {selectedThread ? (
+                    <ReportButton
+                      reportedUserId={selectedThread.otherUser.id}
+                      reportedUserName={selectedThread.otherUser.name}
+                      jobId={selectedJob?.jobId}
+                      firebaseToken={firebaseToken}
+                      className="text-caption"
+                    />
+                  ) : null}
                 </div>
               </div>
 
-              {/* Report / dispute */}
-              {selectedThread && (
-                <div className="border-b border-border bg-card px-4 py-2 flex justify-end">
-                  <ReportButton
-                    reportedUserId={selectedThread.otherUser.id}
-                    reportedUserName={selectedThread.otherUser.name}
-                    jobId={selectedJob?.jobId}
-                    firebaseToken={firebaseToken}
-                    className="text-xs"
-                  />
+              {/* Job context bar */}
+              {contextJobId ? (
+                <div className="flex items-center gap-2 border-b border-line bg-sunken px-3 py-1.5 md:px-4">
+                  <p className="min-w-0 flex-1 truncate text-label text-ink">
+                    {selectedJob?.jobTitle || pendingJobContext?.title || `${t("chat.jobFallback")} ${contextJobId}`}
+                  </p>
+                  {contextJob?.id === contextJobId && contextJob.status ? (
+                    <StatusChip kind="job" value={contextJob.status} className="shrink-0" />
+                  ) : null}
+                  <Link
+                    href={`/jobs/${contextJobId}`}
+                    className="inline-flex min-h-[44px] shrink-0 items-center px-2 text-label text-primary hover:underline"
+                  >
+                    {t("chat.viewJob")}
+                  </Link>
                 </div>
-              )}
+              ) : null}
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-card">
+              <div
+                tabIndex={0}
+                className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4 focus-visible:outline-none focus-visible:shadow-focus"
+                role="log"
+                aria-live="polite"
+                aria-label={t("chat.messagesAria")}
+                aria-busy={loadingMessages}
+              >
                 {loadingMessages ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="animate-spin">
-                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full" />
-                    </div>
-                  </div>
-                ) : messagesForSelectedJob.length === 0 ? (
-                  <p className="text-center text-muted-foreground text-sm py-4">
-                    {t('chat.noMessagesYet')}
-                  </p>
+                  <ListSkeleton rows={3} />
+                ) : messagesError && messagesForSelectedJob.length === 0 && visiblePending.length === 0 ? (
+                  <ErrorState message={messagesError} onRetry={retryHistory} />
+                ) : messagesForSelectedJob.length === 0 && visiblePending.length === 0 ? (
+                  <EmptyState icon={MessageSquare} title={t("chat.noMessagesYet")} />
                 ) : (
-                  messagesForSelectedJob.map((msg) => {
+                  messagesForSelectedJob.map((msg, index) => {
+                    const time = getMessageTime(msg) as string | undefined;
+                    const previousTime = index > 0 ? (getMessageTime(messagesForSelectedJob[index - 1]) as string | undefined) : undefined;
+                    const newDay = !!time && dayKey(time) !== dayKey(previousTime);
                     const mine = getFromUserId(msg) === user?.id;
-                    const failed = mine && !!(msg as any)?.failed;
                     const originalText = getMessageText(msg);
                     const translatedText = getTranslatedText(msg);
                     const sourceLang = getSourceLang(msg);
@@ -984,69 +1078,105 @@ export default function ChatPage() {
                     const hasTranslation = !mine && !!translatedText && translatedText !== originalText;
                     const displayText = hasTranslation && !showingOriginal ? translatedText : originalText;
                     return (
-                      <div key={msg.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                        <div
-                          className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${mine ? "bg-primary text-white" : "bg-muted text-foreground"
-                            }`}
-                        >
-                          <p className="whitespace-pre-wrap">{displayText || t('chat.sentImage')}</p>
-                          {hasTranslation && (
-                            <button
-                              type="button"
-                              onClick={() => toggleShowOriginal(msg.id)}
-                              className="mt-1 text-[10px] font-medium text-muted-foreground underline decoration-dotted hover:text-foreground"
-                            >
-                              {showingOriginal
-                                ? t('chat.showTranslation')
-                                : `${t('chat.translatedFrom')} ${sourceLang?.toUpperCase() ?? "original"} · ${t('chat.seeOriginal')}`}
-                            </button>
-                          )}
+                      <div key={msg.id}>
+                        {newDay && time ? (
+                          <div className="my-3 flex items-center gap-3 text-micro uppercase text-ink-muted" role="separator">
+                            <span className="h-px flex-1 bg-line" />
+                            {dayLabel(time)}
+                            <span className="h-px flex-1 bg-line" />
+                          </div>
+                        ) : null}
+                        <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                           <div
-                            className={`mt-1 flex items-center gap-1 text-[10px] ${mine ? "text-primary-foreground/70" : "text-muted-foreground"
-                              }`}
+                            className={`max-w-[85%] rounded-card px-4 py-2 text-body md:max-w-[70%] ${
+                              mine ? "rounded-br-none bg-primary text-on-fill" : "rounded-bl-none border border-line bg-surface text-ink"
+                            }`}
                           >
-                            <span>
-                              {getMessageTime(msg)
-                                ? new Date(getMessageTime(msg) as string).toLocaleTimeString([], {
-                                  hour: "numeric",
-                                  minute: "2-digit",
-                                })
-                                : ""}
-                            </span>
-                            {mine && failed && (
-                              <span className="inline-flex items-center gap-1 text-red-200" title={t('chat.failedToSend')}>
-                                <AlertCircle size={12} />
-                                {t('chat.failedToSend')}
-                              </span>
-                            )}
-                            {mine &&
-                              !failed &&
-                              !String(msg.id).startsWith("tmp_") &&
-                              (getIsRead(msg) ? (
-                                <CheckCheck size={12} className="text-sky-300" aria-label={t('chat.readAria')} />
-                              ) : (
-                                <Check size={12} aria-label={t('chat.sentAria')} />
-                              ))}
+                            <p className="whitespace-pre-wrap break-words font-normal">{displayText || t("chat.sentImage")}</p>
+                            {hasTranslation ? (
+                              <button
+                                type="button"
+                                onClick={() => toggleShowOriginal(msg.id)}
+                                className="mt-1 min-h-[44px] text-caption text-primary underline decoration-dotted"
+                              >
+                                {showingOriginal
+                                  ? t("chat.showTranslation")
+                                  : `${t("chat.translatedFrom")} ${sourceLang?.toUpperCase() ?? "original"} · ${t("chat.seeOriginal")}`}
+                              </button>
+                            ) : null}
+                            <div className={`mt-1 flex items-center justify-end gap-1 text-micro normal-case tracking-normal tabular ${mine ? "text-on-fill/85" : "text-ink-muted"}`}>
+                              <span>{clock(time)}</span>
+                              {mine && !String(msg.id).startsWith("tmp_") ? (
+                                getIsRead(msg) ? (
+                                  <CheckCheck size={14} aria-label={t("chat.readAria")} />
+                                ) : (
+                                  <Check size={14} aria-label={t("chat.sentAria")} />
+                                )
+                              ) : null}
+                            </div>
                           </div>
                         </div>
                       </div>
                     );
                   })
                 )}
+
+                {/* Outbox: sending / waiting / failed with Retry + Discard */}
+                {!loadingMessages
+                  ? visiblePending.map((item) => (
+                      <div key={item.clientId} className="flex justify-end">
+                        <div
+                          className={`max-w-[85%] rounded-card rounded-br-none px-4 py-2 text-body md:max-w-[70%] ${
+                            item.status === "failed" ? "border border-danger/30 bg-danger-soft text-ink" : "bg-primary/85 text-on-fill"
+                          }`}
+                        >
+                          <p className="whitespace-pre-wrap break-words font-normal">{item.text}</p>
+                          <div className="mt-1 flex flex-wrap items-center justify-end gap-2 text-caption">
+                            {item.status === "failed" ? (
+                              <>
+                                <span className="inline-flex items-center gap-1 text-danger" role="alert">
+                                  <AlertCircle size={14} aria-hidden="true" />
+                                  {t("chat.failedToSend")}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => retryMessage(item.clientId)}
+                                  className="inline-flex min-h-[44px] items-center rounded-control border border-ink/80 bg-surface px-3 text-label text-ink hover:bg-sunken"
+                                >
+                                  {t("common.retry")}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => discardMessage(item.clientId)}
+                                  className="inline-flex min-h-[44px] items-center px-2 text-label text-ink-muted underline decoration-dotted"
+                                >
+                                  {t("chat.discardMessage")}
+                                </button>
+                              </>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 normal-case tracking-normal">
+                                <Clock size={14} aria-hidden="true" />
+                                {item.status === "sending" && item.attempts <= 1 ? t("chat.sending") : t("chat.waitingToSend")}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  : null}
+                <div ref={messagesEndRef} aria-hidden="true" />
               </div>
 
-              {/* Input */}
-              <div className="bg-card border-t border-border p-4 flex-shrink-0">
-                {!isConnected && (
-                  <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
-                    <AlertCircle size={16} className="text-yellow-700 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-yellow-800">
-                      {t('chat.connectionLost')}
-                    </p>
-                  </div>
-                )}
+              {/* Composer */}
+              <div className="shrink-0 border-t border-line bg-surface p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:p-4">
+                {!isConnected ? (
+                  <p role="status" className="mb-2 flex items-start gap-2 rounded-control bg-warning-soft px-3 py-2 text-caption font-normal text-ink">
+                    <AlertCircle size={16} className="mt-0.5 shrink-0 text-warning" aria-hidden="true" />
+                    {isReconnecting ? t("chat.reconnecting") : t("chat.connecting")}
+                  </p>
+                ) : null}
 
-                <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
+                <div className="-mx-3 mb-2 flex snap-x snap-proximity gap-2 overflow-x-auto scroll-px-3 px-3 pb-1 pr-8 [mask-image:linear-gradient(to_right,black_calc(100%-24px),transparent)] md:-mx-4 md:px-4 md:pr-8">
                   {QUICK_REPLIES.map((reply) => (
                     <button
                       key={reply}
@@ -1055,35 +1185,42 @@ export default function ChatPage() {
                         setInput(reply);
                         inputRef.current?.focus();
                       }}
-                      className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-primary hover:bg-primary/10"
+                      className="inline-flex min-h-[44px] shrink-0 snap-start items-center whitespace-nowrap rounded-control border border-line-strong bg-surface px-3 text-label text-ink hover:bg-sunken"
                     >
                       {reply}
                     </button>
                   ))}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <form
+                  className="flex items-center gap-2"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void handleSend();
+                  }}
+                >
                   <input
                     ref={inputRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleSend();
-                      }
+                      // IME composition must not send half-typed text
+                      if (e.key === "Enter" && e.nativeEvent.isComposing) e.preventDefault();
                     }}
-                    placeholder={t('jobDetail.writeMessage')}
-                    className="flex-1 rounded-full border border-border px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder={t("jobDetail.writeMessage")}
+                    aria-label={t("jobDetail.writeMessage")}
+                    maxLength={5000}
+                    autoComplete="off"
+                    className="min-h-[48px] min-w-0 flex-1 rounded-control border border-line-strong bg-surface px-3 text-body text-ink placeholder:text-ink-subtle hover:border-ink-muted focus:border-primary focus:outline-none focus:shadow-focus"
                   />
-                  <Button size="icon" onClick={handleSend} disabled={!isConnected} aria-label={t('chat.sendMessageAria')}>
-                    <Send size={16} />
+                  <Button type="submit" size="icon" className="h-12 w-12" disabled={!input.trim()} aria-label={t("chat.sendMessageAria")}>
+                    <Send size={18} aria-hidden="true" />
                   </Button>
-                </div>
+                </form>
               </div>
             </>
           )}
-        </main>
+        </section>
       </div>
     </div>
   );

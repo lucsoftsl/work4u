@@ -108,13 +108,13 @@ export default function AdminAchievementsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-card">
+        <div className="min-h-screen bg-surface">
             <div className="max-w-7xl mx-auto px-4 py-8">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h1 className="text-4xl font-bold text-foreground mb-2">{t('admin.achievements')}</h1>
-                        <p className="text-muted-foreground">{t('admin.achievementsDesc')}</p>
+                        <h1 className="text-4xl font-bold text-ink mb-2">{t('admin.achievements')}</h1>
+                        <p className="text-ink-muted">{t('admin.achievementsDesc')}</p>
                     </div>
                     <Button
                         onClick={() => handleOpenModal()}
@@ -126,17 +126,17 @@ export default function AdminAchievementsPage() {
                 </div>
 
                 {/* Filters & Search */}
-                <div className="bg-background border border-border rounded-lg p-4 mb-6 space-y-4">
+                <div className="bg-canvas border border-line rounded-lg p-4 mb-6 space-y-4">
                     <div className="flex gap-4">
                         <div className="flex-1">
                             <div className="relative">
-                                <Search className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
+                                <Search className="absolute left-3 top-3 w-5 h-5 text-ink-muted" />
                                 <input
                                     type="text"
                                     placeholder={t('admin.searchAchievements')}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                                    className="w-full pl-10 pr-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-ink-muted"
                                 />
                             </div>
                         </div>
@@ -146,7 +146,7 @@ export default function AdminAchievementsPage() {
                         <select
                             value={filters.category}
                             onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-                            className="px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                         >
                             <option value="">{t('admin.allCategories')}</option>
                             {CATEGORIES.map((cat) => (
@@ -159,7 +159,7 @@ export default function AdminAchievementsPage() {
                         <select
                             value={filters.rarity}
                             onChange={(e) => setFilters({ ...filters, rarity: e.target.value })}
-                            className="px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="px-4 py-2 border border-line rounded-lg bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-primary"
                         >
                             <option value="">{t('admin.allRarities')}</option>
                             {RARITIES.map((rarity) => (
@@ -174,11 +174,11 @@ export default function AdminAchievementsPage() {
                 {/* Achievements Table */}
                 {isLoading ? (
                     <div className="text-center py-12">
-                        <p className="text-muted-foreground">{t('admin.loadingAchievements')}</p>
+                        <p className="text-ink-muted">{t('admin.loadingAchievements')}</p>
                     </div>
                 ) : filteredAchievements.length === 0 ? (
-                    <div className="text-center py-12 bg-background border border-border rounded-lg">
-                        <p className="text-muted-foreground mb-4">{t('admin.noAchievements')}</p>
+                    <div className="text-center py-12 bg-canvas border border-line rounded-lg">
+                        <p className="text-ink-muted mb-4">{t('admin.noAchievements')}</p>
                         <Button onClick={() => handleOpenModal()}>{t('admin.createFirst')}</Button>
                     </div>
                 ) : (
@@ -186,13 +186,13 @@ export default function AdminAchievementsPage() {
                         {filteredAchievements.map((achievement) => (
                             <div
                                 key={achievement.id}
-                                className="bg-background border border-border rounded-lg p-4 flex items-center justify-between hover:border-primary/50 transition-colors"
+                                className="bg-canvas border border-line rounded-lg p-4 flex items-center justify-between hover:border-primary/50 transition-colors"
                             >
                                 <div className="flex items-start gap-4 flex-1">
                                     <div className="text-3xl">{achievement.icon}</div>
                                     <div className="flex-1">
-                                        <h3 className="text-lg font-bold text-foreground">{achievement.name.en}</h3>
-                                        <p className="text-sm text-muted-foreground mb-2">{achievement.description.en}</p>
+                                        <h3 className="text-lg font-bold text-ink">{achievement.name.en}</h3>
+                                        <p className="text-sm text-ink-muted mb-2">{achievement.description.en}</p>
                                         <div className="flex items-center gap-3 text-xs">
                                             <span className="px-2 py-1 bg-primary/10 text-primary rounded">
                                                 {achievement.category}
@@ -200,7 +200,7 @@ export default function AdminAchievementsPage() {
                                             <span className={`px-2 py-1 rounded text-white bg-rarity-${achievement.rarity}`}>
                                                 {achievement.rarity}
                                             </span>
-                                            <span className="text-muted-foreground">
+                                            <span className="text-ink-muted">
                                                 {achievement.rewards.xp} {t('admin.xp')} • {achievement.rewards.gold} {t('admin.gold')}
                                             </span>
                                             {!achievement.enabled && (
@@ -220,7 +220,7 @@ export default function AdminAchievementsPage() {
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => handleOpenModal(achievement)}
-                                        className="p-2 hover:bg-muted rounded-lg transition-colors text-foreground"
+                                        className="p-2 hover:bg-sunken rounded-lg transition-colors text-ink"
                                     >
                                         <Edit2 className="w-5 h-5" />
                                     </button>

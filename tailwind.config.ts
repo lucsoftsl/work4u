@@ -1,127 +1,97 @@
 import type { Config } from "tailwindcss";
+import typography from "@tailwindcss/typography";
+
+// "Guild Ledger" mapping — see qa-b2c/design-tokens.md §3. Colours are RGB channels in
+// globals.css so opacity modifiers work (bg-primary/10).
+const c = (name: string) => `rgb(var(--color-${name}) / <alpha-value>)`;
 
 const config: Config = {
-  darkMode: ["class"],
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
-      fontFamily: {
-        display: ["Inter", "system-ui", "sans-serif"],
-      },
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+        canvas: c("canvas"),
+        surface: c("surface"),
+        sunken: c("sunken"),
+        line: { DEFAULT: c("line"), strong: c("line-strong") },
+        ink: { DEFAULT: c("ink"), muted: c("ink-muted"), subtle: c("ink-subtle") },
+        "on-fill": c("on-fill"),
+        primary: { DEFAULT: c("primary"), strong: c("primary-strong"), soft: c("primary-soft"), foreground: c("on-fill") },
+        ember: { DEFAULT: c("ember"), text: c("ember-text"), soft: c("ember-soft") },
+        money: { DEFAULT: c("money"), soft: c("money-soft") },
+        success: { DEFAULT: c("success"), soft: c("success-soft") },
+        warning: { DEFAULT: c("warning"), soft: c("warning-soft") },
+        danger: { DEFAULT: c("danger"), soft: c("danger-soft") },
+        info: { DEFAULT: c("info"), soft: c("info-soft") },
+
+        // B2B ops console (b2b/ux-direction.md section 2.2). Okabe-Ito families: signal / ink / tint.
+        ops: {
+          chrome: "#1B1F24",
+          "chrome-muted": "#AEB6C1",
+          canvas: "#F4F5F7",
+          surface: "#FFFFFF",
+          ink: "#16191D",
+          "ink-muted": "#4A5361",
+          "ink-subtle": "#5F6874",
+          border: "#D5D9DF",
+          "border-strong": "#737C88",
+          accent: "#005A8C",
         },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+        sig: {
+          slate: { DEFAULT: "#6B7685", ink: "#424B57", tint: "#ECEEF1" },
+          orange: { DEFAULT: "#E69F00", ink: "#7A5200", tint: "#FCEFD2" },
+          blue: { DEFAULT: "#0072B2", ink: "#005A8C", tint: "#E1EEF7" },
+          sky: { DEFAULT: "#56B4E9", ink: "#1A6690", tint: "#E3F2FB" },
+          green: { DEFAULT: "#009E73", ink: "#006B4F", tint: "#DDF2EA" },
+          vermilion: { DEFAULT: "#D55E00", ink: "#A33F00", tint: "#FBE5D6" },
+          purple: { DEFAULT: "#CC79A7", ink: "#8A3D66", tint: "#F6E6EF" },
         },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
-        rarity: {
-          common: "hsl(var(--common))",
-          uncommon: "hsl(var(--uncommon))",
-          rare: "hsl(var(--rare))",
-          epic: "hsl(var(--epic))",
-          legendary: "hsl(var(--legendary))",
-        },
-        xp: {
-          bar: "hsl(var(--xp-bar))",
-          bg: "hsl(var(--xp-bar-bg))",
-        },
-        // Registered as real Tailwind theme colors (not just the hand-authored
-        // bare classes in globals.css) so opacity modifiers like `bg-brand/10`
-        // actually generate CSS instead of silently compiling to nothing.
-        brand: {
-          DEFAULT: "hsl(var(--brand))",
-          strong: "hsl(var(--brand-strong))",
-          soft: "hsl(var(--brand-soft))",
-        },
-        outline: "hsl(var(--outline))",
-        success: "hsl(var(--success))",
+      },
+      borderColor: { DEFAULT: c("line") },
+      fontFamily: {
+        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
+        display: ["var(--font-display)", "system-ui", "sans-serif"],
+        body: ["var(--font-body)", "system-ui", "sans-serif"],
+        sans: ["var(--font-body)", "system-ui", "sans-serif"],
+      },
+      fontSize: {
+        display: ["var(--text-display)", { lineHeight: "1.05", letterSpacing: "-0.02em", fontWeight: "700" }],
+        h1: ["var(--text-h1)", { lineHeight: "1.1", letterSpacing: "-0.015em", fontWeight: "700" }],
+        h2: ["var(--text-h2)", { lineHeight: "1.2", letterSpacing: "-0.01em", fontWeight: "650" }],
+        h3: ["var(--text-h3)", { lineHeight: "1.3", fontWeight: "600" }],
+        "body-lg": ["var(--text-body-lg)", { lineHeight: "1.55" }],
+        body: ["var(--text-body)", { lineHeight: "1.5" }],
+        label: ["var(--text-label)", { lineHeight: "1.43", fontWeight: "700" }],
+        caption: ["var(--text-caption)", { lineHeight: "1.38" }],
+        micro: ["var(--text-micro)", { lineHeight: "1.33", letterSpacing: "0.06em", fontWeight: "700" }],
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        control: "var(--radius-control)",
+        card: "var(--radius-card)",
+        sheet: "var(--radius-sheet)",
       },
       boxShadow: {
-        soft: "0 8px 30px rgba(15, 23, 42, 0.10)",
+        stamp: "var(--shadow-stamp)",
+        raised: "var(--shadow-raised)",
+        focus: "var(--shadow-focus)",
+      },
+      transitionDuration: { fast: "150ms", normal: "240ms", slow: "400ms" },
+      transitionTimingFunction: { out: "var(--ease-out)", "out-expo": "var(--ease-out-expo)" },
+      maxWidth: { content: "var(--content-max)" },
+      spacing: { header: "var(--header-h)", tabbar: "var(--tabbar-h)" },
+      keyframes: {
+        "sheet-up": { from: { transform: "translateY(100%)" }, to: { transform: "translateY(0)" } },
+        "toast-in": { from: { transform: "translateY(8px)", opacity: "0" }, to: { transform: "none", opacity: "1" } },
+        skeleton: { "0%,100%": { opacity: "1" }, "50%": { opacity: ".55" } },
       },
       animation: {
-        "slide-in": "slideIn 0.3s ease-out",
-        "level-up": "levelUp 0.8s ease-out",
-        achievement: "achievement 0.5s ease-out",
-        "coin-collect": "coinCollect 0.6s ease-out",
-        "xp-gain": "xpGain 0.4s ease-out",
-        "pulse-glow": "pulseGlow 2s ease-in-out infinite",
-        shimmer: "shimmer 2s linear infinite",
-        float: "float 3s ease-in-out infinite",
-      },
-      keyframes: {
-        slideIn: {
-          "0%": { transform: "translateX(400px)", opacity: "0" },
-          "100%": { transform: "translateX(0)", opacity: "1" },
-        },
-        levelUp: {
-          "0%": { transform: "scale(0) rotate(-180deg)", opacity: "0" },
-          "50%": { transform: "scale(1.2) rotate(10deg)" },
-          "100%": { transform: "scale(1) rotate(0deg)", opacity: "1" },
-        },
-        achievement: {
-          "0%": { transform: "translateY(-100px)", opacity: "0" },
-          "100%": { transform: "translateY(0)", opacity: "1" },
-        },
-        coinCollect: {
-          "0%": { transform: "translateY(0) scale(1)", opacity: "1" },
-          "50%": { transform: "translateY(-20px) scale(1.5)" },
-          "100%": { transform: "translateY(-100px) scale(0)", opacity: "0" },
-        },
-        xpGain: {
-          "0%": { transform: "scale(1)" },
-          "50%": { transform: "scale(1.05)" },
-          "100%": { transform: "scale(1)" },
-        },
-        pulseGlow: {
-          "0%, 100%": { boxShadow: "0 0 24px rgba(245, 158, 11, 0.50)" },
-          "50%": { boxShadow: "0 0 34px rgba(245, 158, 11, 0.80)" },
-        },
-        shimmer: {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" },
-        },
-        float: {
-          "0%, 100%": { transform: "translateY(0px)" },
-          "50%": { transform: "translateY(-10px)" },
-        },
+        "sheet-up": "sheet-up 240ms var(--ease-out-expo)",
+        "toast-in": "toast-in 240ms var(--ease-out-expo)",
+        skeleton: "skeleton 1.4s ease-in-out infinite",
       },
     },
   },
-  plugins: [require("@tailwindcss/typography")],
+  plugins: [typography],
 };
 
 export default config;

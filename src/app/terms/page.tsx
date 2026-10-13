@@ -1,7 +1,7 @@
 import TermsContent from "./TermsContent";
 
 export const metadata = {
-  title: "Terms & Conditions — Work4U",
+  title: "Terms and conditions",
   description: "The terms that govern use of the Work4U platform.",
 };
 

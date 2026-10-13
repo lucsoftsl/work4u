@@ -100,28 +100,28 @@ export default function AdminUsersPage() {
     }
 
     return (
-        <div className="min-h-screen bg-card">
+        <div className="min-h-screen bg-surface">
             <div className="max-w-5xl mx-auto px-4 py-16">
                 <Link href="/admin" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
                     <ArrowLeft className="w-4 h-4" />
                     {t("admin.backToDashboard")}
                 </Link>
-                <h1 className="mt-4 text-4xl font-bold text-foreground mb-2">{t("adminUsers.title")}</h1>
-                <p className="text-muted-foreground mb-10">{t("adminUsers.subtitle")}</p>
+                <h1 className="mt-4 text-4xl font-bold text-ink mb-2">{t("adminUsers.title")}</h1>
+                <p className="text-ink-muted mb-10">{t("adminUsers.subtitle")}</p>
 
                 {loading ? (
-                    <p className="text-muted-foreground">{t("adminUsers.loading")}</p>
+                    <p className="text-ink-muted">{t("adminUsers.loading")}</p>
                 ) : error ? (
                     <p className="text-red-600 font-semibold">{error}</p>
                 ) : users.length === 0 ? (
-                    <p className="text-muted-foreground">{t("adminUsers.empty")}</p>
+                    <p className="text-ink-muted">{t("adminUsers.empty")}</p>
                 ) : (
-                    <div className="border border-border rounded-xl divide-y divide-border overflow-hidden">
+                    <div className="border border-line rounded-xl divide-y divide-line overflow-hidden">
                         {users.map((u) => (
-                            <div key={u.id} className="flex flex-wrap items-center justify-between gap-4 p-4 bg-background">
+                            <div key={u.id} className="flex flex-wrap items-center justify-between gap-4 p-4 bg-canvas">
                                 <div className="min-w-0">
-                                    <p className="font-semibold text-foreground truncate">{u.displayName || u.email}</p>
-                                    <p className="text-sm text-muted-foreground truncate">{u.email} · {u.userType}</p>
+                                    <p className="font-semibold text-ink truncate">{u.displayName || u.email}</p>
+                                    <p className="text-sm text-ink-muted truncate">{u.email} · {u.userType}</p>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <span className={`rounded-full px-3 py-1 text-xs font-bold ${STATUS_STYLES[u.status]}`}>
@@ -135,14 +135,14 @@ export default function AdminUsersPage() {
                                                     setPlanModalUser(u);
                                                 }}
                                                 disabled={actingOnId === u.id}
-                                                className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground bg-background hover:bg-muted disabled:opacity-50"
+                                                className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink bg-canvas hover:bg-sunken disabled:opacity-50"
                                             >
                                                 {t("adminUsers.setPlanPlaceholder")}
                                             </button>
                                             <button
                                                 onClick={() => handleToggleSuspend(u)}
                                                 disabled={actingOnId === u.id}
-                                                className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-50"
+                                                className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:bg-sunken disabled:opacity-50"
                                             >
                                                 {u.status === "SUSPENDED" ? t("adminUsers.reactivate") : t("adminUsers.suspend")}
                                             </button>

@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { AlertCircle, Plus, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
+import { errorMessage } from "@/lib/http";
 import { useTranslation } from "@/lib/i18n";
+import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Field";
+import { Skeleton } from "@/components/ui/QueryState";
 import type { JobChecklistItem } from "@/api/types";
 
 interface JobChecklistProps {
@@ -29,7 +33,7 @@ export function JobChecklist({ jobId, firebaseToken }: JobChecklistProps) {
       })
       .catch((err) => {
         console.error("Failed to load checklist:", err);
-        if (isActive) setError(t('checklist.errorLoad'));
+        if (isActive) setError(t("checklist.errorLoad"));
       })
       .finally(() => {
         if (isActive) setLoading(false);
@@ -40,7 +44,8 @@ export function JobChecklist({ jobId, firebaseToken }: JobChecklistProps) {
     };
   }, [jobId, firebaseToken, t]);
 
-  const handleAdd = async () => {
+  const handleAdd = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!newItemText.trim()) return;
     setAdding(true);
     setError(null);
@@ -50,97 +55,110 @@ export function JobChecklist({ jobId, firebaseToken }: JobChecklistProps) {
       setNewItemText("");
     } catch (err) {
       console.error("Failed to add checklist item:", err);
-      setError(err instanceof Error ? err.message : t('checklist.errorAdd'));
+      setError(errorMessage(err, t("checklist.errorAdd")));
     } finally {
       setAdding(false);
     }
   };
 
+  // Optimistic toggle / delete with rollback and a visible message on failure.
   const handleToggle = async (item: JobChecklistItem) => {
     const previous = items;
+    setError(null);
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, isDone: !i.isDone } : i)));
     try {
       await api.updateChecklistItem(jobId, item.id, { isDone: !item.isDone }, firebaseToken);
     } catch (err) {
       console.error("Failed to update checklist item:", err);
       setItems(previous);
+      setError(t("checklist.errorUpdate"));
     }
   };
 
   const handleDelete = async (itemId: string) => {
     const previous = items;
+    setError(null);
     setItems((prev) => prev.filter((i) => i.id !== itemId));
     try {
       await api.deleteChecklistItem(jobId, itemId, firebaseToken);
     } catch (err) {
       console.error("Failed to delete checklist item:", err);
       setItems(previous);
+      setError(t("checklist.errorDelete"));
     }
   };
 
-  if (loading) {
-    return (
-      <div className="bg-card shadow-sm rounded-2xl p-6 border border-gray-100">
-        <Loader2 size={16} className="animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  const doneCount = items.filter((i) => i.isDone).length;
 
   return (
-    <div className="bg-card shadow-sm rounded-2xl p-6 border border-gray-100">
-      <h3 className="text-lg font-semibold text-foreground mb-3">{t('checklist.title')}</h3>
+    <section aria-labelledby="job-checklist-title" aria-busy={loading || undefined} className="rounded-card border border-line bg-surface p-4 md:p-6">
+      <div className="mb-3 flex items-baseline justify-between gap-2">
+        <h2 id="job-checklist-title" className="font-display text-h3 text-ink">
+          {t("checklist.title")}
+        </h2>
+        {items.length > 0 ? (
+          <span className="text-caption tabular text-ink-muted">
+            {doneCount}/{items.length}
+          </span>
+        ) : null}
+      </div>
 
-      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      {error ? (
+        <p role="alert" className="mb-3 flex items-start gap-2 rounded-control bg-danger-soft p-3 text-label font-normal text-ink">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden="true" />
+          {error}
+        </p>
+      ) : null}
 
-      {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t('checklist.empty')}</p>
+      {loading ? (
+        <div className="space-y-3" aria-hidden="true">
+          <Skeleton className="h-5 w-2/3" />
+          <Skeleton className="h-5 w-1/2" />
+        </div>
+      ) : items.length === 0 ? (
+        <p className="text-body text-ink-muted">{t("checklist.empty")}</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="divide-y divide-line">
           {items.map((item) => (
-            <li key={item.id} className="flex items-center gap-3 group">
-              <input
-                type="checkbox"
+            <li key={item.id} className="flex items-center gap-2">
+              <Checkbox
+                wrapperClassName="min-w-0 flex-1"
                 checked={item.isDone}
                 onChange={() => handleToggle(item)}
-                className="h-4 w-4 rounded border-border text-primary"
+                label={<span className={item.isDone ? "break-words text-ink-muted line-through" : "break-words text-ink"}>{item.text}</span>}
               />
-              <span className={`flex-1 text-sm ${item.isDone ? "text-muted-foreground line-through" : "text-foreground"}`}>
-                {item.text}
-              </span>
-              <button
+              {/* Always visible: hover-only controls are unreachable on touch (design-tokens §6, active job). */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-ink-muted hover:bg-danger-soft hover:text-danger"
                 onClick={() => handleDelete(item.id)}
-                className="text-muted-foreground hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                aria-label={t('checklist.removeAria')}
+                aria-label={`${t("checklist.removeAria")}: ${item.text}`}
               >
-                <Trash2 size={14} />
-              </button>
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+              </Button>
             </li>
           ))}
         </ul>
       )}
 
-      <div className="mt-4 flex items-center gap-2">
-        <input
-          value={newItemText}
-          onChange={(e) => setNewItemText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleAdd();
-            }
-          }}
-          placeholder={t('checklist.addPlaceholder')}
-          className="flex-1 rounded-full border border-border px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-        <button
-          onClick={handleAdd}
-          disabled={adding || !newItemText.trim()}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white disabled:opacity-50"
-          aria-label={t('checklist.addAria')}
-        >
-          <Plus size={16} />
-        </button>
-      </div>
-    </div>
+      <form onSubmit={handleAdd} className="mt-4 flex items-end gap-2">
+        <div className="min-w-0 flex-1">
+          <label htmlFor={`checklist-new-${jobId}`} className="sr-only">
+            {t("checklist.addAria")}
+          </label>
+          <input
+            id={`checklist-new-${jobId}`}
+            value={newItemText}
+            onChange={(e) => setNewItemText(e.target.value)}
+            placeholder={t("checklist.addPlaceholder")}
+            className="min-h-[48px] w-full rounded-control border border-line-strong bg-surface px-3 text-body text-ink placeholder:text-ink-subtle hover:border-ink-muted focus:border-primary focus:outline-none focus:shadow-focus"
+          />
+        </div>
+        <Button type="submit" size="icon" className="h-12 w-12" loading={adding} disabled={!newItemText.trim()} aria-label={t("checklist.addAria")}>
+          {!adding ? <Plus className="h-5 w-5" aria-hidden="true" /> : null}
+        </Button>
+      </form>
+    </section>
   );
 }

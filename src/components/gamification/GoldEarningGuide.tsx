@@ -14,15 +14,15 @@ export function GoldEarningGuide() {
     ];
 
     return (
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-soft">
+        <div className="bg-surface border border-line rounded-2xl p-4 shadow-stamp">
             <div className="flex items-center gap-2 mb-3">
-                <Coins className="w-4 h-4 text-secondary" />
-                <h3 className="text-sm font-bold text-foreground">{t('gamification.howToEarnGold')}</h3>
+                <Coins className="w-4 h-4 text-ink" />
+                <h3 className="text-sm font-bold text-ink">{t('gamification.howToEarnGold')}</h3>
             </div>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {sources.map(({ icon: Icon, text }) => (
-                    <li key={text} className="flex items-start gap-2 text-sm text-muted-foreground">
-                        <Icon className="w-4 h-4 shrink-0 mt-0.5 text-secondary" />
+                    <li key={text} className="flex items-start gap-2 text-sm text-ink-muted">
+                        <Icon className="w-4 h-4 shrink-0 mt-0.5 text-ink" />
                         <span>{text}</span>
                     </li>
                 ))}

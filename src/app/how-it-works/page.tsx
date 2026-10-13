@@ -54,12 +54,12 @@ export default function HowItWorksPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-card">
+    <div className="min-h-screen bg-surface">
       {/* Hero */}
-      <section className="bg-gradient-to-br from-primary/20 to-primary/5 py-16 border-b border-border">
+      <section className="bg-gradient-to-br from-primary/20 to-primary/5 py-16 border-b border-line">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl font-bold text-foreground mb-4">{t('how.title')}</h1>
-          <p className="text-xl text-muted-foreground">{t('how.subtitle')}</p>
+          <h1 className="text-4xl font-bold text-ink mb-4">{t('how.title')}</h1>
+          <p className="text-xl text-ink-muted">{t('how.subtitle')}</p>
         </div>
       </section>
 
@@ -73,8 +73,8 @@ export default function HowItWorksPage() {
                 <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold mx-auto mb-4">
                   {step.number}
                 </div>
-                <h3 className="text-xl font-bold text-foreground mb-2">{step.title}</h3>
-                <p className="text-muted-foreground">{step.description}</p>
+                <h2 className="text-xl font-bold text-ink mb-2">{step.title}</h2>
+                <p className="text-ink-muted">{step.description}</p>
               </div>
             ))}
           </div>
@@ -82,16 +82,16 @@ export default function HowItWorksPage() {
       </section>
 
       {/* Features */}
-      <section className="bg-muted py-16">
+      <section className="bg-sunken py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-foreground mb-12 text-center">{t('how.whyChoose')}</h2>
+          <h2 className="text-3xl font-bold text-ink mb-12 text-center">{t('how.whyChoose')}</h2>
           <div className="grid md:grid-cols-2 gap-8">
             {features.map((feature, i) => (
-              <div key={i} className="flex gap-4 p-6 bg-card rounded-lg border border-border">
+              <div key={i} className="flex gap-4 p-6 bg-surface rounded-lg border border-line">
                 <span className="text-4xl">{feature.icon}</span>
                 <div>
-                  <h3 className="font-bold text-foreground mb-1">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.desc}</p>
+                  <h2 className="font-bold text-ink mb-1">{feature.title}</h2>
+                  <p className="text-ink-muted">{feature.desc}</p>
                 </div>
               </div>
             ))}
@@ -102,7 +102,7 @@ export default function HowItWorksPage() {
       {/* CTA */}
       <section className="py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-foreground mb-4">{t('home.ctaTitle')}</h2>
+          <h2 className="text-3xl font-bold text-ink mb-4">{t('home.ctaTitle')}</h2>
           <Link href="/jobs">
             <Button size="lg" className="gap-2">
               {t('jobs.title')} <ChevronRight size={20} />

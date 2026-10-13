@@ -105,7 +105,7 @@ export default function AdminBlogPage() {
   }
 
   return (
-    <div className="min-h-screen bg-card">
+    <div className="min-h-screen bg-surface">
       <div className="mx-auto max-w-5xl px-4 py-16">
         <Link href="/admin" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
           <ArrowLeft className="w-4 h-4" />
@@ -113,12 +113,12 @@ export default function AdminBlogPage() {
         </Link>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-bold text-foreground mb-2">{t("adminBlog.title")}</h1>
-            <p className="text-muted-foreground">{t("adminBlog.subtitle")}</p>
+            <h1 className="text-4xl font-bold text-ink mb-2">{t("adminBlog.title")}</h1>
+            <p className="text-ink-muted">{t("adminBlog.subtitle")}</p>
           </div>
           <Link
             href="/admin/blog/new"
-            className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-bold text-white"
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-white"
           >
             <Plus className="h-4 w-4" />
             {t("adminBlog.newArticle")}
@@ -126,16 +126,16 @@ export default function AdminBlogPage() {
         </div>
 
         {loading ? (
-          <p className="mt-10 text-muted-foreground">{t("blog.loading")}</p>
+          <p className="mt-10 text-ink-muted">{t("blog.loading")}</p>
         ) : error ? (
           <p className="mt-10 text-red-600 font-semibold">{error}</p>
         ) : articles.length === 0 ? (
-          <div className="mt-10 rounded-2xl border border-border bg-background p-10 text-center">
-            <Newspaper className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-            <p className="text-muted-foreground mb-4">{t("adminBlog.empty")}</p>
+          <div className="mt-10 rounded-2xl border border-line bg-canvas p-10 text-center">
+            <Newspaper className="mx-auto mb-3 h-8 w-8 text-ink-muted" />
+            <p className="text-ink-muted mb-4">{t("adminBlog.empty")}</p>
             <Link
               href="/admin/blog/new"
-              className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-bold text-white"
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-white"
             >
               {t("adminBlog.createFirst")}
             </Link>
@@ -149,27 +149,27 @@ export default function AdminBlogPage() {
                 onDragStart={() => setDragIndex(index)}
                 onDragOver={(event: DragEvent) => event.preventDefault()}
                 onDrop={() => handleDrop(index)}
-                className="flex items-center gap-4 rounded-2xl border border-border bg-background p-4"
+                className="flex items-center gap-4 rounded-2xl border border-line bg-canvas p-4"
               >
-                <GripVertical className="h-5 w-5 shrink-0 cursor-grab text-muted-foreground" />
-                <div className="relative h-14 w-20 shrink-0 overflow-hidden rounded-xl bg-[#eff7fa]">
+                <GripVertical className="h-5 w-5 shrink-0 cursor-grab text-ink-muted" />
+                <div className="relative h-14 w-20 shrink-0 overflow-hidden rounded-xl bg-primary-soft">
                   {article.coverImageUrl ? (
                     <Image src={article.coverImageUrl} alt="" fill unoptimized className="object-cover" />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-brand/30">
+                    <div className="flex h-full w-full items-center justify-center text-primary/30">
                       <Newspaper className="h-5 w-5" />
                     </div>
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-foreground">{article.title}</p>
+                  <p className="truncate font-semibold text-ink">{article.title}</p>
                   {article.excerpt && (
-                    <p className="truncate text-sm text-muted-foreground">{article.excerpt}</p>
+                    <p className="truncate text-sm text-ink-muted">{article.excerpt}</p>
                   )}
                 </div>
                 <span
                   className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
-                    article.isPublished ? "bg-green-50 text-green-700" : "bg-muted text-muted-foreground"
+                    article.isPublished ? "bg-green-50 text-green-700" : "bg-sunken text-ink-muted"
                   }`}
                 >
                   {article.isPublished ? t("adminBlog.published") : t("adminBlog.hidden")}
@@ -177,14 +177,14 @@ export default function AdminBlogPage() {
                 <div className="flex shrink-0 items-center gap-2">
                   <Link
                     href={`/admin/blog/${article.id}/edit`}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg text-foreground hover:bg-muted"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-ink hover:bg-sunken"
                   >
                     <Pencil className="h-4 w-4" />
                   </Link>
                   <button
                     onClick={() => handleTogglePublished(article)}
                     disabled={actingOnId === article.id}
-                    className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-50"
+                    className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:bg-sunken disabled:opacity-50"
                   >
                     {article.isPublished ? t("adminBlog.unpublish") : t("adminBlog.publish")}
                   </button>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+import { API_BASE_URL as BACKEND_API_BASE_URL } from "@/lib/http";
 
 export async function GET(request: NextRequest) {
   const search = request.nextUrl.searchParams.toString();
