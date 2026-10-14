@@ -31,6 +31,10 @@ export function formatTimeAgo(value: string | null | undefined, locale: string, 
 
 export interface JobCardJob {
   id: string;
+  /** `{slug}-{id}` URL segment when known (public API); falls back to the id. */
+  canonicalPath?: string;
+  /** Poster display name when the full poster block is not loaded yet. */
+  employerName?: string;
   title: string;
   category: string;
   budget: number;
@@ -38,11 +42,12 @@ export interface JobCardJob {
   budgetCurrency: string;
   location: string;
   remote: boolean;
-  applicants: number;
+  /** Unknown until the full job is loaded (server-rendered seeds do not have it). */
+  applicants?: number;
   boosted?: boolean;
   dateTimeCreated?: string;
   lifecycleStatus?: JobLifecycleStatus;
-  createdBy: {
+  createdBy?: {
     userId: string;
     name: string;
     image?: string | null;
@@ -96,7 +101,7 @@ export function JobCard({ job, showStatus, actions, headingLevel }: JobCardProps
   return (
     <LedgerRow
       headingLevel={headingLevel}
-      href={`/jobs/${job.id}`}
+      href={`/jobs/${job.canonicalPath ?? job.id}`}
       title={job.title}
       eyebrow={
         <>
@@ -120,14 +125,27 @@ export function JobCard({ job, showStatus, actions, headingLevel }: JobCardProps
               <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span className="min-w-0 break-words">{job.remote ? t("jobDetail.remote") : job.location}</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 tabular">
-              <Users className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {job.applicants} {t("jobs.applicantsCount")}
-            </span>
+            {typeof job.applicants === "number" ? (
+              <span className="inline-flex items-center gap-1.5 tabular">
+                <Users className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {job.applicants} {t("jobs.applicantsCount")}
+              </span>
+            ) : (
+              // Server-rendered cards do not know the count yet: reserve its space so the live data does not shift the list (CLS).
+              <span aria-hidden="true" data-placeholder="applicants" className="invisible inline-flex items-center gap-1.5 tabular">
+                <Users className="h-4 w-4 shrink-0" />
+                0 {t("jobs.applicantsCount")}
+              </span>
+            )}
           </p>
-          <p className="pt-1">
-            <PosterMiniTrust name={job.createdBy.name} image={job.createdBy.image} rating={job.createdBy.rating} reviews={job.createdBy.reviews} />
-          </p>
+          {job.createdBy ? (
+            <p className="pt-1">
+              <PosterMiniTrust name={job.createdBy.name} image={job.createdBy.image} rating={job.createdBy.rating} reviews={job.createdBy.reviews} />
+            </p>
+          ) : (
+            // Same height as the poster-trust line (24px avatar row) it is replaced by, so nothing moves when it loads.
+            <p data-placeholder="poster" className="min-h-6 pt-1 font-bold text-ink">{job.employerName ?? ""}</p>
+          )}
         </>
       }
       aside={

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ChangeEvent } from "react";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { useRouter } from "next/navigation";
 import { Camera, Gift } from "lucide-react";
 import { Button, buttonClasses } from "@/components/ui/Button";
@@ -17,6 +17,8 @@ import type { AuthUser } from "@/types/auth";
 import { DataAndDangerSection } from "./DataAndDangerSection";
 import { ProfileDetails } from "./ProfileDetails";
 import { ProfileEditForm } from "./ProfileEditForm";
+import { ProfileIndexingToggle } from "./ProfileIndexingToggle";
+import { resolveAccountMode } from "@/hooks/useAccountMode";
 
 function PhotoUpload({ user }: { user: AuthUser }) {
   const { t } = useTranslation();
@@ -82,7 +84,7 @@ export function AccountTab({ user }: { user: AuthUser }) {
           <div className="flex min-w-0 items-center gap-4">
             {user.photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={user.photoUrl} alt="" className="h-20 w-20 shrink-0 rounded-full border border-line object-cover" />
+              <img src={user.photoUrl} alt="" width={80} height={80} decoding="async" className="h-20 w-20 shrink-0 rounded-full border border-line object-cover" />
             ) : (
               <div
                 aria-hidden="true"
@@ -152,6 +154,8 @@ export function AccountTab({ user }: { user: AuthUser }) {
           </Link>
         </div>
       </section>
+
+      {resolveAccountMode(user) !== "REQUESTOR" ? <ProfileIndexingToggle userId={user.id} /> : null}
 
       <DataAndDangerSection userId={user.id} />
     </div>

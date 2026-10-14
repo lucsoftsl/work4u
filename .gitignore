@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# written by scripts/sync-translations.mjs (keys that exist only locally); regenerate with `npm run sync-translations`
+/scripts/translation-sync-report.json

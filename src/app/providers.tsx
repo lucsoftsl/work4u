@@ -3,13 +3,12 @@
 import { ReactNode, useEffect, useRef } from 'react';
 import { Provider } from 'react-redux';
 import { store } from '@/store';
-import { LocaleProvider, useTranslation } from '@/lib/i18n';
+import { LocaleProvider, useTranslation, type Locale } from '@/lib/i18n';
 import { AuthProvider } from '@/context/AuthContext';
 import { ChatProvider } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import { useInitializeGamification } from '@/hooks/useInitializeGamification';
 import { captureReferralCodeFromUrl } from '@/lib/referral';
-import { updateUserProfile } from '@/lib/auth-service';
 import { ToastProvider } from '@/components/ui/Toast';
 
 function GamificationInitializer({ children }: { children: ReactNode }) {
@@ -33,17 +32,26 @@ function LocaleSync({ children }: { children: ReactNode }) {
         if (!isAuthenticated || !user?.id) return;
         if (syncedLocaleRef.current === locale) return;
         syncedLocaleRef.current = locale;
-        updateUserProfile(user.id, { preferredLanguage: locale }).catch(() => {
-            // Best-effort sync — chat translation just falls back to 'en' if this fails.
-        });
+        // Loaded on demand: the profile service pulls in the sign-in SDK, which must not be in every page's first-load bundle.
+        import('@/lib/auth-service')
+            .then((m) => m.updateUserProfile(user.id, { preferredLanguage: locale }))
+            .catch(() => {
+                // Best-effort sync — chat translation just falls back to 'en' if this fails.
+            });
     }, [locale, isAuthenticated, user?.id]);
 
     return <>{children}</>;
 }
 
-export default function Providers({ children }: { children: ReactNode }) {
+interface ProvidersProps {
+    children: ReactNode;
+    initialLocale?: Locale;
+    initialDictionary?: Record<string, string>;
+}
+
+export default function Providers({ children, initialLocale, initialDictionary }: ProvidersProps) {
     return (
-        <LocaleProvider>
+        <LocaleProvider initialLocale={initialLocale} initialDictionary={initialDictionary}>
             <Provider store={store}>
                 <AuthProvider>
                     <ChatProvider>

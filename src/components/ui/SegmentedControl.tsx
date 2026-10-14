@@ -37,7 +37,7 @@ export function SegmentedControl<T extends string>({ value, onChange, options, l
       role="radiogroup"
       aria-label={label}
       className={cn(
-        tone === "tabs" ? "inline-flex gap-6" : "inline-flex rounded-control border border-line bg-sunken p-1",
+        tone === "tabs" ? "inline-flex max-w-full gap-6" : "inline-flex rounded-control border border-line bg-sunken p-1",
         className
       )}
     >
@@ -66,7 +66,7 @@ export function SegmentedControl<T extends string>({ value, onChange, options, l
             className={cn(
               tone === "tabs"
                 ? // Underline grows from the centre; transform keeps the motion on the compositor.
-                  "relative min-h-[44px] whitespace-nowrap text-label transition-colors duration-fast " +
+                  "relative min-h-[44px] min-w-0 py-2 pb-3 text-center text-label leading-tight transition-colors duration-fast " +
                     "after:absolute after:inset-x-0 after:bottom-1.5 after:h-0.5 after:rounded-full after:bg-primary " +
                     "after:transition-transform after:duration-normal after:ease-out"
                 : "min-h-[36px] min-w-[44px] flex-1 rounded-control px-3 text-label transition-colors duration-fast",

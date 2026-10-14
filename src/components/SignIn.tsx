@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useId, useRef, useState } from 'react';
-import Link from 'next/link';
+import Link from "@/components/LocaleLink";
 import { useRouter } from 'next/navigation';
 import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
@@ -12,7 +12,7 @@ import { useTranslation } from '@/lib/i18n';
 import { useAuth } from '@/context/AuthContext';
 import { auth } from '@/lib/firebase';
 import { describeAuthError } from '@/lib/auth-errors';
-import { safeRedirectPath } from '@/lib/auth-redirect';
+import { clearRememberedRedirect, resolvePostAuthTarget, signUpPath } from '@/lib/auth-redirect';
 import { postSignInPath } from '@/lib/signup-resume';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
@@ -145,16 +145,21 @@ interface SignInError {
   message: string;
 }
 
-function afterSignInPath(): string {
-  if (typeof window === 'undefined') return '/dashboard';
-  return safeRedirectPath(new URLSearchParams(window.location.search).get('redirect'));
+const DEFAULT_AFTER_SIGN_IN = '/dashboard';
+
+/** Read once, when the page opens: later navigation changes the URL (and drops `?redirect=`), but the target must not change. */
+function initialTarget(): string {
+  if (typeof window === 'undefined') return DEFAULT_AFTER_SIGN_IN;
+  return resolvePostAuthTarget(window.location.search) ?? DEFAULT_AFTER_SIGN_IN;
 }
 
 export default function SignInComponent() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   useStripCredentialParams();
+  const targetRef = useRef<string | null>(null);
+  const afterSignInPath = () => (targetRef.current ??= initialTarget());
 
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -211,7 +216,9 @@ export default function SignInComponent() {
     setLoading(true);
     try {
       const signedIn = await signIn(formData);
-      router.push(postSignInPath(signedIn, afterSignInPath()));
+      const next = postSignInPath(signedIn, afterSignInPath());
+      if (next === afterSignInPath()) clearRememberedRedirect();
+      router.push(next);
     } catch (err: unknown) {
       const info = describeAuthError(resolveSignInError(err));
       showError({ field: info.field, message: t(info.key) });
@@ -225,8 +232,10 @@ export default function SignInComponent() {
     setGoogleLoading(true);
 
     try {
-      await signInWithGoogle();
-      router.push(afterSignInPath());
+      const signedIn = await signInWithGoogle();
+      const next = postSignInPath(signedIn, afterSignInPath());
+      if (next === afterSignInPath()) clearRememberedRedirect();
+      router.push(next);
     } catch (err: unknown) {
       const resolvedError = resolveSignInError(err);
 
@@ -265,10 +274,18 @@ export default function SignInComponent() {
     }
   };
 
+  // Capture the target the moment the page opens, before any navigation rewrites the URL.
   useEffect(() => {
-    if (isAuthenticated) {
-      router.replace(afterSignInPath());
-    }
+    afterSignInPath();
+  }, []);
+
+  // Already signed in (or just became so): continue to the remembered target, through onboarding if it is unfinished.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const target = targetRef.current ?? initialTarget();
+    targetRef.current = target;
+    router.replace(postSignInPath(user, target));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `user` only refines the destination; navigate once per sign-in
   }, [isAuthenticated, router]);
 
   const bannerError = error && !error.field ? error.message : null;
@@ -367,6 +384,12 @@ export default function SignInComponent() {
               {t('auth.signIn.newHere')}{' '}
               <Link
                 href="/signup"
+                onClick={(event) => {
+                  const target = afterSignInPath();
+                  if (target === DEFAULT_AFTER_SIGN_IN) return;
+                  event.preventDefault();
+                  router.push(signUpPath(target)); // keep where the person was going
+                }}
                 className="inline-flex min-h-[44px] items-center rounded-control font-bold text-primary underline-offset-4 hover:underline"
               >
                 {t('auth.signIn.joinLink')}

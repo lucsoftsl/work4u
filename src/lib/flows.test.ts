@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { postSignInPath, resumeSignup } from "./signup-resume";
 import { safeRedirectPath, signInPath } from "./auth-redirect";
 import { describeAuthError, isUserFacingMessage } from "./auth-errors";
@@ -25,7 +25,7 @@ describe("resumeSignup", () => {
   });
 
   it("sends incomplete users back to onboarding after sign-in", () => {
-    expect(postSignInPath({ onboardingCompleted: false }, "/my-jobs")).toBe("/signup");
+    expect(postSignInPath({ onboardingCompleted: false }, "/my-jobs")).toBe("/signup?redirect=%2Fmy-jobs");
     expect(postSignInPath({ onboardingCompleted: true }, "/my-jobs")).toBe("/my-jobs");
   });
 });
@@ -145,5 +145,43 @@ describe("cn (tailwind-merge with the design type scale)", () => {
     expect(cn("bg-primary text-on-fill", "text-label")).toContain("text-on-fill");
     expect(cn("text-body", "text-label")).toBe("text-label");
     expect(cn("text-ink", "text-primary")).toBe("text-primary");
+  });
+});
+
+import { clearRememberedRedirect, redirectFromSearch, resolvePostAuthTarget, signUpPath } from "./auth-redirect";
+
+describe("post-auth redirect (sign-in, sign-up, Google)", () => {
+  const invite = "/b2b/invite/abcDEF123_-abcDEF123_-abcDEF123_-abcDEF12345";
+  const qs = (target: string) => `?redirect=${encodeURIComponent(target)}`;
+  beforeEach(() => { sessionStorage.clear(); });
+
+  it("accepts any same-origin relative path, with its query", () => {
+    for (const p of [invite, "/profile", "/my-jobs/12/applicants", "/jobs/fix-tap-9?x=1"]) expect(redirectFromSearch(qs(p)), p).toBe(p);
+  });
+  it("refuses open redirects, other hosts, protocol tricks and the auth pages themselves", () => {
+    for (const bad of ["//evil.com", "https://evil.com/x", "/\\evil.com", "javascript:alert(1)", "/signin", "/signup?step=2", "evil", ""]) {
+      expect(redirectFromSearch(qs(bad)), bad).toBeNull();
+    }
+    expect(redirectFromSearch("")).toBeNull();
+  });
+  it("remembers the target for the rest of the session (multi-step sign-up) and prefers the URL", () => {
+    expect(resolvePostAuthTarget(qs("/profile"))).toBe("/profile");
+    expect(resolvePostAuthTarget("")).toBe("/profile"); // later step, URL no longer carries it
+    expect(resolvePostAuthTarget(qs(invite))).toBe(invite);
+    clearRememberedRedirect();
+    expect(resolvePostAuthTarget("")).toBeNull();
+  });
+  it("re-validates what was stored: a tampered value never becomes an open redirect", () => {
+    sessionStorage.setItem("work4u.postAuthRedirect", "//evil.com");
+    expect(resolvePostAuthTarget("")).toBeNull();
+    expect(sessionStorage.getItem("work4u.postAuthRedirect")).toBeNull();
+  });
+  it("sign-up links keep the target, unfinished onboarding sends sign-in to /signup with it", () => {
+    expect(signUpPath(invite)).toBe(`/signup?redirect=${encodeURIComponent(invite)}`);
+    expect(signUpPath(null)).toBe("/signup");
+    expect(signUpPath("//evil.com")).toBe("/signup");
+    expect(postSignInPath({ onboardingCompleted: false }, "/profile")).toBe("/signup?redirect=%2Fprofile");
+    expect(postSignInPath({ onboardingCompleted: false }, "/dashboard")).toBe("/signup");
+    expect(postSignInPath({ onboardingCompleted: true }, "/profile")).toBe("/profile");
   });
 });

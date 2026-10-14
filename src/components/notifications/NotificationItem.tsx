@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { AlertTriangle, Ban, Check, Inbox, Users, X, type LucideIcon } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import {

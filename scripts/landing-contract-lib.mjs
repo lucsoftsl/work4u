@@ -59,7 +59,10 @@ export function validateLandingPayload(payload) {
         }
         stringField(errors, `categories.desktopItems[${idx}].slug`, item.slug);
         stringField(errors, `categories.desktopItems[${idx}].name`, item.name);
-        stringField(errors, `categories.desktopItems[${idx}].countLabel`, item.countLabel);
+        if (item.countLabel !== undefined) stringField(errors, `categories.desktopItems[${idx}].countLabel`, item.countLabel);
+        for (const key of ["jobCount", "professionalCount"]) {
+          if (item[key] !== undefined && !(Number.isInteger(item[key]) && item[key] >= 0)) errors.push(`categories.desktopItems[${idx}].${key} must be a non-negative integer`);
+        }
         stringField(errors, `categories.desktopItems[${idx}].iconKey`, item.iconKey);
       });
     }

@@ -113,18 +113,32 @@ export async function apiFetch(input: string, init: RequestInit & { auth?: boole
   return fetch(url, { ...rest, headers: withToken(baseHeaders, refreshed) });
 }
 
-/** JSON convenience wrapper: throws ApiError on non-2xx, returns undefined on 204. */
-export async function apiJson<T>(input: string, init: RequestInit & { auth?: boolean; json?: unknown } = {}): Promise<T> {
-  const { json, ...rest } = init;
-  const headers = new Headers(rest.headers);
-  if (json !== undefined) headers.set("Content-Type", "application/json");
-  const res = await apiFetch(input, {
-    ...rest,
-    headers,
-    body: json !== undefined ? JSON.stringify(json) : rest.body,
-  });
+// Identical GETs that are in flight at the same moment share one request (the chat page and its socket hook both load the same
+// history on open; reconnects repeat it). Only while pending: nothing is cached, the next call is a fresh request.
+const inflightGets = new Map<string, Promise<unknown>>();
+
+async function fetchJson<T>(input: string, init: RequestInit & { auth?: boolean }): Promise<T> {
+  const res = await apiFetch(input, init);
   if (!res.ok) throw await toApiError(res);
   if (res.status === 204) return undefined as T;
   const text = await res.text();
   return (text ? JSON.parse(text) : undefined) as T;
+}
+
+/** JSON convenience wrapper: throws ApiError on non-2xx, returns undefined on 204. Concurrent identical GETs are shared. */
+export async function apiJson<T>(input: string, init: RequestInit & { auth?: boolean; json?: unknown } = {}): Promise<T> {
+  const { json, ...rest } = init;
+  const headers = new Headers(rest.headers);
+  if (json !== undefined) headers.set("Content-Type", "application/json");
+  const request = { ...rest, headers, body: json !== undefined ? JSON.stringify(json) : rest.body };
+
+  const isPlainGet = (rest.method ?? "GET").toUpperCase() === "GET" && request.body == null && !rest.signal;
+  if (!isPlainGet) return fetchJson<T>(input, request);
+
+  const key = `${input}|${init.auth ? "auth" : ""}|${headers.get("Authorization") ?? ""}`;
+  const pending = inflightGets.get(key);
+  if (pending) return structuredClone(await pending) as T; // each caller gets its own copy: nobody can mutate another's data
+  const promise = fetchJson<T>(input, request).finally(() => inflightGets.delete(key));
+  inflightGets.set(key, promise);
+  return promise;
 }

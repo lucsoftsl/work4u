@@ -16,7 +16,7 @@ const walk = (dir: string): string[] =>
 const STR = String.raw`(?:"((?:\\.|[^"\\])*)"|'((?:\\.|[^'\\])*)'|\x60((?:\\.|[^\x60\\$])*)\x60)`;
 const PAIR = new RegExp(String.raw`(["'])(b2b\.[A-Za-z0-9_.\-]+)\1\s*,\s*${STR}`, "gs");
 
-const sources = ["src/b2b", "src/app/ops", "src/app/tech"].flatMap(walk);
+const sources = ["src/b2b", "src/app/(app)/ops", "src/app/(app)/tech"].flatMap(walk);
 const fallbacks = new Map<string, string>();
 for (const file of sources) {
   for (const m of readFileSync(file, "utf8").matchAll(PAIR)) fallbacks.set(m[2], m[3] ?? m[4] ?? m[5]);

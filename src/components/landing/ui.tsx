@@ -1,11 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
-import { useId, useState, type FormEvent, type ReactNode } from "react";
+import Link from "@/components/LocaleLink";
+import { getImageProps } from "next/image";
+import { useId, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, MapPin, Search, Star, type LucideIcon } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { localizedPath } from "@/lib/i18n-routing";
 import { cn } from "@/lib/utils";
 import { buttonClasses } from "@/components/ui/Button";
 import { LedgerRow } from "@/components/ui/LedgerRow";
@@ -65,7 +66,7 @@ type Persona = "hire" | "work";
 /** Persona tabs + what/where search. Hire searches workers, work searches jobs; both pass keywords/location in the URL. */
 export function PersonaSearch({ className, centered = false }: { className?: string; centered?: boolean }) {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [persona, setPersona] = useState<Persona>("hire");
   const [what, setWhat] = useState("");
   const [where, setWhere] = useState("");
@@ -79,7 +80,7 @@ export function PersonaSearch({ className, centered = false }: { className?: str
     if (where.trim()) params.set("location", where.trim());
     const base = persona === "hire" ? "/workers" : "/jobs";
     const query = params.toString();
-    router.push(query ? `${base}?${query}` : base);
+    router.push(localizedPath(locale, query ? `${base}?${query}` : base));
   };
 
   // Fields are borderless inside one bar; the bar itself carries the outline and the focus ring.
@@ -157,6 +158,33 @@ export function PersonaSearch({ className, centered = false }: { className?: str
 /* Featured helper card (hero, ≥ md)                                   */
 /* ------------------------------------------------------------------ */
 
+const HERO_SIZES = "(min-width: 1024px) 40vw, 36rem";
+/** 1x1 transparent GIF: the <img> fallback below 768px, so phones never download the hero (it is not even shown there). */
+
+/**
+ * Hero photo, only for >= md (the card is hidden below). It is rendered on the client, and only when the viewport is >= 768px, so a
+ * phone never creates the <img> at all: no download, no preload hint, whatever the browser does with <picture>/lazy/display:none.
+ * (Earlier versions kept a <picture> with a media source and a lazy blank <img>; QA still saw a 28 KB /_next/image copy on a phone.)
+ * The photo is decorative (alt=""), so leaving it out of the server HTML costs nothing; the aspect-[4/3] box reserves its space.
+ * No fetchPriority: React turns a high-priority <img> into a preload hint, and the hero text is the LCP anyway.
+ */
+const DESKTOP_QUERY = "(min-width: 768px)";
+const subscribeDesktop = (notify: () => void) => {
+  const mq = window.matchMedia(DESKTOP_QUERY);
+  mq.addEventListener("change", notify);
+  return () => mq.removeEventListener("change", notify);
+};
+const isDesktop = () => window.matchMedia(DESKTOP_QUERY).matches;
+
+function HeroPicture({ src }: { src: string }) {
+  const desktop = useSyncExternalStore(subscribeDesktop, isDesktop, () => false);
+  if (!desktop) return null;
+  const { props } = getImageProps({ src, alt: "", width: 640, height: 480, sizes: HERO_SIZES, quality: 70 });
+  // getImageProps already produced the optimised srcSet; a plain <img> keeps it out of next/image's own preload logic.
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img {...props} alt="" loading="eager" decoding="async" className="absolute inset-0 h-full w-full object-cover" />;
+}
+
 interface FeaturedHelper {
   name: string;
   title: string;
@@ -168,7 +196,7 @@ export function FeaturedHelperCard({ imageUrl, helper }: { imageUrl: string; hel
   return (
     <article className="relative rounded-card border border-line bg-surface p-3 shadow-raised transition-[border-color] duration-fast hover:border-line-strong focus-within:border-line-strong">
       <div className="relative aspect-[4/3] overflow-hidden rounded-control bg-sunken">
-        <Image src={imageUrl} alt="" fill unoptimized loading="eager" sizes="(min-width: 1024px) 40vw, 36rem" className="object-cover" />
+        <HeroPicture src={imageUrl} />
       </div>
       <div className="px-2 pb-1 pt-3">
         <p className="text-micro uppercase text-ink-muted">{t("landing.featured.eyebrow")}</p>

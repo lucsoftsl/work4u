@@ -1,3 +1,7 @@
+import { signUpPath } from "./auth-redirect";
+
+const DEFAULT_AFTER_AUTH = "/dashboard";
+
 // Decides where a returning user should continue onboarding.
 // A backend user row only exists after step 1 (account) succeeded, so any loaded user is at least on step 2.
 
@@ -22,6 +26,6 @@ export function resumeSignup(user: OnboardingSnapshot | null | undefined): Signu
 
 /** Where to send a user right after sign-in. */
 export function postSignInPath(user: OnboardingSnapshot | null | undefined, requested: string): string {
-  if (user && user.onboardingCompleted === false) return "/signup";
+  if (user && user.onboardingCompleted === false) return signUpPath(requested === DEFAULT_AFTER_AUTH ? null : requested);
   return requested;
 }

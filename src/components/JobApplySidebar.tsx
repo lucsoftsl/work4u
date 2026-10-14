@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { AlertCircle, Send } from "lucide-react";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Field";

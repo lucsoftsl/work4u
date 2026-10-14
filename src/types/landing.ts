@@ -5,10 +5,13 @@ const linkSchema = z.object({
   href: z.string().min(1),
 });
 
-const categoryDesktopSchema = z.object({
+// `countLabel` was static marketing copy and is no longer sent; the API now returns real counts instead.
+export const categoryDesktopSchema = z.object({
   slug: z.string().min(1),
   name: z.string().min(1),
-  countLabel: z.string().min(1),
+  countLabel: z.string().min(1).optional(),
+  jobCount: z.number().int().min(0).optional(),
+  professionalCount: z.number().int().min(0).optional(),
   iconKey: z.string().min(1),
 });
 

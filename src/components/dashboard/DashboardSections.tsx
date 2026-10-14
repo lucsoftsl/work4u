@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import type { ReactNode } from "react";
 import { ArrowRight, CheckCircle2, Circle, CircleAlert, Clock, MapPin } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";

@@ -1,5 +1,7 @@
 import { CATEGORIES } from "@/data/categories";
-import { getTranslator, LOCALES } from "./i18n";
+import labels from "@/data/category-labels.generated.json";
+
+const LABELS = labels as Record<string, Record<string, string>>;
 
 // Shortest query worth expanding into categories; a single letter would match
 // almost every category name and swamp the results.
@@ -17,7 +19,7 @@ export function foldText(value: string): string {
 const CATEGORY_SEARCH_LABELS: ReadonlyArray<{ id: string; labels: readonly string[] }> = CATEGORIES.map(
   (category) => ({
     id: category.id,
-    labels: [category.id, ...LOCALES.map((locale) => getTranslator(locale)(category.nameKey))].map(foldText),
+    labels: [category.id, ...Object.values(LABELS[category.nameKey] ?? {})].map(foldText),
   })
 );
 

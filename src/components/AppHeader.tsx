@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, Gift, LogOut, Menu, MessageSquare, Settings, User, X, Zap } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -138,7 +138,7 @@ function AccountMenu() {
       >
         {user?.photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.photoUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
+          <img src={user.photoUrl} alt="" width={36} height={36} decoding="async" className="h-9 w-9 rounded-full object-cover" />
         ) : (
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft font-display text-label text-primary">{initial}</span>
         )}

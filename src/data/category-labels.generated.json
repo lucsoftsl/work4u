@@ -1,0 +1,254 @@
+{
+ "categories.alterations": {
+  "en": "Clothing Alterations & Repair",
+  "fr": "Retouches et Réparation de Vêtements",
+  "es": "Alteraciones y Reparación de Ropa",
+  "hu": "Ruhajavítás és -átalakítás",
+  "ro": "Retușuri și reparații haine"
+ },
+ "categories.applianceRepair": {
+  "en": "Appliance Repair",
+  "fr": "Réparation d'Électroménagers",
+  "es": "Reparación de Electrodomésticos",
+  "hu": "Háztartási gép javítás",
+  "ro": "Reparații electrocasnice"
+ },
+ "categories.bartending": {
+  "en": "Bartending & Bar Service",
+  "fr": "Bartending et Service de Boissons",
+  "es": "Bartending y Servicio de Bebidas",
+  "hu": "Bártending és italszolgáltatás",
+  "ro": "Bartending și servire băuturi"
+ },
+ "categories.beauty": {
+  "en": "Beauty & Makeup",
+  "fr": "Beauté et Maquillage",
+  "es": "Belleza y Maquillaje",
+  "hu": "Szépségápolás és sminkelés",
+  "ro": "Frumusețe și machiaj"
+ },
+ "categories.carRepair": {
+  "en": "Car Repair & Maintenance",
+  "fr": "Réparation et Entretien Automobile",
+  "es": "Reparación y Mantenimiento de Vehículos",
+  "hu": "Autójavítás és karbantartás",
+  "ro": "Reparații și întreținere auto"
+ },
+ "categories.carWash": {
+  "en": "Car Washing & Detailing",
+  "fr": "Lavage et Détailing Automobile",
+  "es": "Lavado y Detallado de Autos",
+  "hu": "Autómosás és -ápolás",
+  "ro": "Spălătorie auto și detailing"
+ },
+ "categories.carpentry": {
+  "en": "Carpentry",
+  "fr": "Menuiserie",
+  "es": "Carpintería",
+  "hu": "Asztalos munkák",
+  "ro": "Tâmplărie"
+ },
+ "categories.childcare": {
+  "en": "Childcare & Babysitting",
+  "fr": "Garde d'Enfants et Babysitting",
+  "es": "Cuidado Infantil y Babysitting",
+  "hu": "Gyermekfelügyelet",
+  "ro": "Îngrijire copii"
+ },
+ "categories.cleaning": {
+  "en": "Cleaning Services",
+  "fr": "Services de Nettoyage",
+  "es": "Servicios de Limpieza",
+  "hu": "Takarítási szolgáltatások",
+  "ro": "Servicii de curățenie"
+ },
+ "categories.construction": {
+  "en": "Construction & Building",
+  "fr": "Construction et Bâtiment",
+  "es": "Construcción y Edificación",
+  "hu": "Építőipar",
+  "ro": "Construcții"
+ },
+ "categories.cooking": {
+  "en": "Cooking & Meal Prep",
+  "fr": "Cuisine et Préparation de Repas",
+  "es": "Cocina y Preparación de Comidas",
+  "hu": "Főzés és étkezés-előkészítés",
+  "ro": "Gătit și pregătire mese"
+ },
+ "categories.delivery": {
+  "en": "Delivery & Errands",
+  "fr": "Livraison et Courses",
+  "es": "Entregas y Recados",
+  "hu": "Kiszállítás és ügyintézés",
+  "ro": "Livrări și comisioane"
+ },
+ "categories.electrical": {
+  "en": "Electrical",
+  "fr": "Électricité",
+  "es": "Electricidad",
+  "hu": "Villanyszerelés",
+  "ro": "Electricitate"
+ },
+ "categories.eventSetup": {
+  "en": "Event Setup & Coordination",
+  "fr": "Organisation et Coordination d'Événements",
+  "es": "Organización y Coordinación de Eventos",
+  "hu": "Rendezvényszervezés",
+  "ro": "Organizare evenimente"
+ },
+ "categories.flooring": {
+  "en": "Flooring",
+  "fr": "Revêtements de Sol",
+  "es": "Pisos y Suelos",
+  "hu": "Padlózás",
+  "ro": "Pardoseli"
+ },
+ "categories.hairstyle": {
+  "en": "Hair Styling & Salon",
+  "fr": "Coiffure et Stylisme",
+  "es": "Peluquería y Estilismo",
+  "hu": "Fodrászat",
+  "ro": "Coafură și salon"
+ },
+ "categories.handyman": {
+  "en": "General Handyman",
+  "fr": "Réparations Générales",
+  "es": "Mantenimiento General",
+  "hu": "Általános mindenes",
+  "ro": "Om de întreținere"
+ },
+ "categories.hvac": {
+  "en": "HVAC & Climate Control",
+  "fr": "Chauffage, Ventilation et Climatisation",
+  "es": "Climatización y Ventilación",
+  "hu": "Fűtés és klímatechnika",
+  "ro": "Climatizare și încălzire"
+ },
+ "categories.itSupport": {
+  "en": "IT Support & Tech Help",
+  "fr": "Support Informatique",
+  "es": "Soporte Técnico e Informática",
+  "hu": "Informatikai támogatás",
+  "ro": "Suport IT și tehnic"
+ },
+ "categories.landscaping": {
+  "en": "Landscaping & Gardening",
+  "fr": "Paysagisme et Jardinage",
+  "es": "Paisajismo y Jardinería",
+  "hu": "Kertépítés és kertészet",
+  "ro": "Amenajări peisagistice și grădinărit"
+ },
+ "categories.laundry": {
+  "en": "Laundry & Ironing",
+  "fr": "Blanchisserie et Repassage",
+  "es": "Lavandería y Planchado",
+  "hu": "Mosás és vasalás",
+  "ro": "Spălătorie și călcătorie"
+ },
+ "categories.locksmith": {
+  "en": "Locksmith Services",
+  "fr": "Serrurier",
+  "es": "Cerrajería",
+  "hu": "Zárszerviz",
+  "ro": "Servicii de lăcătușerie"
+ },
+ "categories.masonry": {
+  "en": "Masonry & Tiling",
+  "fr": "Maçonnerie et Carrelage",
+  "es": "Albañilería y Azulejos",
+  "hu": "Kőműves és csempézés",
+  "ro": "Zidărie și placări"
+ },
+ "categories.moving": {
+  "en": "Moving & Transport",
+  "fr": "Déménagement et Transport",
+  "es": "Mudanzas y Transporte",
+  "hu": "Költöztetés és szállítás",
+  "ro": "Mutări și transport"
+ },
+ "categories.musicLessons": {
+  "en": "Music Lessons",
+  "fr": "Cours de Musique",
+  "es": "Lecciones de Música",
+  "hu": "Zeneórák",
+  "ro": "Lecții de muzică"
+ },
+ "categories.organizing": {
+  "en": "Organizing & Decluttering",
+  "fr": "Organisation et Rangement",
+  "es": "Organización y Orden",
+  "hu": "Rendszerezés és rendrakás",
+  "ro": "Organizare și degajare spații"
+ },
+ "categories.other": {
+  "en": "Other",
+  "fr": "Autre",
+  "es": "Otro",
+  "hu": "Egyéb",
+  "ro": "Altele"
+ },
+ "categories.painting": {
+  "en": "Painting & Decorating",
+  "fr": "Peinture et Décoration",
+  "es": "Pintura y Decoración",
+  "hu": "Festés és dekorálás",
+  "ro": "Vopsitorie și decorațiuni"
+ },
+ "categories.personalTraining": {
+  "en": "Personal Training & Fitness",
+  "fr": "Entraînement Personnel et Fitness",
+  "es": "Entrenamiento Personal y Fitness",
+  "hu": "Személyi edzés és fitnesz",
+  "ro": "Antrenament personal și fitness"
+ },
+ "categories.petCare": {
+  "en": "Pet Care",
+  "fr": "Garde d'Animaux",
+  "es": "Cuidado de Mascotas",
+  "hu": "Állatgondozás",
+  "ro": "Îngrijire animale de companie"
+ },
+ "categories.photography": {
+  "en": "Photography & Videography",
+  "fr": "Photographie et Vidéographie",
+  "es": "Fotografía y Videografía",
+  "hu": "Fotózás és videózás",
+  "ro": "Fotografie și videografie"
+ },
+ "categories.plumbing": {
+  "en": "Plumbing",
+  "fr": "Plomberie",
+  "es": "Fontanería",
+  "hu": "Vízvezeték-szerelés",
+  "ro": "Instalații sanitare"
+ },
+ "categories.roofing": {
+  "en": "Roofing",
+  "fr": "Toiture",
+  "es": "Techumbres y Cubiertas",
+  "hu": "Tetőfedés",
+  "ro": "Acoperișuri"
+ },
+ "categories.seniorCare": {
+  "en": "Senior Care",
+  "fr": "Aide aux Personnes Âgées",
+  "es": "Cuidado de Mayores",
+  "hu": "Idősgondozás",
+  "ro": "Îngrijire vârstnici"
+ },
+ "categories.tutoring": {
+  "en": "Tutoring & Education",
+  "fr": "Tutorat et Éducation",
+  "es": "Tutoría y Educación",
+  "hu": "Korrepetálás és oktatás",
+  "ro": "Meditații și educație"
+ },
+ "categories.welding": {
+  "en": "Welding & Metal Work",
+  "fr": "Soudure et Travail des Métaux",
+  "es": "Soldadura y Trabajo de Metales",
+  "hu": "Hegesztés és fémmegmunkálás",
+  "ro": "Sudură și prelucrarea metalelor"
+ }
+}

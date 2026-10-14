@@ -1,6 +1,6 @@
 /* Field app service worker (scope /tech). Keeps the app shell openable offline.
  * It never stores API responses: today's jobs live in IndexedDB (cleared on sign-out), not in a shared cache. */
-const VERSION = "v2";
+const VERSION = "v3";
 const SHELL = `tech-shell-${VERSION}`;
 const STATIC = `tech-static-${VERSION}`;
 
@@ -60,4 +60,27 @@ self.addEventListener("message", (event) => {
       try { const res = await fetch(u); if (res.ok) await cache.put(u, res); } catch { /* offline: next time */ }
     }))),
   );
+});
+
+// The page also asks for the screens a technician needs when reopening the app with no connection (Today, Sync), even when the
+// last full page load was a job screen (client-side navigation never stores a page copy). We fetch their HTML now, keep it, and
+// keep the build files it references, so a cold offline open of /tech/:org/today shows the cached list, not an endless "Loading…".
+const PAGE_PATH = /^\/tech(\/[A-Za-z0-9_-]+\/(today|sync))?$/;
+self.addEventListener("message", (event) => {
+  if (!event.data || event.data.type !== "cache-pages" || !Array.isArray(event.data.paths)) return;
+  const paths = event.data.paths.filter((p) => typeof p === "string" && PAGE_PATH.test(p)).slice(0, 4);
+  event.waitUntil(Promise.all(paths.map(async (path) => {
+    try {
+      const res = await fetch(path, { credentials: "same-origin", headers: { Accept: "text/html" } });
+      if (!res.ok || !(res.headers.get("content-type") || "").includes("text/html")) return;
+      const html = await res.clone().text();
+      await (await caches.open(SHELL)).put(path, res);
+      const assets = [...new Set(html.match(/\/_next\/static\/[^"'\s\\)]+\.(?:js|css)/g) || [])].slice(0, 80);
+      const statics = await caches.open(STATIC);
+      await Promise.all(assets.map(async (u) => {
+        if (await statics.match(u)) return;
+        try { const r = await fetch(u); if (r.ok) await statics.put(u, r); } catch { /* offline: next time */ }
+      }));
+    } catch { /* offline: the copy from the last visit stays */ }
+  })));
 });

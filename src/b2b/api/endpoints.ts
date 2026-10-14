@@ -81,6 +81,11 @@ export const getBoard = (orgId: string, date: string, filters: BoardQuery = {}, 
     signal,
   });
 
+// ---- invitations (public preview, then accept as the signed-in invitee)
+export interface InvitePreview { orgName: string; roleName: string; memberType: string; emailHint: string; expiresAt: string }
+export const previewInvitation = (token: string) => b2b<InvitePreview>(`/invitations/${encodeURIComponent(token)}`);
+export const acceptInvitation = (token: string) => b2b<{ orgId: string; memberId: string }>(`/invitations/${encodeURIComponent(token)}/accept`, { method: "POST" });
+
 // ---- technician
 export const getMyJobs = (orgId: string, date?: string, since?: string) => b2b<MyJobs>(orgPath(orgId, "/me/jobs"), { query: { date, since } });
 export interface ActionBody { reason?: string; expectedVersion?: number; clientOccurredAt?: string; notes?: string; signatureName?: string; photoKeys?: string[] }

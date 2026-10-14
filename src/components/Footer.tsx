@@ -1,16 +1,19 @@
 'use client';
 
-import Link from 'next/link';
+import Link from "@/components/LocaleLink";
 import { usePathname } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
 import { ArrowRight, Globe } from 'lucide-react';
 import { useTranslation, type Locale } from '@/lib/i18n';
+import { useLanguageSwitch } from '@/hooks/useLanguageSwitch';
 import { BrandMark } from '@/components/BrandMark';
 import { useMenuKeys } from '@/hooks/useMenuKeys';
 import { isChromeless } from '@/components/shell/nav-config';
+import { BRAND } from '@/lib/seo/site';
 
 function LanguageMenu() {
-    const { t, locale, setLocale } = useTranslation();
+    const { t, locale } = useTranslation();
+    const switchLanguage = useLanguageSwitch();
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLButtonElement>(null);
@@ -63,7 +66,7 @@ function LanguageMenu() {
                             <button
                                 type="button"
                                 onClick={() => {
-                                    setLocale(lang.code);
+                                    switchLanguage(lang.code);
                                     setOpen(false);
                                 }}
                                 className={`flex min-h-[44px] w-full items-center rounded-control px-3 text-left text-label ${
@@ -112,7 +115,7 @@ export default function Footer() {
                 </nav>
                 <div className="flex flex-wrap items-center gap-4">
                     <LanguageMenu />
-                    <p className="text-caption text-ink-muted">© {new Date().getFullYear()} work4u. {t('footer.allRightsReserved')}</p>
+                    <p className="text-caption text-ink-muted">© {new Date().getFullYear()} {BRAND}. {t('footer.allRightsReserved')}</p>
                 </div>
             </div>
         </footer>

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { MessageCircle } from "lucide-react";
 import { useChat } from "@/context/ChatContext";
 import { useTranslation } from "@/lib/i18n";

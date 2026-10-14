@@ -1,9 +1,8 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useRef, useState, useEffect, ReactNode } from 'react';
-import { onIdTokenChanged, type User } from 'firebase/auth';
-import { auth } from '../lib/firebase';
-import { getAuthUserFromFirebaseUser, signOut as authServiceSignOut } from '../lib/auth-service';
+import type { User } from 'firebase/auth';
+import { hasSessionHint, loadAuthSdk, whenIdle, type AuthSdk } from '../lib/auth-sdk';
 import { setTokenProvider } from '../lib/http';
 import { ProfileUnavailableError, backoffDelay, isOutageError } from '../lib/auth-outage';
 import { ConnectionBanner } from '../components/ConnectionBanner';
@@ -58,12 +57,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // ignore storage errors
     }
     // Every API call asks Firebase for the current token; the SDK refreshes it when it is near expiry.
-    setTokenProvider(async (forceRefresh) => (auth.currentUser ? auth.currentUser.getIdToken(forceRefresh) : null));
+    // The SDK loads on demand (see lib/auth-sdk.ts); an early authenticated call simply waits for it and for the stored session.
+    setTokenProvider(async (forceRefresh) => {
+      const sdk = await loadAuthSdk();
+      await sdk.auth.authStateReady().catch(() => undefined);
+      return sdk.auth.currentUser ? sdk.auth.currentUser.getIdToken(forceRefresh) : null;
+    });
     return () => setTokenProvider(null);
   }, []);
 
   useEffect(() => {
     let lastUid: string | null = null;
+    let cancelled = false;
+    let sdk: AuthSdk | null = null;
+    let unsubscribe: (() => void) | null = null;
     const retry = retryRef.current;
 
     const stopRetrying = () => {
@@ -79,9 +86,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // we show a retry banner and recover on our own when the API answers again.
     const loadProfile = async (authedUser: User) => {
       try {
-        const authUser = await getAuthUserFromFirebaseUser(authedUser);
+        const authUser = await sdk!.getAuthUserFromFirebaseUser(authedUser);
         stopRetrying();
-        if (auth.currentUser?.uid !== authedUser.uid) return; // signed out / switched meanwhile
+        if (sdk!.auth.currentUser?.uid !== authedUser.uid) return; // signed out / switched meanwhile
         setAuthUser(authUser);
         setAuthCookie(true);
         setLoading(false);
@@ -101,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     // onIdTokenChanged fires on sign-in, sign-out AND hourly token refresh.
-    const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
+    const onToken = async (firebaseUser: User | null) => {
       try {
         if (!firebaseUser) {
           lastUid = null;
@@ -131,7 +138,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setFirebaseToken(null);
         setLoading(false);
       }
-    });
+    };
+
+    const start = async () => {
+      try {
+        sdk = await loadAuthSdk();
+      } catch {
+        if (cancelled) return;
+        // The auth code could not be fetched (offline on a first visit): a signed-in person keeps the retry banner, others see signed-out.
+        if (hasSessionHint()) {
+          setConnectionIssue(true);
+          retry.run = () => void start();
+          retry.timer = setTimeout(() => {
+            retry.attempt += 1;
+            retry.run?.();
+          }, backoffDelay(retry.attempt));
+        } else {
+          setLoading(false);
+        }
+        return;
+      }
+      if (cancelled) return;
+      unsubscribe = sdk.onIdTokenChanged(sdk.auth, onToken);
+    };
+    // Signed-in visitors need it now; everyone else (and every crawler) after the page has painted and the browser is idle.
+    const cancelIdle = hasSessionHint() ? (void start(), () => undefined) : whenIdle(() => void start());
 
     const retryNow = () => {
       if (!retry.run) return;
@@ -142,7 +173,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener('online', retryNow);
 
     return () => {
-      unsubscribe();
+      cancelled = true;
+      cancelIdle();
+      unsubscribe?.();
       window.removeEventListener('online', retryNow);
       if (retry.timer) clearTimeout(retry.timer);
     };
@@ -157,10 +190,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshUser = useCallback(async () => {
-    const current = auth.currentUser;
+    let sdk: AuthSdk;
+    try {
+      sdk = await loadAuthSdk();
+    } catch {
+      return null;
+    }
+    const current = sdk.auth.currentUser;
     if (!current) return null;
     try {
-      const fresh = await getAuthUserFromFirebaseUser(current);
+      const fresh = await sdk.getAuthUserFromFirebaseUser(current);
       setAuthUser(fresh);
       return fresh;
     } catch (error) {
@@ -175,7 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleSignOut = async () => {
     try {
-      await authServiceSignOut();
+      await (await loadAuthSdk()).signOut();
     } finally {
       setAuthUser(null);
       setFirebaseToken(null);

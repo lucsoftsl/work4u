@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { MapPin, Star, Trash2 } from "lucide-react";
 import type { ListingAvailability, WorkerListing } from "@/api/types";
 import { useTranslation } from "@/lib/i18n";

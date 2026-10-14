@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { AlertCircle, ArrowRight, Bookmark, CheckCircle2, Eye, MessageSquare, Star, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { ApiError, errorMessage } from "@/lib/http";
