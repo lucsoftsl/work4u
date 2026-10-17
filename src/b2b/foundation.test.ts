@@ -58,7 +58,11 @@ describe("guardDecision (route guard)", () => {
     expect(labels).toEqual(["dashboard", "jobs", "notifications"]);
     expect(visibleNav((p) => can(viewerOf([["job.view", "ALL"], ["dispatch.view", "ALL"]]), p)).map((n) => n.section)).toEqual(["dashboard", "jobs", "dispatch", "notifications"]);
     const manager = viewerOf([["job.view", "ALL"], ["job.close", "ALL"], ["team.view", "ALL"], ["customer.view", "ALL"]]);
-    expect(visibleNav((p) => can(manager, p)).map((n) => n.section)).toEqual(["dashboard", "jobs", "review", "teams", "customers", "notifications"]);
+    expect(visibleNav((p) => can(manager, p)).map((n) => n.section)).toEqual(["dashboard", "jobs", "review", "teams", "customers", "notifications", "settings"]);
+    // Company setup shows for anyone who can manage/see company data, and the Clients entry is labelled "Clients"
+    expect(visibleNav((p) => can(viewerOf([["org.manage", "ALL"]]), p)).map((n) => n.section)).toEqual(["settings"]);
+    expect(visibleNav((p) => can(viewerOf([["member.view", "ALL"]]), p)).map((n) => n.section)).toEqual(["settings"]);
+    expect(visibleNav((p) => can(manager, p)).find((n) => n.section === "customers")?.label).toBe("Clients");
   });
 });
 

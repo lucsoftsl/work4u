@@ -95,6 +95,7 @@ export function NewJobForm() {
 
   const banner =
     server?.kind === "forbidden" ? t("b2b.newJob.forbidden", "You don't have permission to create jobs in this workspace.")
+    : server?.kind === "archived" ? t("b2b.clients.err.archived", "This client is archived. Restore it to create jobs.")
     : server?.kind === "network" ? t("b2b.newJob.network", "Can't reach the server. Check your connection and try again.")
     : server?.message;
   const hasFieldErrors = Object.values(errors).some(Boolean) || Object.values(server?.fields ?? {}).some(Boolean);

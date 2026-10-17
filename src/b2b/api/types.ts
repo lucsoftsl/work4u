@@ -11,10 +11,12 @@ export type TeamStatus = "AVAILABLE" | "ASSIGNED" | "TRAVELLING" | "ON_SITE" | "
 export interface OrgSummary {
   id: string; name: string; timezone: string; memberId: string;
   role: { name: string; template: string };
+  /** Where this person's day starts: /tech/{org}/today for technicians, else /ops/{org}/dashboard. */
+  landing?: string;
 }
 
 export interface OrgMe {
-  org: { id: string; name: string; timezone: string };
+  org: { id: string; name: string; timezone: string; /** The org has a logo (so the shell asks for the signed link). */ hasLogo?: boolean };
   member: { id: string; displayName: string; memberType: string; teamIds: string[] };
   role: { id: string; name: string; template: string };
   permissions: Grant[];

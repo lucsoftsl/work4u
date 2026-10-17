@@ -80,6 +80,9 @@ describe("helpers", () => {
 });
 
 describe("mapSubmitError", () => {
+  it("maps CUSTOMER_ARCHIVED to its own kind (friendly message in the form)", () => {
+    expect(mapSubmitError({ status: 409, code: "CUSTOMER_ARCHIVED", message: "raw" }).kind).toBe("archived");
+  });
   it("maps VALIDATION_ERROR fields to inline errors", () => {
     const e = new B2bError(400, "VALIDATION_ERROR", "Invalid request", { fields: { title: "Too small", "checklist.1": "Too long", _: "Bad body" } });
     expect(mapSubmitError(e)).toEqual({ kind: "field", fields: { title: "Too small", checklist: "Too long" }, message: undefined });

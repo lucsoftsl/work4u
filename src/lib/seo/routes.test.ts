@@ -26,7 +26,7 @@ describe("private route classification", () => {
 
   it("every top-level folder in src/app is a route group or a classified route handler", () => {
     const appDir = join(process.cwd(), "src/app");
-    const groups = new Set(["(app)", "(public)"]);
+    const groups = new Set(["(app)", "(public)", "(b2b)", "(b2b-public)"]);
     const privateTop = new Set(PRIVATE_ROUTE_PREFIXES.map((p) => p.split("/")[1]));
     const unclassified = dirsOf(appDir).filter((f) => !groups.has(f) && !privateTop.has(f) && !(PUBLIC_ROUTES as readonly string[]).includes(f));
     expect(unclassified).toEqual([]);
@@ -40,6 +40,17 @@ describe("private route classification", () => {
     expect(dirsOf(join(appDir, "(app)", "jobs", "[id]")).sort()).toEqual([...PRIVATE_JOB_SUBPAGES].sort());
     const publicTop = new Set([...(PUBLIC_ROUTES as readonly string[]).filter((r) => r && r !== "api" && r !== "sitemap" && r !== "sitemap.xml"), "not-found-page", "service-unavailable"]);
     expect(dirsOf(join(appDir, "(public)", "[lang]")).filter((f) => !publicTop.has(f))).toEqual([]);
+  });
+
+  it("(b2b) holds exactly the logged-in B2B app and (b2b-public)/[lang] only the public B2B pages", () => {
+    const appDir = join(process.cwd(), "src/app");
+    expect(dirsOf(join(appDir, "(b2b)")).sort()).toEqual(["b2b", "ops", "tech"]);
+    expect(dirsOf(join(appDir, "(b2b-public)", "[lang]")).sort()).toEqual(["field-service"]);
+    // every B2B app prefix is private (noindex), and nothing of the marketplace sits in the B2B groups
+    for (const p of ["/ops", "/ops/signin", "/ops/start", "/tech", "/b2b"]) expect(PRIVATE_ROUTE_PREFIXES.some((x) => p === x || p.startsWith(`${x}/`)), p).toBe(true);
+    expect(isPrivatePath("/field-service")).toBe(false);
+    expect(isPrivatePath("/ops/signin")).toBe(true);
+    expect(isPrivatePath("/ops/start")).toBe(true);
   });
 
   it("the public tree is only reachable under a launch language: [lang] is static (dynamicParams = false)", () => {

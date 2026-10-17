@@ -24,7 +24,7 @@ export const isLaunchLang = (v: unknown): v is LaunchLang => typeof v === "strin
 export const isAppLang = (v: unknown): v is AppLang => typeof v === "string" && (ALL_LANGS as readonly string[]).includes(v);
 
 /** Public sections whose pages are localized. `/business` is the marketing page only; its sub-pages are the private company app. */
-const EXACT_PUBLIC = new Set(["/", "/service-unavailable", "/pricing", "/how-it-works", "/contact", "/business", "/field-service", "/privacy", "/terms", "/blog", "/jobs", "/workers"]);
+const EXACT_PUBLIC = new Set(["/", "/service-unavailable", "/pricing", "/how-it-works", "/contact", "/business", "/field-service", "/field-service/demo", "/privacy", "/terms", "/blog", "/jobs", "/workers"]);
 /** Sections with one level of detail pages: /blog/{slug-id}, /jobs/{slug-id}, /workers/{slug-id}. */
 const DETAIL_PUBLIC = ["blog", "jobs", "workers"] as const;
 
@@ -55,6 +55,21 @@ export function localizedPath(lang: string | null | undefined, href: string): st
   const rest = href.slice(href.split(/[?#]/)[0].length);
   if (!isLocalizablePath(path) || !isLaunchLang(lang) || lang === DEFAULT_LANG) return `${path}${rest}`;
   return `${path === "/" ? `/${lang}` : `/${lang}${path}`}${rest}`;
+}
+
+/**
+ * The public field-service pages are static per language and have no client-side translation, so unlike the marketplace they give
+ * fr / hu their own (not indexed) URLs: `/fr/field-service`. Their canonical stays the English page.
+ */
+const B2B_PUBLIC_PATHS = new Set(["/field-service", "/field-service/demo"]);
+const isClientOnlyLang = (v: unknown): v is (typeof CLIENT_ONLY_LANGS)[number] => typeof v === "string" && (CLIENT_ONLY_LANGS as readonly string[]).includes(v);
+
+/** `localizedPath` for links inside the public B2B site: also prefixes fr / hu on the field-service pages. */
+export function b2bLocalizedPath(lang: string | null | undefined, href: string): string {
+  const base = href.split(/[?#]/)[0];
+  const { path } = splitLangPrefix(base);
+  if (isClientOnlyLang(lang) && B2B_PUBLIC_PATHS.has(path)) return `/${lang}${path}${href.slice(base.length)}`;
+  return localizedPath(lang, href);
 }
 
 /** The unprefixed (English / canonical) form of any path. */
@@ -97,6 +112,19 @@ const KNOWN_ROOTS = new Set<string>([
  *    Next's empty `__next_error__` shell that only the client fills in);
  *  - /{lang}/service-unavailable: the "temporarily unavailable" state (503 + Retry-After) that list/detail pages redirect to when the API is down. */
 export const NOT_FOUND_PAGE = "/not-found-page";
+/** Same idea for the logged-in B2B app (its own root layout): /ops/{org}/zzz and /tech/{org}/zzz. */
+export const B2B_NOT_FOUND_PAGE = "/b2b/not-found-page";
+const OPS_SECTIONS = new Set(["dashboard", "jobs", "dispatch", "review", "teams", "customers", "notifications", "settings", "setup"]);
+const TECH_SECTIONS = new Set(["today", "sync", "jobs"]);
+
+/** True for /ops/{org}/{unknown} and /tech/{org}/{unknown}: the segment after the workspace id is not a screen that exists. */
+export function isUnknownB2bSection(pathname: string): boolean {
+  const [, root, org, section] = pathname.split("/");
+  if (!org || !section) return false;
+  if (root === "ops") return !OPS_SECTIONS.has(section);
+  if (root === "tech") return !TECH_SECTIONS.has(section);
+  return false;
+}
 export const UNAVAILABLE_PAGE = "/service-unavailable";
 export const RETRY_AFTER_SECONDS = 120;
 
@@ -142,6 +170,7 @@ export function decideRoute(input: { pathname: string; search: string; cookieLan
 
   if (lang) {
     if (lang === "en") return { action: "redirect", to: `${path}${search}`, status: 301 };
+    if ((lang === "fr" || lang === "hu") && B2B_PUBLIC_PATHS.has(path)) return { action: "next" }; // served (static, noindex)
     if (lang === "fr" || lang === "hu") return { action: "redirect", to: `${path}${search}`, status: 302, cookieLang: lang };
     if (path === UNAVAILABLE_PAGE) return unavailableFor(lang, search);
     if (isLocalizablePath(path)) return { action: "next" };
@@ -153,9 +182,11 @@ export function decideRoute(input: { pathname: string; search: string; cookieLan
   if (!isLocalizablePath(pathname)) {
     const root = pathname.split("/")[1] ?? "";
     // Unknown first segment (/foo, /xx/jobs): a 404 in the language the visitor chose, when known.
-    return KNOWN_ROOTS.has(root) ? { action: "next" } : notFoundFor(input.cookieLang, search);
+    if (KNOWN_ROOTS.has(root)) return isUnknownB2bSection(pathname) ? { action: "rewrite", to: B2B_NOT_FOUND_PAGE, status: 404, headers: NOINDEX_HEADERS } : { action: "next" };
+    return notFoundFor(input.cookieLang, search);
   }
   const bot = BOT_UA.test(input.userAgent ?? "");
+  if (!bot && isClientOnlyLang(input.cookieLang) && B2B_PUBLIC_PATHS.has(pathname)) return { action: "redirect", to: `/${input.cookieLang}${pathname}${search}`, status: 307 };
   if (!bot && (input.cookieLang === "ro" || input.cookieLang === "es")) return { action: "redirect", to: `${localizedPath(input.cookieLang, pathname)}${search}`, status: 307 };
   return { action: "rewrite", to: `/en${pathname === "/" ? "" : pathname}${search}` };
 }

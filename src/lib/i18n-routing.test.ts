@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { retryTarget, unavailablePath, canonicalPathOf, decideRoute, hreflangMap, isLocalizablePath, launchLangOf, localizedPath, splitLangPrefix } from "./i18n-routing";
+import { b2bLocalizedPath, retryTarget, unavailablePath, canonicalPathOf, decideRoute, hreflangMap, isLocalizablePath, launchLangOf, localizedPath, splitLangPrefix } from "./i18n-routing";
 
 describe("which paths are localized", () => {
   it("marketing, listing and detail pages are; the app, auth, apps and private sub-pages are not", () => {
@@ -87,6 +87,13 @@ describe("decideRoute (the proxy)", () => {
     expect(go("/not-found-page")).toEqual(nf("/en/not-found-page")); // visiting the internal page directly is also a 404
     for (const p of ["/jobs/x/y", "/opengraph-image"]) expect(go(p), p).toEqual({ action: "next" });
   });
+  it("unknown screens inside the logged-in B2B app are a 404 rendered in the B2B shell; real screens are untouched", () => {
+    const nf = { action: "rewrite", to: "/b2b/not-found-page", status: 404, headers: { "X-Robots-Tag": "noindex, nofollow" } };
+    for (const p of ["/ops/o1/zzz", "/ops/o1/zzz/yyy", "/tech/o1/zzz", "/ops/o1/jobs/x/y/z".replace("/jobs", "/nope")]) expect(go(p, "ro"), p).toEqual(nf);
+    for (const p of ["/ops", "/ops/signin", "/ops/start", "/ops/o1", "/ops/o1/dashboard", "/ops/o1/jobs/j1", "/ops/o1/settings/team/import", "/ops/o1/customers/import", "/ops/o1/setup", "/tech", "/tech/o1", "/tech/o1/today", "/tech/o1/jobs/j9", "/tech/o1/sync", "/b2b/invite/abc"]) {
+      expect(go(p), p).toEqual({ action: "next" });
+    }
+  });
   it("/service-unavailable is a 503 with Retry-After and noindex, in the page language, never cookie-redirected or indexed", () => {
     const un = (to: string) => ({ action: "rewrite", to, status: 503, headers: { "X-Robots-Tag": "noindex, nofollow", "Retry-After": "120" } });
     expect(go("/service-unavailable", null, "?from=%2Fjobs")).toEqual(un("/en/service-unavailable?from=%2Fjobs"));
@@ -130,5 +137,22 @@ describe("decideRoute (the proxy)", () => {
     for (const p of ["/dashboard", "/chat", "/admin/users", "/ops/o1/dashboard", "/tech/o1/today", "/signin", "/signup", "/b2b/invite/abc", "/api/landing", "/robots.txt", "/sitemap.xml", "/sitemap/core.xml", "/tech-sw.js", "/assets/welcome1.png", "/jobs/x/edit", "/business/dashboard"]) {
       expect(go(p, "ro"), p).toEqual({ action: "next" });
     }
+  });
+});
+
+describe("field-service pages in fr / hu (own URLs, not indexed)", () => {
+  it("b2bLocalizedPath prefixes fr / hu only on the field-service pages", () => {
+    expect(b2bLocalizedPath("fr", "/field-service")).toBe("/fr/field-service");
+    expect(b2bLocalizedPath("hu", "/field-service/demo?x=1")).toBe("/hu/field-service/demo?x=1");
+    expect(b2bLocalizedPath("ro", "/field-service")).toBe("/ro/field-service");
+    expect(b2bLocalizedPath("en", "/field-service")).toBe("/field-service");
+    expect(b2bLocalizedPath("fr", "/pricing")).toBe("/pricing");
+  });
+  it("the proxy serves /fr/field-service instead of redirecting it, and sends fr / hu cookie holders there", () => {
+    const go = (pathname: string, cookieLang: string | null = null) => decideRoute({ pathname, search: "", cookieLang, userAgent: "Mozilla/5.0" });
+    expect(go("/fr/field-service")).toEqual({ action: "next" });
+    expect(go("/hu/field-service/demo")).toEqual({ action: "next" });
+    expect(go("/field-service", "fr")).toEqual({ action: "redirect", to: "/fr/field-service", status: 307 });
+    expect(go("/fr/pricing")).toEqual({ action: "redirect", to: "/pricing", status: 302, cookieLang: "fr" }); // the marketplace is unchanged
   });
 });

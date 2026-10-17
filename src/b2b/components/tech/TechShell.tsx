@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AlertTriangle, CalendarCheck, Cloud, CloudOff, RefreshCw, Store } from "lucide-react";
+import { AlertTriangle, CalendarCheck, Cloud, CloudOff, RefreshCw } from "lucide-react";
 import { useOrg } from "@/b2b/context/OrgContext";
 import { useOffline } from "@/b2b/offline/OfflineProvider";
 import { statusBarView, type BarView } from "@/b2b/offline/status-bar";
@@ -81,7 +81,7 @@ export function TechShell({ children }: { children: ReactNode }) {
       )}
 
       <nav aria-label={t("b2b.tech.fieldApp", "Field app")} className="fixed inset-x-0 bottom-0 z-30 border-t border-ops-border bg-ops-surface pb-[env(safe-area-inset-bottom)]">
-        <ul className="mx-auto grid max-w-2xl grid-cols-3">
+        <ul className="mx-auto grid max-w-2xl grid-cols-2">
           <li>
             <Link href={todayHref} aria-current={pathname.startsWith(todayHref) ? "page" : undefined} className={tab(todayHref, pathname.startsWith(todayHref))}>
               <CalendarCheck className="h-6 w-6" aria-hidden="true" /> {t("b2b.tech.tab.today", "Today")}
@@ -91,11 +91,6 @@ export function TechShell({ children }: { children: ReactNode }) {
             <Link href={syncHref} aria-current={pathname.startsWith(syncHref) ? "page" : undefined} className={tab(syncHref, pathname.startsWith(syncHref))}>
               <RefreshCw className="h-6 w-6" aria-hidden="true" /> {t("b2b.tech.tab.sync", "Sync")}
               {badge > 0 ? <span className="absolute right-[28%] top-1.5 min-w-[20px] rounded-full bg-sig-orange-ink px-1.5 text-center text-xs text-white" aria-label={t("b2b.tech.badgeWaiting", "{n} waiting").replace("{n}", String(badge))}>{badge}</span> : null}
-            </Link>
-          </li>
-          <li>
-            <Link href="/dashboard" className={tab("/dashboard", false)}>
-              <Store className="h-6 w-6" aria-hidden="true" /> {t("b2b.tech.tab.marketplace", "Marketplace")}
             </Link>
           </li>
         </ul>

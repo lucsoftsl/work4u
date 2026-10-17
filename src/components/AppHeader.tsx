@@ -294,6 +294,9 @@ export function AppHeader() {
               <Link href="/how-it-works" className={cn(navLink(isActivePath(pathname, "/how-it-works")), "hidden lg:inline-flex")}>
                 {t("nav.howItWorks")}
               </Link>
+              <Link href="/business" className={cn(navLink(isActivePath(pathname, "/business")), "hidden lg:inline-flex")}>
+                {t("footer.forCompanies")}
+              </Link>
             </nav>
             <div className="ml-auto flex items-center gap-2">
               <Link href={signInPath(pathname === "/" ? null : currentPath())} className={buttonClasses("ghost", "sm")}>

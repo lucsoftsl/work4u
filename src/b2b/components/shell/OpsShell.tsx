@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Menu, Radio, Search, Store, X } from "lucide-react";
+import { LogOut, Menu, Radio, Search, X } from "lucide-react";
+import { B2B_SIGN_IN } from "@/lib/b2b-paths";
 import { useAuth } from "@/context/AuthContext";
 import { useOrg, type LiveState } from "@/b2b/context/OrgContext";
 import { visibleNav } from "@/b2b/lib/nav";
@@ -69,10 +70,10 @@ export function OpsShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-ops-canvas font-body text-ops-ink">
+    <div className="flex min-h-screen max-w-full flex-col overflow-x-clip bg-ops-canvas font-body text-ops-ink">
       <a href="#ops-main" className="sr-only-focusable fixed left-3 top-3 z-[100] rounded bg-white px-3 py-2 text-sm font-bold text-ops-ink">Skip to content</a>
 
-      <header className="sticky top-0 z-40 flex h-16 items-center gap-2 bg-ops-chrome px-3 text-white md:gap-3 md:px-4">
+      <header className="sticky top-0 z-40 flex h-16 min-w-0 items-center gap-1 bg-ops-chrome px-2 text-white sm:gap-2 sm:px-3 md:gap-3 md:px-4">
         <button type="button" aria-label={drawer ? "Close menu" : "Open menu"} aria-expanded={drawer} onClick={() => setDrawer((v) => !v)} className="flex h-11 w-11 items-center justify-center rounded hover:bg-white/10 lg:hidden">
           {drawer ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
         </button>
@@ -100,16 +101,13 @@ export function OpsShell({ children }: { children: ReactNode }) {
             />
           </label>
         </form>
-        <div className="ml-auto flex items-center gap-1 md:gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1 md:gap-2">
           <LiveIndicator state={live} />
           <NotificationsBell orgId={orgId} />
-          <Link href="/dashboard" aria-label="Back to the marketplace" title="Back to the marketplace" className="flex h-11 w-11 items-center justify-center rounded text-white hover:bg-white/10">
-            <Store className="h-5 w-5" aria-hidden="true" />
-          </Link>
-          <button type="button" onClick={() => void signOut().then(() => router.push("/signin"))} aria-label="Sign out" title="Sign out" className="flex h-11 w-11 items-center justify-center rounded text-white hover:bg-white/10">
+          <button type="button" onClick={() => void signOut().then(() => router.push(B2B_SIGN_IN))} aria-label="Sign out" title="Sign out" className="flex h-11 w-11 items-center justify-center rounded text-white hover:bg-white/10">
             <LogOut className="h-5 w-5" aria-hidden="true" />
           </button>
-          <span aria-hidden="true" className="flex h-9 w-9 items-center justify-center rounded bg-white/10 text-sm font-bold">{initial}</span>
+          <span aria-hidden="true" className="hidden h-9 w-9 items-center justify-center rounded bg-white/10 text-sm font-bold sm:flex">{initial}</span>
         </div>
       </header>
 
@@ -128,9 +126,9 @@ export function OpsShell({ children }: { children: ReactNode }) {
           </div>
         ) : null}
 
-        <div id="ops-main" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
+        <main id="ops-main" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
           {children}
-        </div>
+        </main>
       </div>
     </div>
   );

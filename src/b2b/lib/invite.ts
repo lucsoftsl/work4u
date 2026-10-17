@@ -1,6 +1,6 @@
 import { isB2bError } from "@/b2b/api/client";
 
-export type InviteProblem = "invalid" | "expired" | "used" | "revoked" | "mismatch" | "already" | "signin" | "busy" | "network" | "generic";
+export type InviteProblem = "invalid" | "expired" | "used" | "revoked" | "mismatch" | "already" | "claimed" | "signin" | "busy" | "network" | "generic";
 
 /** Maps an API failure (preview or accept) to a user-facing situation. Never exposes codes or the token. */
 export function inviteProblem(err: unknown): InviteProblem {
@@ -12,6 +12,9 @@ export function inviteProblem(err: unknown): InviteProblem {
     case "INVITE_REVOKED": return "revoked";
     case "INVITE_EMAIL_MISMATCH": return "mismatch";
     case "ALREADY_MEMBER": return "already";
+    case "MEMBER_ALREADY_CLAIMED": return "claimed";
+    case "MEMBER_REMOVED":
+    case "MEMBER_SUSPENDED": return "revoked";
     default:
   }
   if (err.status === 401) return "signin";

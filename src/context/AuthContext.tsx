@@ -38,7 +38,11 @@ function setAuthCookie(signedIn: boolean) {
   }
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+/**
+ * `kind="b2b"`: the field-service product. A person may have no marketplace profile (a company admin before the organisation exists,
+ * an invited employee), which is normal there and must not look like "signed out".
+ */
+export function AuthProvider({ children, kind = 'marketplace' }: { children: ReactNode; kind?: 'marketplace' | 'b2b' }) {
   const [user, setAuthUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [firebaseToken, setFirebaseToken] = useState<string | null>(null);
@@ -86,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // we show a retry banner and recover on our own when the API answers again.
     const loadProfile = async (authedUser: User) => {
       try {
-        const authUser = await sdk!.getAuthUserFromFirebaseUser(authedUser);
+        const authUser = await (kind === 'b2b' ? sdk!.getB2bAuthUser(authedUser) : sdk!.getAuthUserFromFirebaseUser(authedUser));
         stopRetrying();
         if (sdk!.auth.currentUser?.uid !== authedUser.uid) return; // signed out / switched meanwhile
         setAuthUser(authUser);
@@ -179,7 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('online', retryNow);
       if (retry.timer) clearTimeout(retry.timer);
     };
-  }, []);
+  }, [kind]);
 
   const retryProfileNow = useCallback(() => {
     const retry = retryRef.current;
@@ -199,14 +203,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const current = sdk.auth.currentUser;
     if (!current) return null;
     try {
-      const fresh = await sdk.getAuthUserFromFirebaseUser(current);
+      const fresh = await (kind === 'b2b' ? sdk.getB2bAuthUser(current) : sdk.getAuthUserFromFirebaseUser(current));
       setAuthUser(fresh);
       return fresh;
     } catch (error) {
       console.error('Failed to refresh user:', error);
       return null;
     }
-  }, []);
+  }, [kind]);
 
   const updateUser = useCallback((patch: Partial<AuthUser>) => {
     setAuthUser((prev) => (prev ? { ...prev, ...patch } : prev));

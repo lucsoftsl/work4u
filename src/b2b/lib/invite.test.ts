@@ -10,6 +10,10 @@ describe("inviteProblem", () => {
     expect(inviteProblem(new B2bError(410, "INVITE_REVOKED", "x"))).toBe("revoked");
     expect(inviteProblem(new B2bError(403, "INVITE_EMAIL_MISMATCH", "x"))).toBe("mismatch");
     expect(inviteProblem(new B2bError(409, "ALREADY_MEMBER", "x"))).toBe("already");
+    expect(inviteProblem(new B2bError(409, "MEMBER_ALREADY_CLAIMED", "x"))).toBe("claimed");
+    expect(inviteProblem(new B2bError(409, "MEMBER_REMOVED", "x"))).toBe("revoked");
+    expect(inviteProblem(new B2bError(409, "MEMBER_SUSPENDED", "x"))).toBe("revoked");
+    expect(inviteProblem(new B2bError(410, "INVITE_REVOKED", "x"))).toBe("revoked");
     expect(inviteProblem(new B2bError(401, "UNKNOWN", "x"))).toBe("signin");
   });
   it("treats rate limits, offline and anything else without leaking details", () => {

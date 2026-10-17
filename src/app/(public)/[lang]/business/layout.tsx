@@ -10,7 +10,12 @@ type Props = { params: Promise<{ lang: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { lang } = await params;
   const t = await getServerT(lang);
-  return pageMetadata({ title: t("business.heroTitle"), description: t("business.heroSubtitle"), path: "/business", lang });
+  return pageMetadata({
+    title: t("business.hub.metaTitle", "work4u for business: field service and marketplace crews"),
+    description: t("business.hub.subtitle", "Run your own field team with dispatch and a technician app, or build a roster of vetted marketplace workers and book them directly."),
+    path: "/business",
+    lang,
+  });
 }
 
 export default async function Layout({ children, params }: { children: React.ReactNode } & Props) {
@@ -18,7 +23,7 @@ export default async function Layout({ children, params }: { children: React.Rea
   const t = await getServerT(lang);
   return (
     <>
-      <JsonLd data={breadcrumbJsonLd([{ name: t("nav.home"), path: "/" }, { name: t("business.heroTitle"), path: "/business" }], lang)} />
+      <JsonLd data={breadcrumbJsonLd([{ name: t("nav.home"), path: "/" }, { name: t("business.badge"), path: "/business" }], lang)} />
       {children}
     </>
   );

@@ -96,14 +96,35 @@ function sleep(ms: number): Promise<void> {
 // error status is returned immediately, unchanged.
 const PROFILE_FETCH_RETRY_DELAYS_MS = [300, 600, 1200, 2000];
 
-async function buildAuthUser(firebaseUser: User, token: string): Promise<AuthUser | null> {
+/** What a person who signed up through the B2B flow looks like before (or without) a marketplace profile. */
+function minimalAuthUser(firebaseUser: User, token: string): AuthUser {
+    return {
+        id: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        photoUrl: firebaseUser.photoURL,
+        phoneNumber: firebaseUser.phoneNumber,
+        status: 'ACTIVE',
+        userType: 'PERSONAL',
+        workerTypes: [],
+        accountMode: null,
+        profileTier: null,
+        onboardingStep: 1,
+        onboardingCompleted: false,
+        emailVerified: Boolean(firebaseUser.emailVerified),
+        phoneVerified: false,
+        token,
+    };
+}
+
+async function buildAuthUser(firebaseUser: User, token: string, options: { profileOptional?: boolean } = {}): Promise<AuthUser | null> {
     let response = await apiFetch(`${API_URL}/api/users/${firebaseUser.uid}`, {
         headers: {
             'Authorization': `Bearer ${token}`,
         },
     });
 
-    for (const delay of PROFILE_FETCH_RETRY_DELAYS_MS) {
+    for (const delay of options.profileOptional ? [] : PROFILE_FETCH_RETRY_DELAYS_MS) {
         if (response.status !== 404) break;
         await sleep(delay);
         response = await apiFetch(`${API_URL}/api/users/${firebaseUser.uid}`, {
@@ -124,7 +145,8 @@ async function buildAuthUser(firebaseUser: User, token: string): Promise<AuthUse
         throw new ProfileUnavailableError();
     }
     if (!response.ok) {
-        return null;
+        // B2B accounts exist in the auth service before the organisation (and the minimal profile row) is created.
+        return options.profileOptional && response.status === 404 ? minimalAuthUser(firebaseUser, token) : null;
     }
 
     const apiUser: ApiUser = await response.json();
@@ -575,6 +597,13 @@ export function getCurrentUser(): Promise<AuthUser | null> {
 export async function getAuthUserFromFirebaseUser(firebaseUser: User): Promise<AuthUser | null> {
     const token = await firebaseUser.getIdToken();
     return buildAuthUser(firebaseUser, token);
+}
+
+/** B2B sessions: the signed-in person from the sign-in account alone (name, email, id). */
+export async function getB2bAuthUser(firebaseUser: User): Promise<AuthUser> {
+    const token = await firebaseUser.getIdToken();
+    // No marketplace profile call: nothing in the B2B product needs it (it answers 404 for B2B-only people, by design).
+    return minimalAuthUser(firebaseUser, token);
 }
 
 /**

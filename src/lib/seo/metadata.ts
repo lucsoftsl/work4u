@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { BRAND, DEFAULT_DESCRIPTION, absoluteUrl } from "./site";
+import { BRAND, DEFAULT_DESCRIPTION, absoluteUrl, b2bAbsoluteUrl } from "./site";
 import { DEFAULT_LANG, hreflangMap, localizedPath } from "../i18n-routing";
 
 /** Site-wide share image (app/opengraph-image.tsx); used whenever a page has no image of its own. */
@@ -49,6 +49,8 @@ export interface PageMeta {
   alternates?: "pages" | "item";
   /** For alternates "item": the language of the content (null/unknown → the unprefixed English URL). */
   contentLang?: string | null;
+  /** Which site the page belongs to: "b2b" builds URLs on the B2B origin (same as the marketplace until the B2B site has its own host). */
+  site?: "marketplace" | "b2b";
 }
 
 /** OpenGraph locale codes of the launch languages. */
@@ -60,14 +62,15 @@ export function pageMetadata(meta: PageMeta): Metadata {
   const isItem = meta.alternates === "item";
   // Self-referencing canonical per language; for user content, one canonical for all prefixes.
   const canonicalLang = isItem ? itemCanonicalLang(meta.contentLang) : lang;
-  const url = absoluteUrl(localizedPath(canonicalLang, meta.path));
-  const image = meta.image ? (meta.image.startsWith("http") ? meta.image : absoluteUrl(meta.image)) : absoluteUrl(FALLBACK_OG_IMAGE);
+  const abs = meta.site === "b2b" ? b2bAbsoluteUrl : absoluteUrl;
+  const url = abs(localizedPath(canonicalLang, meta.path));
+  const image = meta.image ? (meta.image.startsWith("http") ? meta.image : abs(meta.image)) : abs(FALLBACK_OG_IMAGE);
   const title = toTitle(meta.title);
   const fullTitle = `${title} · ${BRAND}`;
   return {
     title,
     description,
-    alternates: isItem ? { canonical: url } : { canonical: url, languages: hreflangMap(meta.path, absoluteUrl) },
+    alternates: isItem ? { canonical: url } : { canonical: url, languages: hreflangMap(meta.path, abs) },
     robots: meta.noindex ? { index: false, follow: false } : undefined,
     openGraph: {
       type: meta.type ?? "website",

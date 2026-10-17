@@ -111,7 +111,7 @@ export function formatDuration(minutes: number): string {
 }
 
 // ---- server errors
-export type SubmitErrorKind = "field" | "forbidden" | "network" | "generic";
+export type SubmitErrorKind = "field" | "forbidden" | "network" | "archived" | "generic";
 export interface SubmitError {
   kind: SubmitErrorKind;
   /** Server message per form field (VALIDATION_ERROR / INVALID_REFERENCE). */
@@ -134,6 +134,7 @@ export function mapSubmitError(err: unknown): SubmitError {
   const e = (err ?? {}) as ErrorLike;
   const message = typeof e.message === "string" && e.message ? e.message : undefined;
   if (e.code === "NETWORK") return { kind: "network", fields: {}, message };
+  if (e.code === "CUSTOMER_ARCHIVED") return { kind: "archived", fields: {} };
   if (e.status === 403) return { kind: "forbidden", fields: {} };
   if (e.code === "VALIDATION_ERROR") {
     const fields: SubmitError["fields"] = {};

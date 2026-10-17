@@ -12,6 +12,7 @@ vi.mock("./BucketCards", () => ({ BucketCards: () => <section aria-label="bucket
 vi.mock("./AlertsPanel", () => ({ AlertsPanel: () => <section aria-label="alerts" /> }));
 vi.mock("./TeamStrip", () => ({ TeamStrip: () => <section aria-label="teams" /> }));
 vi.mock("./LiveIndicator", () => ({ LiveIndicator: () => null }));
+vi.mock("@/b2b/setup/SetupChecklist", () => ({ SetupChecklist: () => null })); // own tests in b2b/setup
 afterEach(cleanup);
 
 describe("DashboardView hierarchy", () => {

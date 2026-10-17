@@ -1,5 +1,7 @@
 "use client";
 
+import { LogoImage } from "@/b2b/setup/LogoImage";
+import { useOrgSettings } from "@/b2b/setup/useOrgSettings";
 import { useEffect, useId, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -26,6 +28,7 @@ export function OrgSwitcher() {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const id = useId();
+  const logo = useOrgSettings(orgId, me?.org.hasLogo === true);
   const orgs = useQuery({ queryKey: qk.myOrgs, queryFn: listMyOrgs, staleTime: 5 * 60_000 });
   const onKeys = useMenuKeys(open, () => setOpen(false), listRef, triggerRef);
 
@@ -52,9 +55,9 @@ export function OrgSwitcher() {
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen((v) => !v)}
-        className="flex min-h-[44px] max-w-[16rem] items-center gap-2 rounded border border-white/20 px-3 text-sm text-white hover:bg-white/10"
+        className="flex min-h-[44px] w-full min-w-0 max-w-[16rem] items-center gap-2 rounded border border-white/20 px-2 text-sm text-white hover:bg-white/10 sm:px-3"
       >
-        <span className="text-ops-chrome-muted">Org:</span>
+        {me?.org.hasLogo ? <LogoImage url={logo.data?.logoUrl} name={me.org.name} className="h-7 w-7" /> : <span className="hidden text-ops-chrome-muted sm:inline">Org:</span>}
         <span className="truncate font-bold">{me?.org.name ?? "…"}</span>
         <ChevronsUpDown className="h-4 w-4 shrink-0 text-ops-chrome-muted" aria-hidden="true" />
       </button>

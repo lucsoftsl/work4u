@@ -14,6 +14,7 @@ import { TeamStrip } from "./TeamStrip";
 import { TOTAL_BUCKET_KEYS } from "@/b2b/lib/dashboard";
 import { useDashboardData, MAX_PAGES, PAGE_LIMIT } from "./useDashboardData";
 import { useNow } from "./useNow";
+import { SetupChecklist } from "@/b2b/setup/SetupChecklist";
 
 const EMPTY: ReadonlySet<BucketKey> = new Set();
 const ALL_KEYS: BucketKey[] = ["live", "scheduledToday", "upcoming", "delayed", "waitingParts", "review", "blocked", "completedToday", "cancelled"];
@@ -50,6 +51,8 @@ export function DashboardView() {
         <h1 className="text-2xl font-bold text-ops-ink">{t("b2b.dashboard.title", "Operations dashboard")}</h1>
         <LiveIndicator live={org.live} updatedAt={updatedAt} nowMs={nowMs} fetching={all.isFetching || unassigned.isFetching} />
       </div>
+
+      <SetupChecklist />
 
       {failed ? (
         <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-sig-vermilion-ink bg-ops-surface p-4">

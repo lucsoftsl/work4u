@@ -82,6 +82,12 @@ describe("sitemap index and files (rendered per request, fresh content)", () => 
     expect(xml).toContain(loc("/"));
     expect(set(urlOf("/"))).toContain("ro=http://localhost:3000/ro");
   });
+  it("core.xml lists the B2B home /field-service in every launch language with the same hreflang set", async () => {
+    const xml = await (await file("core.xml")).text();
+    for (const u of ["/field-service", "/ro/field-service", "/es/field-service"]) expect(xml, u).toContain(`<loc>http://localhost:3000${u}</loc>`);
+    expect(xml).not.toMatch(/<loc>[^<]*\/(ops|tech|b2b)(\/|<)/); // the logged-in B2B app is never listed
+    expect(xml).not.toContain("/field-service/demo"); // thin contact page: out of the index and the sitemap
+  });
   it("item sitemaps list one canonical URL per item: no language prefixes, no hreflang", async () => {
     const xml = await (await file("jobs-0.xml")).text();
     expect(xml).not.toMatch(/\/(ro|es|en)\/jobs/);

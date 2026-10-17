@@ -55,6 +55,28 @@ describe("proxy (language prefixes + signed-in /signin)", () => {
   it("private app and the invite link are untouched", () => {
     for (const p of ["/dashboard", "/chat", "/tech/o1/today", "/b2b/invite/abc"]) expect(proxy(req(p, { cookie: "NEXT_LOCALE=ro" })).headers.get("x-middleware-next"), p).toBe("1");
   });
+  it("B2B: the public home follows the language rules, the logged-in app and its sign-in pages are never prefixed or redirected", () => {
+    expect(proxy(req("/field-service")).headers.get("x-middleware-rewrite")).toBe("http://localhost:3000/en/field-service");
+    expect(proxy(req("/field-service/demo")).headers.get("x-middleware-rewrite")).toBe("http://localhost:3000/en/field-service/demo");
+    expect(proxy(req("/ro/field-service")).headers.get("x-middleware-next")).toBe("1");
+    const en = proxy(req("/en/field-service"));
+    expect(en.status).toBe(301);
+    expect(loc(en)).toBe("http://localhost:3000/field-service");
+    expect(proxy(req("/field-service", { cookie: "NEXT_LOCALE=es" })).status).toBe(307);
+    for (const p of ["/ops", "/ops/signin", "/ops/start", "/ops/o1/dashboard", "/tech", "/tech/o1/today", "/b2b/invite/abc"]) {
+      expect(proxy(req(p, { cookie: "NEXT_LOCALE=ro" })).headers.get("x-middleware-next"), p).toBe("1");
+    }
+    expect(proxy(req("/ro/ops/signin")).status).toBe(308); // a language prefix on the private app goes to the real URL
+  });
+  it("B2B: unknown /ops/{org}/zzz and /tech/{org}/zzz are a real 404 rendered by the B2B shell", () => {
+    for (const p of ["/ops/o1/zzz", "/tech/o1/zzz"]) {
+      const r = proxy(req(p));
+      expect(r.status, p).toBe(404);
+      expect(r.headers.get("x-middleware-rewrite")).toBe("http://localhost:3000/b2b/not-found-page");
+      expect(r.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+    }
+    expect(proxy(req("/ops/o1/dashboard")).status).toBe(200);
+  });
   it("keeps the old behaviour: signed-in users are sent from /signin to the dashboard unless a redirect target is given", () => {
     const r = proxy(req("/signin", { cookie: "work4u_auth=1" }));
     expect(r.status).toBe(307);

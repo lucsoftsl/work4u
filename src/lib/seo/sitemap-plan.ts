@@ -33,6 +33,7 @@ export const CORE_PATHS: Array<{ path: string; priority: number; changeFrequency
   { path: "/how-it-works", priority: 0.7, changeFrequency: "monthly" },
   { path: "/pricing", priority: 0.6, changeFrequency: "monthly" },
   { path: "/business", priority: 0.6, changeFrequency: "monthly" },
+  { path: "/field-service", priority: 0.8, changeFrequency: "monthly" }, // the B2B home (own header/footer, same sitemap)
   { path: "/contact", priority: 0.4, changeFrequency: "yearly" },
   { path: "/privacy", priority: 0.2, changeFrequency: "yearly" },
   { path: "/terms", priority: 0.2, changeFrequency: "yearly" },

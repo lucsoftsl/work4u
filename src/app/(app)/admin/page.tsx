@@ -3,7 +3,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState } from 'react';
 import Link from "@/components/LocaleLink";
-import { Settings, Trophy, Scroll, BarChart3, ArrowRight, Users, Flag, Building2, AlertTriangle, ShieldAlert, Newspaper, Phone, Languages, CreditCard, SlidersHorizontal } from 'lucide-react';
+import { Settings, Trophy, Scroll, BarChart3, ArrowRight, Users, Flag, Building2, AlertTriangle, ShieldAlert, Newspaper, Phone, Languages, CreditCard, SlidersHorizontal, Briefcase } from 'lucide-react';
 import { fetchAdminStats, type AdminStats } from '@/lib/admin-api';
 import { useTranslation } from '@/lib/i18n';
 
@@ -72,6 +72,13 @@ export default function AdminDashboard() {
             icon: Newspaper,
             href: '/admin/blog',
             color: 'from-primary to-ember',
+        },
+        {
+            title: t('admin.business.title', 'Business'),
+            description: t('admin.business.moduleDesc', 'Demo requests, demo page contact details and field service rules.'),
+            icon: Briefcase,
+            href: '/admin/business',
+            color: 'from-primary to-sunken',
         },
         {
             title: t('adminContact.title'),

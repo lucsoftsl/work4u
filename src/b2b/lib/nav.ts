@@ -1,7 +1,13 @@
-import { Bell, Briefcase, ClipboardCheck, LayoutDashboard, Map, UserRound, Users, type LucideIcon } from "lucide-react";
+import { Bell, Briefcase, ClipboardCheck, LayoutDashboard, Map, Settings, UserRound, Users, type LucideIcon } from "lucide-react";
 import type { PermissionKey } from "./permissions";
 
-export interface NavEntry { section: string; label: string; labelKey: string; icon: LucideIcon; permission: PermissionKey }
+export interface NavEntry {
+  section: string; label: string; labelKey: string; icon: LucideIcon; permission: PermissionKey;
+  /** Visible when the role holds ANY of these (instead of `permission`). */
+  anyOf?: readonly PermissionKey[];
+  /** Route below /ops/{org}/ when it differs from the section name. */
+  href?: string;
+}
 
 /** Spec §25 navigation. Only built sections appear; each is hidden when the role lacks the permission. */
 export const OPS_NAV: readonly NavEntry[] = [
@@ -10,10 +16,12 @@ export const OPS_NAV: readonly NavEntry[] = [
   { section: "dispatch", label: "Dispatch", labelKey: "b2b.nav.dispatch", icon: Map, permission: "dispatch.view" },
   { section: "review", label: "Review queue", labelKey: "b2b.nav.review", icon: ClipboardCheck, permission: "job.close" },
   { section: "teams", label: "Teams", labelKey: "b2b.nav.teams", icon: Users, permission: "team.view" },
-  { section: "customers", label: "Customers", labelKey: "b2b.nav.customers", icon: UserRound, permission: "customer.view" },
+  { section: "customers", label: "Clients", labelKey: "b2b.nav.customers", icon: UserRound, permission: "customer.view" },
   { section: "notifications", label: "Notifications", labelKey: "b2b.nav.notifications", icon: Bell, permission: "job.view" },
+  // Company setup: profile (org.manage), team (member.view), clients (customer.view). Opens the first page the viewer may see.
+  { section: "settings", label: "Company setup", labelKey: "b2b.nav.setup", icon: Settings, permission: "org.manage", anyOf: ["org.manage", "member.view", "customer.view"], href: "settings" },
 ];
 
 export function visibleNav(can: (p: PermissionKey) => boolean): NavEntry[] {
-  return OPS_NAV.filter((entry) => can(entry.permission));
+  return OPS_NAV.filter((entry) => (entry.anyOf ? entry.anyOf.some((p) => can(p)) : can(entry.permission)));
 }

@@ -10,3 +10,8 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_UR
 
 export const absoluteUrl = (path: string): string => `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 
+
+/** Origin of the B2B public pages. Same as SITE_URL today; set NEXT_PUBLIC_B2B_ORIGIN when they move to their own host. */
+export const B2B_SITE_URL = (process.env.NEXT_PUBLIC_B2B_ORIGIN || SITE_URL).trim().replace(/\/+$/, "");
+
+export const b2bAbsoluteUrl = (path: string): string => `${B2B_SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;

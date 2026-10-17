@@ -7,6 +7,8 @@ import { useToast } from "@/components/ui/Toast";
 import { assignJob, checkAssignment, listTeams, qk, type AssignTarget } from "@/b2b/api/endpoints";
 import type { Conflict, JobWorkspace } from "@/b2b/api/types";
 import { useOrg } from "@/b2b/context/OrgContext";
+import { listAssignableMembers, sk } from "@/b2b/setup/api";
+import { assigneeGroups } from "@/b2b/lib/assignees";
 import { describeB2bError, isValidReason, type DescribedError } from "@/b2b/lib/workspace";
 import { ConflictList } from "./ConflictList";
 import { Banner, btnClass, Card, ErrorRetry, fieldClass, ReasonField, Spinner } from "./ui";
@@ -29,6 +31,8 @@ export function AssignmentPanel({ job }: { job: JobWorkspace }) {
   const target = parseTarget(key);
 
   const teams = useQuery({ queryKey: qk.teams(orgId), queryFn: () => listTeams(orgId), staleTime: 60_000 });
+  // Every ACTIVE member (planning-only and team-less people included). If this fails the team members still work.
+  const people = useQuery({ queryKey: [...sk.membersAll(orgId), "assignable"] as const, queryFn: () => listAssignableMembers(orgId), staleTime: 60_000, retry: false });
   const check = useQuery({
     queryKey: [...qk.job(orgId, job.id), "assign-check", key, job.version] as const,
     queryFn: () => checkAssignment(orgId, job.id, target as AssignTarget),
@@ -46,8 +50,7 @@ export function AssignmentPanel({ job }: { job: JobWorkspace }) {
     onError: (e) => setError(describeB2bError(e)),
   });
 
-  const techs = new Map<string, string>();
-  for (const t of teams.data ?? []) for (const m of t.members) techs.set(m.id, m.displayName);
+  const groups = assigneeGroups(teams.data ?? [], people.data, "No team");
   const alreadyAssigned = new Set((job.assignments ?? []).flatMap((a) => [a.teamId, a.memberId].filter(Boolean) as string[]));
 
   const conflicts: Conflict[] = error?.conflicts?.length ? error.conflicts : check.data?.conflicts ?? [];
@@ -74,9 +77,11 @@ export function AssignmentPanel({ job }: { job: JobWorkspace }) {
               <optgroup label="Teams">
                 {(teams.data ?? []).filter((t) => t.active).map((t) => <option key={t.id} value={`team:${t.id}`} disabled={alreadyAssigned.has(t.id)}>{t.name}{alreadyAssigned.has(t.id) ? " (assigned)" : ""}</option>)}
               </optgroup>
-              <optgroup label="Technicians">
-                {[...techs].map(([id, name]) => <option key={id} value={`member:${id}`} disabled={alreadyAssigned.has(id)}>{name}{alreadyAssigned.has(id) ? " (assigned)" : ""}</option>)}
-              </optgroup>
+              {groups.map((g) => (
+                <optgroup key={g.key} label={g.label ? `Technicians · ${g.label}` : "Technicians"}>
+                  {g.members.map((m) => <option key={m.id} value={`member:${m.id}`} disabled={alreadyAssigned.has(m.id)}>{m.displayName}{m.loginStatus === "NONE" ? " (planning only)" : ""}{alreadyAssigned.has(m.id) ? " (assigned)" : ""}</option>)}
+                </optgroup>
+              ))}
             </select>
           </div>
           {checking ? <Spinner label="Checking availability…" /> : null}

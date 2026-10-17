@@ -9,6 +9,7 @@ export interface AuthSdk {
   auth: Auth;
   onIdTokenChanged: typeof import("firebase/auth").onIdTokenChanged;
   getAuthUserFromFirebaseUser: typeof import("./auth-service").getAuthUserFromFirebaseUser;
+  getB2bAuthUser: typeof import("./auth-service").getB2bAuthUser;
   signOut: typeof import("./auth-service").signOut;
 }
 
@@ -16,7 +17,7 @@ let loading: Promise<AuthSdk> | null = null;
 
 export function loadAuthSdk(): Promise<AuthSdk> {
   loading ??= Promise.all([import("firebase/auth"), import("./firebase"), import("./auth-service")])
-    .then(([fa, fb, svc]) => ({ auth: fb.auth, onIdTokenChanged: fa.onIdTokenChanged, getAuthUserFromFirebaseUser: svc.getAuthUserFromFirebaseUser, signOut: svc.signOut }))
+    .then(([fa, fb, svc]) => ({ auth: fb.auth, onIdTokenChanged: fa.onIdTokenChanged, getAuthUserFromFirebaseUser: svc.getAuthUserFromFirebaseUser, getB2bAuthUser: svc.getB2bAuthUser, signOut: svc.signOut }))
     .catch((error) => {
       loading = null; // a failed chunk load (offline) can be retried
       throw error;

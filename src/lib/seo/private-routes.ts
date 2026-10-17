@@ -17,7 +17,7 @@ export const PRIVATE_ROUTE_PREFIXES = [
 export const PRIVATE_JOB_SUBPAGES = ["edit", "nearby-pros"] as const;
 
 /** Top-level app folders that are public (indexable) pages or non-page route handlers. */
-export const PUBLIC_ROUTES = ["", "blog", "business", "contact", "how-it-works", "jobs", "pricing", "privacy", "terms", "workers", "api", "sitemap", "sitemap.xml"] as const;
+export const PUBLIC_ROUTES = ["", "blog", "business", "contact", "field-service", "how-it-works", "jobs", "pricing", "privacy", "terms", "workers", "api", "sitemap", "sitemap.xml"] as const;
 
 export function isPrivatePath(pathname: string): boolean {
   const path = pathname.split("?")[0].replace(/\/+$/, "") || "/";

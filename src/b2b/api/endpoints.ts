@@ -29,6 +29,23 @@ export const listMyOrgs = () => b2b<OrgSummary[]>("/me/orgs");
 export const createOrg = (input: { name: string; timezone?: string }) =>
   b2b<{ org: { id: string; name: string; timezone: string; status: string }; member: { id: string } }>("/orgs", { method: "POST", json: input });
 
+/** B2B sign-up: creates the organisation (and a minimal profile row if the account has none). Needs no marketplace profile or plan. */
+export interface CompanySignupInput {
+  name: string; adminDisplayName?: string; timezone?: string; legalName?: string; taxId?: string; phone?: string;
+  addressLine?: string; city?: string; postalCode?: string; country?: string; locale?: string;
+}
+export const signupCompany = (input: CompanySignupInput) =>
+  b2b<{ org: { id: string; name: string; timezone: string; status: string }; member: { id: string; roleId: string; roleTemplate: string } }>("/signup", { method: "POST", json: input });
+
+export type DemoTeamSize = "1-5" | "6-20" | "21-50" | "51+";
+export interface DemoRequestInput {
+  name: string; email: string; company: string; phone?: string; teamSize?: DemoTeamSize; message?: string; locale?: string;
+  /** Honeypot: always empty for people. */
+  website?: string;
+}
+/** Public "Request a demo" form (no sign-in). 400 VALIDATION_ERROR carries `fields`; 429 after 5 an hour per IP. */
+export const submitDemoRequest = (input: DemoRequestInput) => b2b<{ ok: true }>("/demo-requests", { method: "POST", json: input });
+
 // ---- org + people
 export const getMe = (orgId: string) => b2b<OrgMe>(orgPath(orgId, "/me"));
 export const listTeams = (orgId: string) => b2b<Team[]>(orgPath(orgId, "/teams"));
@@ -82,7 +99,7 @@ export const getBoard = (orgId: string, date: string, filters: BoardQuery = {}, 
   });
 
 // ---- invitations (public preview, then accept as the signed-in invitee)
-export interface InvitePreview { orgName: string; roleName: string; memberType: string; emailHint: string; expiresAt: string }
+export interface InvitePreview { orgName: string; roleName: string; memberType: string; emailHint: string; expiresAt: string; /** A planned employee claims an existing member (keeps schedule and history). */ claim?: boolean; memberName?: string | null }
 export const previewInvitation = (token: string) => b2b<InvitePreview>(`/invitations/${encodeURIComponent(token)}`);
 export const acceptInvitation = (token: string) => b2b<{ orgId: string; memberId: string }>(`/invitations/${encodeURIComponent(token)}/accept`, { method: "POST" });
 
