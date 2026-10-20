@@ -30,7 +30,8 @@ export function RowMenu({ name, archived, canManage, canCreateJob, jobHref, offl
   }, [open]);
 
   if (!canManage && !(canCreateJob && !archived)) return null;
-  const run = (fn: () => void) => () => { setOpen(false); fn(); };
+  // Focus the persistent trigger first: a dialog opened by the action then returns focus to it (the menu item unmounts).
+  const run = (fn: () => void) => () => { trigger.current?.focus(); setOpen(false); fn(); };
   return (
     <div ref={root} className="relative inline-block">
       <button ref={trigger} type="button" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined}

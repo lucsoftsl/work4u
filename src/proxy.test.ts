@@ -69,7 +69,7 @@ describe("proxy (language prefixes + signed-in /signin)", () => {
     expect(proxy(req("/ro/ops/signin")).status).toBe(308); // a language prefix on the private app goes to the real URL
   });
   it("B2B: unknown /ops/{org}/zzz and /tech/{org}/zzz are a real 404 rendered by the B2B shell", () => {
-    for (const p of ["/ops/o1/zzz", "/tech/o1/zzz"]) {
+    for (const p of ["/ops/o1/zzz", "/tech/o1/zzz", "/b2b/zzz"]) {
       const r = proxy(req(p));
       expect(r.status, p).toBe(404);
       expect(r.headers.get("x-middleware-rewrite")).toBe("http://localhost:3000/b2b/not-found-page");

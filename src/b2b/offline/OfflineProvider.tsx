@@ -11,7 +11,7 @@ import { enqueue, flushQueue, pendingForJob, removeWaiting, type Runners } from 
 import { qk } from "@/b2b/api/endpoints";
 import { statusAfter } from "./apply";
 import { useTranslation } from "@/lib/i18n";
-import { JOB_STATUS_META } from "@/b2b/lib/status";
+import { jobStatusLabel } from "@/b2b/lib/status-label";
 import { newPartId } from "@/b2b/lib/parts";
 import { serverNowIso } from "@/b2b/lib/server-clock";
 import { clearAllOfflineData, getMeta, listQueue, setMeta, subscribeQueue } from "./store";
@@ -94,7 +94,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const [flushing, setFlushing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<FlushResult | null>(null);
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [undoEntry, setUndoEntry] = useState<UndoEntry | null>(null);
   const [undoMessage, setUndoMessage] = useState<string | null>(null);
   const undoToken = useRef(0);
@@ -124,7 +124,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     if (!navigator.onLine) return;
     setFlushing(true);
     try {
-      const res = await flushQueue(orgRef.current, RUNNERS);
+      const res = await flushQueue(orgRef.current, RUNNERS, { t, locale });
       setLastResult(res);
       if (res.undoRejected > 0) setUndoMessage(t("b2b.tech.undo.failed", "Can't undo: this job changed."));
       if (res.sent > 0 || res.undoRejected > 0) void qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === "org" && q.queryKey[1] === orgRef.current && q.queryKey[2] !== "me" });
@@ -132,7 +132,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       setFlushing(false);
       await reload();
     }
-  }, [qc, reload, t]);
+  }, [qc, reload, t, locale]);
 
   // Flush on connect, on return to the app, and every 30 s while something waits.
   const waitingCount = items.filter((i) => i.status === "waiting" || i.status === "sending").length;
@@ -164,7 +164,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     return { queued: true };
   }, [flush, reload, offerUndo, stillQueued]);
 
-  const stepText = useCallback((action: TechAction) => t("b2b.tech.undo.action.step", "Moved to {status}").replace("{status}", JOB_STATUS_META[statusAfter(action)].label), [t]);
+  const stepText = useCallback((action: TechAction) => t("b2b.tech.undo.action.step", "Moved to {status}").replace("{status}", jobStatusLabel(t, statusAfter(action))), [t]);
 
   const submitAction = useCallback<OfflineContextValue["submitAction"]>(async (job, action, body, label) => {
     const key = newIdempotencyKey();
@@ -263,7 +263,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   }, [undoEntry, reload, refreshJob, flush, t]);
 
   const submitPhoto = useCallback<OfflineContextValue["submitPhoto"]>(async (job, file) => {
-    const base = { orgId, jobId: job.id, jobRef: job.reference, kind: "photo" as const, file, fileName: file.name, label: "Photo" };
+    const base = { orgId, jobId: job.id, jobRef: job.reference, kind: "photo" as const, file, fileName: file.name, label: t("b2b.tech.queue.photo", "Photo") };
     if (!navigator.onLine || (await pendingForJob(orgId, job.id)).length > 0) return queueThenFlush(base);
     try {
       await uploadPhoto(orgId, job.id, file);
@@ -273,12 +273,12 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       if (isNetwork(e)) return queueThenFlush(base);
       throw e;
     }
-  }, [orgId, qc, queueThenFlush]);
+  }, [orgId, qc, queueThenFlush, t]);
 
   const queueSignature = useCallback<OfflineContextValue["queueSignature"]>(async (job, png) => {
-    await enqueue({ orgId, jobId: job.id, jobRef: job.reference, kind: "signature", file: png, fileName: "signature.png", label: "Customer signature" });
+    await enqueue({ orgId, jobId: job.id, jobRef: job.reference, kind: "signature", file: png, fileName: "signature.png", label: t("b2b.tech.queue.signature", "Customer signature") });
     await reload();
-  }, [orgId, reload]);
+  }, [orgId, reload, t]);
 
   const attention = useMemo(() => items.filter((i) => i.status === "failed" || i.status === "conflict"), [items]);
   const syncState: SyncState = attention.length > 0 ? "attention" : flushing ? "syncing" : waitingCount > 0 ? "queued" : "synced";

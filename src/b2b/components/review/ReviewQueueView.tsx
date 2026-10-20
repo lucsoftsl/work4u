@@ -56,13 +56,13 @@ export function ReviewQueueView() {
     },
     onError: (e, { item }, ctx) => {
       if (ctx) qc.setQueryData<Queue>(key, (cur) => (cur ? { ...cur, items: restoreToQueue(cur.items, ctx), total: cur.total + (ctx.removed ? 1 : 0) } : cur));
-      const described = classifyReviewError(isB2bError(e) ? e : {});
+      const described = classifyReviewError(isB2bError(e) ? e : {}, t);
       if (described.kind === "stale") setStaleMsg(`${item.reference}: ${described.message}`);
       else setError({ kind: described.kind, message: `${item.reference}: ${described.message}` });
     },
     onSuccess: (_d, { item, reason }) => {
       setError(null);
-      toast.push({ message: reason !== undefined ? `${item.reference} sent back to the team` : `${item.reference} approved and closed`, tone: "success" });
+      toast.push({ message: reason !== undefined ? t("b2b.job.review.sentBack", "{ref} sent back to the team").replace("{ref}", item.reference) : t("b2b.job.review.approved", "{ref} approved and closed").replace("{ref}", item.reference), tone: "success" });
     },
     onSettled: () => {
       if (!returnFocus.current?.isConnected) headingRef.current?.focus();
@@ -100,9 +100,9 @@ export function ReviewQueueView() {
       {error ? <Banner tone={error.kind === "forbidden" ? "warning" : "danger"} role="alert">{error.message}</Banner> : null}
 
       {q.isPending ? (
-        <div role="status" aria-busy="true" className="space-y-3"><span className="sr-only">Loading</span><Skeleton className="h-24" /><Skeleton className="h-24" /></div>
+        <div role="status" aria-busy="true" className="space-y-3"><span className="sr-only">{t("b2b.common.loading", "Loading")}</span><Skeleton className="h-24" /><Skeleton className="h-24" /></div>
       ) : q.isError ? (
-        <ErrorRetry message={isB2bError(q.error) ? q.error.message : "Couldn't load the review queue."} onRetry={() => void q.refetch()} />
+        <ErrorRetry message={t("b2b.review.loadError", "Couldn't load the review queue.")} onRetry={() => void q.refetch()} />
       ) : items.length === 0 ? (
         <EmptyState icon={ClipboardCheck} title={t("b2b.review.emptyTitle", "No jobs waiting for review")}
           body={t("b2b.review.emptyBody", "When a team completes a job that needs sign-off, it appears here. Only members with close rights, such as admins and dispatchers, review jobs.")} />

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { AlertTriangle, CircleCheck, SearchX, ShieldAlert } from "lucide-react";
-import { TEAM_STATUS_LABEL } from "@/b2b/lib/status";
 import { canDragJob, teamHours, UNASSIGNED_LANE, type LaneBadge } from "@/b2b/lib/dispatch";
 import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -15,6 +14,9 @@ import { noTeamsVariant } from "@/b2b/lib/empty-states";
 import { INDIVIDUALS_LANE } from "@/b2b/lib/dispatch-view";
 import { HandlePlaceholder, JobCard } from "./JobCard";
 import type { BoardViewProps, JobCardProps, LaneProps } from "./types";
+import { plural } from "@/b2b/lib/plural";
+import { teamStatusLabel } from "@/b2b/lib/status-label";
+import type { TeamStatus } from "@/b2b/api/types";
 
 const LANE_MIN = "min-h-[220px]";
 /** Tablet (md..lg) shows one lane at a time; the lane switcher picks it. */
@@ -75,26 +77,22 @@ function CapacityMeter({ capacity }: { capacity: LaneCapacity }) {
   );
 }
 
-export function LaneHeader({ name, status, jobs, capacity }: { name: string; status?: Parameters<typeof statusLabel>[0]; jobs: Job[]; capacity?: LaneCapacity }) {
-  const { t } = useTranslation();
+export function LaneHeader({ name, status, jobs, capacity }: { name: string; status?: TeamStatus; jobs: Job[]; capacity?: LaneCapacity }) {
+  const { t, locale } = useTranslation();
   const hours = teamHours(jobs);
   return (
     <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-1">
       <h2 className="min-w-0 truncate text-sm font-bold text-ops-ink">{name}</h2>
       <div className="flex items-center gap-2 text-xs text-ops-ink-muted">
-        {status ? <span className="rounded border border-ops-border-strong bg-ops-surface px-1.5 py-0.5 font-bold text-ops-ink">{statusLabel(status)}</span> : null}
+        {status ? <span className="rounded border border-ops-border-strong bg-ops-surface px-1.5 py-0.5 font-bold text-ops-ink">{teamStatusLabel(t, status)}</span> : null}
         <span className="font-mono">
           {!capacity && hours.hasHours ? `${hours.hours} h · ` : ""}
-          {hours.count} {hours.count === 1 ? t("b2b.dispatch.job", "job") : t("b2b.dispatch.jobs", "jobs")}
+          {plural(t, locale, "b2b.dispatch.jobCount", { one: "{n} job", other: "{n} jobs" }, hours.count)}
         </span>
       </div>
       {capacity ? <CapacityMeter capacity={capacity} /> : null}
     </header>
   );
-}
-
-function statusLabel(status: keyof typeof TEAM_STATUS_LABEL): string {
-  return TEAM_STATUS_LABEL[status];
 }
 
 /** Static (non-draggable) card; reserves the handle width so the dnd upgrade does not shift the layout. */

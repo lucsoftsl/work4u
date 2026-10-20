@@ -46,7 +46,7 @@ export function ClientsList(p: Props) {
   }
   const th = "px-4 py-2 text-left text-xs font-bold uppercase tracking-wide text-ops-ink-muted";
   return (
-    <div className="overflow-x-auto rounded-lg border border-ops-border bg-ops-surface">
+    <div className="relative overflow-x-auto rounded-lg border border-ops-border bg-ops-surface">
       <table className="w-full border-collapse">
         <caption className="sr-only">{tr("b2b.clients.title", "Clients")}</caption>
         <thead className="border-b border-ops-border">

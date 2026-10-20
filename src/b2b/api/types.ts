@@ -1,7 +1,7 @@
 // Types for the B2B API (/api/b2b). Source: b2b/impl-log-backend.md "API reference". Times are ISO-8601 UTC.
 
 export type JobStatus =
-  | "NEW" | "PLANNING" | "WAITING_FOR_PARTS" | "READY_TO_SCHEDULE" | "SCHEDULED" | "DISPATCHED"
+  | "DRAFT" | "NEW" | "PLANNING" | "WAITING_FOR_PARTS" | "READY_TO_SCHEDULE" | "SCHEDULED" | "DISPATCHED"
   | "EN_ROUTE" | "ON_SITE" | "IN_PROGRESS" | "BLOCKED" | "COMPLETED" | "REVIEW" | "CLOSED" | "CANCELLED";
 
 export type Scope = "ALL" | "TEAM" | "ASSIGNED";
@@ -16,8 +16,14 @@ export interface OrgSummary {
 }
 
 export interface OrgMe {
-  org: { id: string; name: string; timezone: string; /** The org has a logo (so the shell asks for the signed link). */ hasLogo?: boolean };
-  member: { id: string; displayName: string; memberType: string; teamIds: string[] };
+  org: {
+    id: string; name: string; timezone: string; /** The org has a logo (so the shell asks for the signed link). */ hasLogo?: boolean;
+    /** Chosen company currency, or null until someone chooses one. `effectiveCurrency` is what a selector pre-selects. */
+    currency?: string | null; currencyIsSet?: boolean; effectiveCurrency?: string;
+  };
+  /** The last currency this person picked in any selector (null: none yet). */
+  preferredCurrency?: string | null;
+  member: { id: string; displayName: string | null; memberType: string; teamIds: string[] };
   role: { id: string; name: string; template: string };
   permissions: Grant[];
   /** Site-wide policies. Absent on older APIs: treat as strict (false). */
@@ -69,8 +75,18 @@ export interface Job {
   status: JobStatus;
   blockedFromStatus?: JobStatus | null;
   statusReason?: string | null;
-  customerId: string;
-  locationId: string;
+  /** null only on a DRAFT that has no client / location yet. */
+  customerId: string | null;
+  locationId: string | null;
+  /** Job type (migration 0015); null = none. */
+  jobTypeId?: string | null;
+  jobTypeName?: string | null;
+  /** Money: minor units of `currency`. The keys are ABSENT (not null) unless the viewer holds finance.view. */
+  price?: number | null;
+  cost?: number | null;
+  margin?: number | null;
+  marginPct?: number | null;
+  currency?: string;
   requestedDate?: string | null;
   scheduledStart?: string | null;
   scheduledEnd?: string | null;
@@ -103,10 +119,13 @@ export interface Assignment {
   memberId?: string | null;
   role?: "TEAM" | "LEAD" | "TECHNICIAN" | "SPECIALIST";
   teamName?: string;
-  memberName?: string;
+  /** null when the person has no real name (show "Team member"). */
+  memberName?: string | null;
 }
 
 export interface JobWorkspace extends Job {
+  jobType?: { id: string; name: string; archived: boolean } | null;
+  // A DRAFT can lack both at runtime (customerId/locationId are null); the draft editor reads them with `?.`.
   customer: { id: string; name: string; email?: string | null; phone?: string | null; [k: string]: unknown };
   location: {
     id: string; label: string; addressLine: string; city?: string | null; postalCode?: string | null; country?: string | null;
@@ -173,17 +192,24 @@ export type WorkingHours = Partial<Record<WeekdayKey, { start: string; end: stri
 
 export interface Team {
   id: string; name: string; leadMemberId?: string | null; status: TeamStatus; active: boolean;
-  members: { id: string; displayName: string }[];
+  members: { id: string; displayName: string | null }[];
   /** null / missing = default hours. */
   workingHours?: WorkingHours | null;
 }
 
-/** Body of POST /jobs. */
+/** Body of POST /jobs. A real job needs title, customerId, locationId and a category or jobTypeId; a draft (`draft: true`) only a title or a client. */
 export interface CreateJobInput {
-  title: string;
-  category: string;
-  customerId: string;
-  locationId: string;
+  draft?: boolean;
+  title?: string;
+  category?: string;
+  jobTypeId?: string;
+  customerId?: string;
+  locationId?: string;
+  /** Minor units; only for viewers with finance.view (the API answers 403 otherwise). */
+  price?: number;
+  cost?: number;
+  /** Only with the first amount while the company has no currency; the API then makes it the company's. */
+  currency?: string;
   priority?: "LOW" | "NORMAL" | "HIGH" | "URGENT";
   description?: string;
   requestedDate?: string;

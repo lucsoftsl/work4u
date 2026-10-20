@@ -13,7 +13,7 @@ import { useNowTick } from "./useNowTick";
  * a sleeping tablet or airplane mode all show the same value. Screen readers hear state changes only, never seconds.
  */
 export function TimerChip({ time, offline, estimateMin, className }: { time: WorkTime | null | undefined; offline?: boolean; estimateMin?: number | null; className?: string }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const ticking = time?.state === "RUNNING" || time?.state === "PAUSED";
   const now = useNowTick(ticking);
   const state = time?.state ?? null;
@@ -24,7 +24,7 @@ export function TimerChip({ time, offline, estimateMin, className }: { time: Wor
   const [seen, setSeen] = useState(state);
   if (seen !== state) {
     setSeen(state);
-    if (state === "PAUSED") setAnnounce(t("b2b.tech.timer.srPaused", "Timer paused at {time}").replace("{time}", timerSpeech(worked ?? 0)));
+    if (state === "PAUSED") setAnnounce(t("b2b.tech.timer.srPaused", "Timer paused at {time}").replace("{time}", timerSpeech(worked ?? 0, { t, locale })));
     else if (state === "RUNNING" && seen === "PAUSED") setAnnounce(t("b2b.tech.timer.srResumed", "Timer resumed"));
   }
 
@@ -44,7 +44,7 @@ export function TimerChip({ time, offline, estimateMin, className }: { time: Wor
       </span>
       {overMin > 0 ? <span className="text-sm font-bold text-sig-vermilion-ink">{t("b2b.tech.timer.over", "+{n} min over estimate").replace("{n}", String(overMin))}</span> : null}
       {offline ? <span className="inline-flex items-center gap-1 text-sm font-bold text-sig-orange-ink"><CloudOff className="h-4 w-4" aria-hidden="true" />{t("b2b.tech.timer.savedOnDevice", "Saved on device")}</span> : null}
-      <span role="timer" aria-live="off" className="sr-only">{timerSpeech(worked ?? 0)}</span>
+      <span role="timer" aria-live="off" className="sr-only">{timerSpeech(worked ?? 0, { t, locale })}</span>
       <span role="status" aria-live="polite" className="sr-only">{announce}</span>
     </span>
   );

@@ -1,4 +1,4 @@
-import { Bell, Briefcase, ClipboardCheck, LayoutDashboard, Map, Settings, UserRound, Users, type LucideIcon } from "lucide-react";
+import { Bell, Briefcase, ChartNoAxesColumn, ClipboardCheck, LayoutDashboard, Map, Settings, UserRound, Users, type LucideIcon } from "lucide-react";
 import type { PermissionKey } from "./permissions";
 
 export interface NavEntry {
@@ -17,9 +17,11 @@ export const OPS_NAV: readonly NavEntry[] = [
   { section: "review", label: "Review queue", labelKey: "b2b.nav.review", icon: ClipboardCheck, permission: "job.close" },
   { section: "teams", label: "Teams", labelKey: "b2b.nav.teams", icon: Users, permission: "team.view" },
   { section: "customers", label: "Clients", labelKey: "b2b.nav.customers", icon: UserRound, permission: "customer.view" },
+  // Money: Administrator and Operations Manager only (finance.view). Neutral chart icon: the currency is per company.
+  { section: "finance", label: "Finance", labelKey: "b2b.nav.finance", icon: ChartNoAxesColumn, permission: "finance.view" },
   { section: "notifications", label: "Notifications", labelKey: "b2b.nav.notifications", icon: Bell, permission: "job.view" },
   // Company setup: profile (org.manage), team (member.view), clients (customer.view). Opens the first page the viewer may see.
-  { section: "settings", label: "Company setup", labelKey: "b2b.nav.setup", icon: Settings, permission: "org.manage", anyOf: ["org.manage", "member.view", "customer.view"], href: "settings" },
+  { section: "settings", label: "Company setup", labelKey: "b2b.nav.setup", icon: Settings, permission: "org.manage", anyOf: ["org.manage", "member.view", "customer.view", "jobType.manage"], href: "settings" },
 ];
 
 export function visibleNav(can: (p: PermissionKey) => boolean): NavEntry[] {

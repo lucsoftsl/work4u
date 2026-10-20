@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslation } from "@/lib/i18n";
+
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor, useDraggable, useDroppable, useSensor, useSensors,
@@ -39,6 +41,7 @@ function DraggableCard(props: JobCardProps) {
 }
 
 function DroppableLane({ id, name, droppable, header, children, isEmpty, className }: LaneProps) {
+  const { t } = useTranslation();
   const { setNodeRef, isOver, active } = useDroppable({ id, disabled: !droppable, data: { name } });
   const hover = useContext(BadgeContext);
   const badge = hover.laneId === id ? hover.badge : null;
@@ -55,7 +58,7 @@ function DroppableLane({ id, name, droppable, header, children, isEmpty, classNa
     >
       {header}
       {badge ? <LaneBadgeView badge={badge} /> : null}
-      {isEmpty ? <p className="px-1 py-3 text-sm text-ops-ink-muted">No jobs this day</p> : <ul className="flex flex-col gap-2">{children}</ul>}
+      {isEmpty ? <p className="px-1 py-3 text-sm text-ops-ink-muted">{t("b2b.dispatch.noJobsDay", "No jobs this day")}</p> : <ul className="flex flex-col gap-2">{children}</ul>}
     </section>
   );
 }
@@ -91,6 +94,7 @@ interface DndBoardProps extends Omit<BoardViewProps, "CardComponent" | "LaneComp
 }
 
 export default function DndBoard({ onDropOnTeam, fetchCheck, ...view }: DndBoardProps) {
+  const { t } = useTranslation();
   const { board } = view;
   const [activeJob, setActiveJob] = useState<Job | null>(null);
   const [hover, setHover] = useState<{ laneId: string | null; badge: LaneBadge | null }>({ laneId: null, badge: null });
@@ -110,16 +114,16 @@ export default function DndBoard({ onDropOnTeam, fetchCheck, ...view }: DndBoard
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   const laneName = useCallback((id: unknown) => board.teams.find((t) => t.id === id)?.name, [board.teams]);
-  const refOf = useCallback((id: unknown) => findJob(board, String(id))?.reference ?? "job", [board]);
+  const refOf = useCallback((id: unknown) => findJob(board, String(id))?.reference ?? t("b2b.dispatch.aJob", "job"), [board, t]);
 
   const announcements: Announcements = useMemo(
     () => ({
-      onDragStart: ({ active }) => `Picked up ${refOf(active.id)}. Use arrow keys to move between teams.`,
-      onDragOver: ({ active, over }) => (over ? `${refOf(active.id)} is over ${laneName(over.id) ?? "a lane"}.` : `${refOf(active.id)} is not over a team.`),
-      onDragEnd: ({ active, over }) => (over && laneName(over.id) ? `Dropped ${refOf(active.id)} on ${laneName(over.id)}.` : `${refOf(active.id)} was dropped. No change.`),
-      onDragCancel: ({ active }) => `Cancelled. ${refOf(active.id)} was not moved.`,
+      onDragStart: ({ active }) => t("b2b.dispatch.ann.start", "Picked up {ref}. Use arrow keys to move between teams.").replace("{ref}", refOf(active.id)),
+      onDragOver: ({ active, over }) => (over ? t("b2b.dispatch.ann.over", "{ref} is over {lane}.").replace("{ref}", refOf(active.id)).replace("{lane}", laneName(over.id) ?? t("b2b.dispatch.aLane", "a lane")) : t("b2b.dispatch.ann.notOver", "{ref} is not over a team.").replace("{ref}", refOf(active.id))),
+      onDragEnd: ({ active, over }) => (over && laneName(over.id) ? t("b2b.dispatch.ann.dropped", "Dropped {ref} on {lane}.").replace("{ref}", refOf(active.id)).replace("{lane}", String(laneName(over.id))) : t("b2b.dispatch.ann.noChange", "{ref} was dropped. No change.").replace("{ref}", refOf(active.id))),
+      onDragCancel: ({ active }) => t("b2b.dispatch.ann.cancel", "Cancelled. {ref} was not moved.").replace("{ref}", refOf(active.id)),
     }),
-    [refOf, laneName]
+    [refOf, laneName, t]
   );
 
   const onDragStart = (e: DragStartEvent) => setActiveJob(findJob(board, String(e.active.id)) ?? null);
@@ -134,15 +138,15 @@ export default function DndBoard({ onDropOnTeam, fetchCheck, ...view }: DndBoard
     }
     const key = checkCacheKey(jobId, laneId);
     const cached = cache.current.get(key);
-    setHover({ laneId, badge: laneBadge(cached ?? null) });
+    setHover({ laneId, badge: laneBadge(cached ?? null, t) });
     if (cached) return;
     timer.current = setTimeout(() => {
       fetchCheck(jobId, laneId)
         .then((check) => {
           cache.current.set(key, check);
-          setHover((h) => (h.laneId === laneId ? { laneId, badge: laneBadge(check) } : h));
+          setHover((h) => (h.laneId === laneId ? { laneId, badge: laneBadge(check, t) } : h));
         })
-        .catch(() => setHover((h) => (h.laneId === laneId ? { laneId, badge: { tone: "checking", text: "Couldn't check availability" } } : h)));
+        .catch(() => setHover((h) => (h.laneId === laneId ? { laneId, badge: { tone: "checking", text: t("b2b.dispatch.badge.checkFailed", "Couldn't check availability") } } : h)));
     }, HOVER_DEBOUNCE_MS);
   };
 

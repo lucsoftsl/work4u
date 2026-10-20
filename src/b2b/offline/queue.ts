@@ -2,6 +2,7 @@ import { B2bError, newIdempotencyKey, isB2bError } from "@/b2b/api/client";
 import type { ActionBody, PartInput, PartWriteResponse } from "@/b2b/api/endpoints";
 import type { Job, PauseReason, TechAction } from "@/b2b/api/types";
 import { classifyError } from "./classify";
+import { plural, type Translate } from "@/b2b/lib/plural";
 import { serverNowIso } from "@/b2b/lib/server-clock";
 import { deleteItem, getDb, listQueue, notifyQueue, putItem, setMeta } from "./store";
 import type { FlushResult, PartOp, QueueItem } from "./types";
@@ -128,6 +129,9 @@ async function send(item: QueueItem, run: Runners) {
   }
 }
 
+/** The technician's language for the messages kept on queued items (English when absent). */
+export interface FlushI18n { t?: Translate; locale?: string }
+
 const inFlight = new Map<string, Promise<FlushResult>>();
 
 /**
@@ -137,15 +141,16 @@ const inFlight = new Map<string, Promise<FlushResult>>();
  * - a refusal marks the item failed and holds the rest of that job until the technician acts
  * Concurrent calls share one run.
  */
-export function flushQueue(orgId: string, run: Runners): Promise<FlushResult> {
+export function flushQueue(orgId: string, run: Runners, i18n: FlushI18n = {}): Promise<FlushResult> {
   const running = inFlight.get(orgId);
   if (running) return running;
-  const p = doFlush(orgId, run).finally(() => inFlight.delete(orgId));
+  const p = doFlush(orgId, run, i18n).finally(() => inFlight.delete(orgId));
   inFlight.set(orgId, p);
   return p;
 }
 
-async function doFlush(orgId: string, run: Runners): Promise<FlushResult> {
+async function doFlush(orgId: string, run: Runners, i18n: FlushI18n): Promise<FlushResult> {
+  const t: Translate = i18n.t ?? ((_key, fallback) => fallback);
   const result: FlushResult = { sent: 0, offline: false, conflicts: 0, failed: 0, remaining: 0, undoRejected: 0 };
   const all = await listQueue(orgId);
   const jobs = [...new Set(all.map((i) => i.jobId))];
@@ -175,8 +180,10 @@ async function doFlush(orgId: string, run: Runners): Promise<FlushResult> {
         }
         const rest = group.slice(idx + 1);
         const photos = group.filter((i) => i.kind === "photo").length;
-        const summary = photos ? `Your notes and ${photos} photo${photos === 1 ? " is" : "s are"} saved as a draft.` : "Your changes are saved as a draft.";
-        const verdict = classifyError(err, summary);
+        const summary = photos
+          ? plural(t, i18n.locale ?? "en", "b2b.tech.err.draftPhotos", { one: "Your notes and {n} photo is saved as a draft.", other: "Your notes and {n} photos are saved as a draft." }, photos)
+          : t("b2b.tech.err.draftSaved", "Your changes are saved as a draft.");
+        const verdict = classifyError(err, summary, t);
         if (verdict.kind === "retry") {
           await putItem({ ...item, status: "waiting", attempts: item.attempts + 1, lastAttemptAt: new Date().toISOString(), error: verdict.message });
           result.offline = true;

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslation } from "@/lib/i18n";
 import { useId, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { NotebookPen } from "lucide-react";
@@ -15,6 +16,8 @@ import { useJobCache } from "./useJobCache";
 type NoteField = "internalNotes" | "customerNotes";
 
 function NoteEditor({ job, field, label, hint }: { job: JobWorkspace; field: NoteField; label: string; hint: string }) {
+  const { t: tx, locale } = useTranslation();
+  const i18n = { t: tx, locale };
   const { orgId, can } = useOrg();
   const toast = useToast();
   const { merge, refresh } = useJobCache(orgId, job.id);
@@ -28,8 +31,8 @@ function NoteEditor({ job, field, label, hint }: { job: JobWorkspace; field: Not
 
   const save = useMutation({
     mutationFn: () => patchJob(orgId, job.id, job.version, { [field]: (draft ?? "").trim() }),
-    onSuccess: (updated) => { merge(updated); setDraft(undefined); setError(null); toast.push({ message: `${label} saved`, tone: "success" }); },
-    onError: (e) => setError(describeB2bError(e)),
+    onSuccess: (updated) => { merge(updated); setDraft(undefined); setError(null); toast.push({ message: tx("b2b.job.notes.saved", "Notes saved"), tone: "success" }); },
+    onError: (e) => setError(describeB2bError(e, i18n)),
   });
 
   return (
@@ -40,12 +43,12 @@ function NoteEditor({ job, field, label, hint }: { job: JobWorkspace; field: Not
           <textarea id={id} rows={3} value={value} onChange={(e) => setDraft(e.target.value)} disabled={save.isPending} className={fieldClass} aria-describedby={`${id}-h`} />
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             <p id={`${id}-h`} className="text-xs text-ops-ink-muted">{hint}</p>
-            <button type="button" disabled={!dirty || save.isPending} aria-busy={save.isPending || undefined} onClick={() => { setError(null); save.mutate(); }} className={btnClass("primary")}>Save note</button>
+            <button type="button" disabled={!dirty || save.isPending} aria-busy={save.isPending || undefined} onClick={() => { setError(null); save.mutate(); }} className={btnClass("primary")}>{tx("b2b.job.notes.save", "Save note")}</button>
           </div>
           {error ? <TransitionError error={error} onReload={() => { setError(null); void refresh(); }} /> : null}
         </>
       ) : (
-        <p id={id} className="whitespace-pre-wrap text-sm text-ops-ink">{saved || <span className="text-ops-ink-subtle">No notes.</span>}</p>
+        <p id={id} className="whitespace-pre-wrap text-sm text-ops-ink">{saved || <span className="text-ops-ink-subtle">{tx("b2b.job.notes.none", "No notes.")}</span>}</p>
       )}
     </div>
   );
@@ -53,12 +56,13 @@ function NoteEditor({ job, field, label, hint }: { job: JobWorkspace; field: Not
 
 /** Internal notes are omitted by the API for technicians: show nothing for them (not an error). */
 export function NotesCard({ job }: { job: JobWorkspace }) {
+  const { t } = useTranslation();
   const hasInternal = job.internalNotes !== undefined;
   return (
-    <Card title="Notes" icon={<NotebookPen className="h-4 w-4" aria-hidden="true" />}>
+    <Card title={t("b2b.job.notes.title", "Notes")} icon={<NotebookPen className="h-4 w-4" aria-hidden="true" />}>
       <div className="grid gap-5 md:grid-cols-2">
-        {hasInternal ? <NoteEditor job={job} field="internalNotes" label="Internal notes" hint="Only your team sees this." /> : null}
-        <NoteEditor job={job} field="customerNotes" label="Customer-visible notes" hint="The customer can see this." />
+        {hasInternal ? <NoteEditor job={job} field="internalNotes" label={t("b2b.job.notes.internal", "Internal notes")} hint={t("b2b.job.notes.internalHint", "Only your team sees this.")} /> : null}
+        <NoteEditor job={job} field="customerNotes" label={t("b2b.job.notes.customer", "Customer-visible notes")} hint={t("b2b.job.notes.customerHint", "The customer can see this.")} />
       </div>
     </Card>
   );

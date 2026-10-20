@@ -1,5 +1,6 @@
 "use client";
 
+import { usePersonName } from "@/b2b/lib/usePersonName";
 import { useId } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Modal } from "@/b2b/components/catalog/Modal";
@@ -22,6 +23,7 @@ export function ConfirmStatusDialog({ orgId, change, online, onClose }: { orgId:
 function Body({ orgId, change, online, onClose }: { orgId: string; change: StatusChange; online: boolean; onClose: () => void }) {
   const headingId = useId();
   const { tr } = useTr();
+  const nameOf = usePersonName();
   const qc = useQueryClient();
   const { member, action } = change;
   const mut = useMutation({
@@ -34,9 +36,9 @@ function Body({ orgId, change, online, onClose }: { orgId: string; change: Statu
     },
   });
   const copy = {
-    remove: { title: tr("b2b.team.confirm.removeTitle", "Remove {name} from the company?", { name: member.displayName }), body: tr("b2b.team.confirm.removeBody", "They disappear from the team and can no longer be scheduled. Their job history is kept."), cta: tr("b2b.team.remove", "Remove") },
-    suspend: { title: tr("b2b.team.confirm.suspendTitle", "Suspend {name}?", { name: member.displayName }), body: tr("b2b.team.confirm.suspendBody", "They can't use the app until you reactivate them. Pending invitations are cancelled."), cta: tr("b2b.team.suspend", "Suspend") },
-    reactivate: { title: tr("b2b.team.confirm.reactivateTitle", "Reactivate {name}?", { name: member.displayName }), body: tr("b2b.team.confirm.reactivateBody", "They can be scheduled again."), cta: tr("b2b.team.reactivate", "Reactivate") },
+    remove: { title: tr("b2b.team.confirm.removeTitle", "Remove {name} from the company?", { name: nameOf(member.displayName) }), body: tr("b2b.team.confirm.removeBody", "They disappear from the team and can no longer be scheduled. Their job history is kept."), cta: tr("b2b.team.remove", "Remove") },
+    suspend: { title: tr("b2b.team.confirm.suspendTitle", "Suspend {name}?", { name: nameOf(member.displayName) }), body: tr("b2b.team.confirm.suspendBody", "They can't use the app until you reactivate them. Pending invitations are cancelled."), cta: tr("b2b.team.suspend", "Suspend") },
+    reactivate: { title: tr("b2b.team.confirm.reactivateTitle", "Reactivate {name}?", { name: nameOf(member.displayName) }), body: tr("b2b.team.confirm.reactivateBody", "They can be scheduled again."), cta: tr("b2b.team.reactivate", "Reactivate") },
   }[action];
   return (
     <div className="space-y-4">

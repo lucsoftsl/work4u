@@ -1,5 +1,6 @@
 import { B2bError } from "@/b2b/api/client";
 import { identityT, techErrorMessage, type Translate } from "@/b2b/lib/tech-actions";
+import { jobStatusLabel } from "@/b2b/lib/status-label";
 import type { Verdict } from "./types";
 
 /**
@@ -14,7 +15,7 @@ export function classifyError(err: unknown, draftSummary = "Your changes are sav
   if (err.status >= 500 || err.status === 429 || err.status === 408 || err.status === 401) return { kind: "retry", message: t("b2b.tech.err.serverBusy", "The server is busy. Will try again.") };
   if (err.code === "IDEMPOTENCY_IN_PROGRESS") return { kind: "retry", message: t("b2b.tech.err.stillSending", "Still sending. Will check again.") };
   if (err.isVersionConflict || err.code === "INVALID_TRANSITION") {
-    const now = err.currentStatus ? t("b2b.tech.err.nowStatus", " It is now {status}.").replace("{status}", err.currentStatus.toLowerCase().replace(/_/g, " ")) : "";
+    const now = err.currentStatus ? t("b2b.tech.err.nowStatus", " It is now {status}.").replace("{status}", jobStatusLabel(t, err.currentStatus)) : "";
     return { kind: "conflict", message: t("b2b.tech.err.changedOffline", "This job changed while you were offline.{now} {summary}").replace("{now}", now).replace("{summary}", draftSummary) };
   }
   if (err.status === 404 || err.status === 403 || err.code === "FORBIDDEN") {

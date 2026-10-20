@@ -17,6 +17,7 @@ import { MapStep } from "./MapStep";
 import { PreviewStep } from "./PreviewStep";
 import { Stepper, STEPS, type StepKey } from "./Stepper";
 import { UploadStep } from "./UploadStep";
+import { useStepFocus } from "./useStepFocus";
 import { buildImportOptions, classifyUploadError, commitMode, initialOptionsState, type FileErrorCode, type Kind, type OptionsState } from "./importLogic";
 
 interface Props { kind: Kind; backHref: string; doneHref: string }
@@ -36,6 +37,7 @@ function WizardBody({ kind, backHref, doneHref }: Props) {
   const online = useOnlineStatus();
   const qc = useQueryClient();
   const [step, setStep] = useState<StepKey>("upload");
+  useStepFocus(step);
   const [maxReached, setMaxReached] = useState<StepKey>("upload");
   const [file, setFile] = useState<File | null>(null);
   const [options, setOptions] = useState<OptionsState>(() => initialOptionsState(kind));
@@ -116,12 +118,17 @@ function WizardBody({ kind, backHref, doneHref }: Props) {
     if (v != null) examples[header] = String(v);
   }
   const headers = missing?.headers ?? preview?.headers ?? [];
+  const stepLabel: Record<StepKey, string> = {
+    upload: tr("b2b.import.step.upload", "Upload"), map: tr("b2b.import.step.map", "Map columns"), preview: tr("b2b.import.step.preview", "Preview"),
+    confirm: tr("b2b.import.step.confirm", "Confirm"), result: tr("b2b.import.step.result", "Result"),
+  };
   const title = kind === "employees" ? tr("b2b.import.titleEmployees", "Import employees from CSV") : tr("b2b.import.titleClients", "Import clients from CSV");
 
   return (
     <div className="space-y-4">
       <Link href={backHref} className="inline-flex min-h-[44px] items-center gap-2 text-sm font-bold text-ops-ink underline-offset-2 hover:underline"><ArrowLeft className="h-4 w-4" aria-hidden="true" />{tr("b2b.common.back", "Back")}</Link>
       <h1 className="text-2xl font-bold text-ops-ink">{title}</h1>
+      <p role="status" aria-live="polite" className="sr-only">{tr("b2b.import.stepAnnounce", "Step {n} of {total}: {name}", { n: STEPS.indexOf(step) + 1, total: STEPS.length, name: stepLabel[step] })}</p>
       <Stepper current={step} maxReached={maxReached} onGo={(s) => { setCommitError(null); setStep(s); }} />
       {step === "upload" && <UploadStep kind={kind} busy={busy} online={online} fileError={fileError} message={message} file={file} onFile={onFile} onEncoding={onEncoding} />}
       {step === "map" && (

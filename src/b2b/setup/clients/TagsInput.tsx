@@ -10,15 +10,15 @@ interface Props { tags: string[]; onChange: (tags: string[]) => void; disabled?:
 
 /** Enter (or comma) adds a chip; invalid tags show an inline error and are not added. */
 export function TagsInput({ tags, onChange, disabled }: Props) {
-  const { tr } = useTr();
+  const { tr, trn } = useTr();
   const id = useId();
   const [text, setText] = useState("");
   const [error, setError] = useState<TagError | null>(null);
 
   const messages: Record<TagError, string> = {
-    tooLong: tr("b2b.clients.tags.err.tooLong", "A tag can have up to {n} characters.", { n: MAX_TAG_LENGTH }),
+    tooLong: trn("b2b.clients.tags.err.tooLong", { one: "A tag can have up to {n} character.", other: "A tag can have up to {n} characters." }, MAX_TAG_LENGTH),
     leadingChar: tr("b2b.clients.tags.err.leading", "A tag can't start with = + - or @."),
-    tooMany: tr("b2b.clients.tags.err.tooMany", "You can add up to {n} tags.", { n: MAX_TAGS }),
+    tooMany: trn("b2b.clients.tags.err.tooMany", { one: "You can add up to {n} tag.", other: "You can add up to {n} tags." }, MAX_TAGS),
     duplicate: tr("b2b.clients.tags.err.duplicate", "This tag is already added."),
   };
 

@@ -113,7 +113,7 @@ export function AssignDialogs({ orgId, dialog, onClose, onSubmitOverride, onRetr
             {t("b2b.dispatch.blockedTitle", "Can't assign")} {dialog.job.reference} {t("b2b.dispatch.to", "to")} {dialog.teamName}
           </h2>
           <ConflictList conflicts={dialog.conflicts} />
-          <div className="mt-4 flex justify-end"><button type="button" onClick={onClose} className={BTN_PRIMARY}>OK</button></div>
+          <div className="mt-4 flex justify-end"><button type="button" onClick={onClose} className={BTN_PRIMARY}>{t("b2b.common.ok", "OK")}</button></div>
         </>
       ) : null}
       {dialog?.mode === "error" ? (
@@ -128,7 +128,7 @@ export function AssignDialogs({ orgId, dialog, onClose, onSubmitOverride, onRetr
               <Link href={`/ops/${orgId}/jobs/${dialog.job.id}`} className={BTN_SECONDARY}>{t("b2b.dispatch.openJob", "Open job")} {dialog.job.reference}</Link>
             ) : null}
             {dialog.info.retryable ? <button type="button" onClick={onRetry} className={BTN_SECONDARY}>{t("common.retry", "Try again")}</button> : null}
-            <button type="button" onClick={onClose} className={BTN_PRIMARY}>OK</button>
+            <button type="button" onClick={onClose} className={BTN_PRIMARY}>{t("b2b.common.ok", "OK")}</button>
           </div>
         </>
       ) : null}
@@ -175,9 +175,9 @@ export function AssignToDialog({ job, board, fetchCheck, onPick, onClose }: {
                       className="w-full rounded border border-ops-border-strong p-2 text-left hover:bg-ops-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-ops-accent"
                     >
                       <span className="block min-h-[28px] text-sm font-bold">{team.name}</span>
-                      {check && check !== "error" ? <LaneBadgeView badge={laneBadge(check)} /> : null}
+                      {check && check !== "error" ? <LaneBadgeView badge={laneBadge(check, t)} /> : null}
                       {check === "error" ? <span className="text-xs text-ops-ink-muted">{t("b2b.dispatch.checkFailed", "Couldn't check availability")}</span> : null}
-                      {!check ? <LaneBadgeView badge={laneBadge(null)} /> : null}
+                      {!check ? <LaneBadgeView badge={laneBadge(null, t)} /> : null}
                     </button>
                   </li>
                 );

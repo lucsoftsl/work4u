@@ -1,5 +1,5 @@
 import {
-  CalendarCheck, CalendarPlus, CircleCheck, CircleDashed, CircleSlash, ClipboardCheck, Lock, MapPinCheck, OctagonAlert,
+  PencilLine, CalendarCheck, CalendarPlus, CircleCheck, CircleDashed, CircleSlash, ClipboardCheck, Lock, MapPinCheck, OctagonAlert,
   PackageSearch, PencilRuler, Send, Truck, Wrench, type LucideIcon,
 } from "lucide-react";
 import type { JobStatus, TeamStatus } from "@/b2b/api/types";
@@ -11,6 +11,8 @@ export type Treatment = "outline" | "tint" | "solid";
 export interface StatusMeta { label: string; family: Family; treatment: Treatment; icon: LucideIcon }
 
 export const JOB_STATUS_META: Record<JobStatus, StatusMeta> = {
+  // A draft is "not a real job yet": the dashed outline (see StatusPill) is its non-colour cue, next to the icon and the word.
+  DRAFT: { label: "Draft", family: "slate", treatment: "outline", icon: PencilLine },
   NEW: { label: "New", family: "slate", treatment: "outline", icon: CircleDashed },
   PLANNING: { label: "Planning", family: "slate", treatment: "tint", icon: PencilRuler },
   WAITING_FOR_PARTS: { label: "Waiting for parts", family: "orange", treatment: "tint", icon: PackageSearch },

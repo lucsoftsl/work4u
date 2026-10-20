@@ -25,7 +25,7 @@ export function LaneSwitcher({ board, active, onSelect }: Props) {
     <div
       role="tablist"
       aria-label={t("b2b.dispatch.lanes", "Teams")}
-      className="hidden gap-1 overflow-x-auto md:flex lg:hidden"
+      className="relative hidden gap-1 overflow-x-auto md:flex lg:hidden"
       onKeyDown={(e) => {
         const next = nextTab(active, tabs, e.key);
         if (!next) return;

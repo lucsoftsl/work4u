@@ -17,7 +17,7 @@ interface Props {
 export function WorkingHoursEditor({ useDefault, draft, showErrors, onUseDefault, onChange }: Props) {
   const { t } = useTranslation();
   const baseId = useId();
-  const errors = showErrors && !useDefault ? validateDraft(draft) : {};
+  const errors = showErrors && !useDefault ? validateDraft(draft, t) : {};
   const set = (day: (typeof WEEKDAYS)[number], patch: Partial<DayDraft>) => onChange({ ...draft, [day]: { ...draft[day], ...patch } });
 
   return (

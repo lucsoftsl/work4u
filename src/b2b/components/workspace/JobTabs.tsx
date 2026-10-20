@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export type TabId = "overview" | "schedule" | "files" | "timeline";
@@ -11,6 +12,7 @@ export interface TabDef { id: TabId; label: string; count?: string | number }
 
 /** Accessible tablist (roving tabindex, arrows/Home/End). Scrolls horizontally on narrow screens. */
 export function JobTabs({ tabs, active, onChange, children }: { tabs: TabDef[]; active: TabId; onChange: (id: TabId) => void; children: ReactNode }) {
+  const { t: tx } = useTranslation();
   const refs = useRef<Partial<Record<TabId, HTMLButtonElement | null>>>({});
   const onKey = (e: KeyboardEvent) => {
     const i = tabs.findIndex((t) => t.id === active);
@@ -27,7 +29,7 @@ export function JobTabs({ tabs, active, onChange, children }: { tabs: TabDef[]; 
   };
   return (
     <>
-      <div role="tablist" aria-label="Job sections" onKeyDown={onKey} className="-mx-4 flex gap-1 overflow-x-auto border-b border-ops-border px-4 md:mx-0 md:px-0">
+      <div role="tablist" aria-label={tx("b2b.job.tabs", "Job sections")} onKeyDown={onKey} className="relative -mx-4 flex gap-1 overflow-x-auto border-b border-ops-border px-4 md:mx-0 md:px-0">
         {tabs.map((t) => {
           const on = t.id === active;
           return (

@@ -8,7 +8,7 @@ import { useTranslation } from "@/lib/i18n";
 import { transitionJob } from "@/b2b/api/endpoints";
 import type { JobStatus, JobWorkspace } from "@/b2b/api/types";
 import { useOrg } from "@/b2b/context/OrgContext";
-import { JOB_STATUS_META } from "@/b2b/lib/status";
+import { transitionDone, transitionVerb } from "@/b2b/lib/transition-text";
 import { allowedTransitions, blockedReason, GRAPH, permissionForTransition, type TransitionOption } from "@/b2b/lib/transitions";
 import { describeB2bError, toTransitionJob, type DescribedError } from "@/b2b/lib/workspace";
 import { cn } from "@/lib/utils";
@@ -18,11 +18,11 @@ import { useJobCache } from "./useJobCache";
 
 interface MenuItem { to: JobStatus; option?: TransitionOption; disabledReason?: string }
 
-const verb = (to: JobStatus) => (to === "CANCELLED" ? "Cancel job" : to === "BLOCKED" ? "Mark blocked" : `Move to ${JOB_STATUS_META[to].label}`);
-
 export function TransitionControl({ job }: { job: JobWorkspace }) {
   const { orgId, me, viewer, can } = useOrg();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const i18n = { t, locale };
+  const verb = (to: JobStatus) => transitionVerb(t, to);
   const toast = useToast();
   const { merge, refresh } = useJobCache(orgId, job.id);
   const [approvalOpen, setApprovalOpen] = useState(false);
@@ -41,11 +41,11 @@ export function TransitionControl({ job }: { job: JobWorkspace }) {
     const relation = { assignedToMe: forTransitions.assignedToMe, teamIds: forTransitions.teamIds };
     for (const to of GRAPH[job.status]) {
       if (allowed.some((o) => o.to === to)) continue;
-      const why = blockedReason(forTransitions, to);
+      const why = blockedReason(forTransitions, to, t);
       if (why && can(permissionForTransition(job.status, to), relation)) out.push({ to, disabledReason: why });
     }
     return out;
-  }, [viewer, forTransitions, job.status, can]);
+  }, [viewer, forTransitions, job.status, can, t]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -62,11 +62,11 @@ export function TransitionControl({ job }: { job: JobWorkspace }) {
       setPending(null);
       setApprovalOpen(false);
       if (v.to === "CLOSED") (approvalTrigger.current?.isConnected ? approvalTrigger.current : rootRef.current?.querySelector<HTMLElement>("button"))?.focus();
-      const msg = `${job.reference} is now ${JOB_STATUS_META[v.to].label}`;
+      const msg = transitionDone(t, job.reference, v.to);
       setAnnounce(msg);
       toast.push({ message: msg, tone: "success" });
     },
-    onError: (err) => setError(describeB2bError(err)),
+    onError: (err) => setError(describeB2bError(err, i18n)),
   });
 
   if (!viewer || items.length === 0) return null;
@@ -97,7 +97,7 @@ export function TransitionControl({ job }: { job: JobWorkspace }) {
         {primary ? (
           <button type="button" disabled={busy} aria-busy={busy || undefined} onClick={() => run(primary)} className={btnClass("primary", "rounded-r-none")}>
             {busy && !pending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" /> : null}
-            {t("b2b.job.moveTo", verb(primary.to))}
+            {verb(primary.to)}
           </button>
         ) : null}
         <button
@@ -123,7 +123,7 @@ export function TransitionControl({ job }: { job: JobWorkspace }) {
                   disabled && "cursor-not-allowed text-ops-ink-subtle hover:bg-transparent", item.to === "CANCELLED" && !disabled && "text-sig-vermilion-ink")}
               >
                 <span className="font-bold">{verb(item.to)}</span>
-                {disabled ? <span className="text-xs">{item.disabledReason}</span> : item.option?.needsReason ? <span className="text-xs text-ops-ink-muted">Reason required</span> : null}
+                {disabled ? <span className="text-xs">{item.disabledReason}</span> : item.option?.needsReason ? <span className="text-xs text-ops-ink-muted">{t("b2b.job.reasonRequired", "Reason required")}</span> : null}
               </button>
             );
           })}
@@ -138,8 +138,12 @@ export function TransitionControl({ job }: { job: JobWorkspace }) {
         open={!!pending}
         title={pending ? verb(pending.to) : ""}
         tone={pending?.to === "CANCELLED" ? "danger" : "primary"}
-        description={pending?.to === "CANCELLED" ? "Cancelling can't be undone. The assigned team will be told." : pending?.to === "BLOCKED" ? "Tell dispatch what is stopping the work." : "Explain why this job is going back."}
-        confirmLabel={pending?.to === "CANCELLED" ? "Cancel job" : pending ? verb(pending.to) : "Confirm"}
+        description={pending?.to === "CANCELLED" ? t("b2b.job.cancelWarn", "Cancelling can't be undone. The assigned team will be told.") : pending?.to === "BLOCKED" ? t("b2b.job.blockedPrompt", "Tell dispatch what is stopping the work.") : t("b2b.job.backPrompt", "Explain why this job is going back.")}
+        reasonLabel={t("b2b.job.reason", "Reason")}
+        cancelLabel={t("b2b.common.cancel", "Cancel")}
+        reasonHint={t("b2b.jobs.draft.discardReasonHint", "Required, at least 3 characters.")}
+        reasonShort={t("b2b.jobs.draft.discardReasonShort", "Enter at least 3 characters.")}
+        confirmLabel={pending ? verb(pending.to) : t("b2b.job.confirm", "Confirm")}
         loading={busy}
         error={error && pending ? error.message : null}
         onConfirm={(reason) => pending && mutation.mutate({ to: pending.to, reason, version: job.version })}
@@ -150,11 +154,12 @@ export function TransitionControl({ job }: { job: JobWorkspace }) {
 }
 
 export function TransitionError({ error, onReload }: { error: DescribedError; onReload: () => void }) {
+  const { t } = useTranslation();
   const stale = error.kind === "stale";
   return (
     <div className="mt-2 w-full max-w-md">
       <Banner tone={stale ? "warning" : "danger"} role="alert"
-        action={stale ? <button type="button" onClick={onReload} className={btnClass("secondary", "text-ops-ink")}>Reload</button> : undefined}>
+        action={stale ? <button type="button" onClick={onReload} className={btnClass("secondary", "text-ops-ink")}>{t("b2b.job.reload", "Reload")}</button> : undefined}>
         {error.message}
       </Banner>
     </div>

@@ -20,19 +20,21 @@ import { formatClock, formatDayLong, formatWindow } from "@/b2b/lib/tz-format";
 import { formatHms, shownSeconds } from "@/b2b/lib/work-time";
 import { PausedChip } from "./PausedChip";
 import { useNowTick } from "./useNowTick";
+import { plural } from "@/b2b/lib/plural";
 
 export const JOB_HEADING_ID = "tech-job-heading";
 
 function RowTimer({ job }: { job: Job }) {
+  const { t } = useTranslation();
   const running = job.time?.state === "RUNNING";
   const now = useNowTick(running);
   if (!job.time || job.time.state === "NOT_STARTED") return null;
   if (job.time.state === "PAUSED") return <PausedChip time={job.time} />;
-  return <span className="font-mono text-xs font-bold text-sig-blue-ink"><span className="sr-only">{job.time.state === "RUNNING" ? "Running " : "Worked "}</span>⏱ {formatHms(shownSeconds(job.time, now) ?? 0)}</span>;
+  return <span className="font-mono text-xs font-bold text-sig-blue-ink"><span className="sr-only">{job.time.state === "RUNNING" ? t("b2b.tech.timer.running", "Running") : t("b2b.tech.timer.workedSr", "Worked")} </span>⏱ {formatHms(shownSeconds(job.time, now) ?? 0)}</span>;
 }
 
 function Row({ job, tz, selected, waiting, attention, orgId }: { job: Job; tz: string; selected: boolean; waiting: number; attention: boolean; orgId: string }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   return (
     <li>
       <Link
@@ -41,7 +43,7 @@ function Row({ job, tz, selected, waiting, attention, orgId }: { job: Job; tz: s
         onClick={(e) => { if (e.detail === 0) setTimeout(() => document.getElementById(JOB_HEADING_ID)?.focus(), 200); }} // keyboard selection moves focus to the job; touch does not
         className={cn("block min-h-[72px] border-l-4 px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ops-ink", selected ? "border-ops-accent bg-sig-blue-tint" : "border-transparent hover:bg-ops-canvas")}
       >
-        <span className="flex items-center justify-between gap-2"><span className="font-mono text-sm font-bold text-ops-accent">{formatWindow(job.scheduledStart, job.scheduledEnd, tz)}</span><JobRef reference={job.reference} /></span>
+        <span className="flex items-center justify-between gap-2"><span className="font-mono text-sm font-bold text-ops-accent">{formatWindow(job.scheduledStart, job.scheduledEnd, tz, { t, locale })}</span><JobRef reference={job.reference} /></span>
         <span className="mt-0.5 block truncate text-[17px] font-bold">{job.title}</span>
         <span className="block truncate text-sm text-ops-ink-muted">{[job.customerName, job.locationLabel].filter(Boolean).join(" · ")}</span>
         <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -57,7 +59,7 @@ function Row({ job, tz, selected, waiting, attention, orgId }: { job: Job; tz: s
 
 /** Tablet list pane: selectable rows of today's jobs. Same query as the phone list, so nothing is fetched twice. */
 export function JobListPane() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { orgId, me } = useOrg();
   const { items, online } = useOffline();
   const pathname = usePathname();
@@ -88,15 +90,15 @@ export function JobListPane() {
   return (
     <div>
       <div className="border-b border-ops-border px-3 py-2">
-        <h2 className="text-base font-bold">{formatDayLong(jobs.data.serverTime, tz)}</h2>
-        <p className="text-sm text-ops-ink-muted">{(list.length === 1 ? t("b2b.tech.today.jobCount.one", "{n} job") : t("b2b.tech.today.jobCount.other", "{n} jobs")).replace("{n}", String(list.length))}</p>
+        <h2 className="text-base font-bold">{formatDayLong(jobs.data.serverTime, tz, { t, locale })}</h2>
+        <p className="text-sm text-ops-ink-muted">{plural(t, locale, "b2b.tech.today.jobCount", { one: "{n} job", other: "{n} jobs" }, list.length)}</p>
       </div>
       {stale ? (
         <p role="status" className="m-2 rounded border border-sig-orange-ink/40 bg-sig-orange-tint p-2 text-sm font-bold text-sig-orange-ink">
-          {(online ? t("b2b.tech.today.staleList", "Job list last updated {time}. Something may have changed.") : t("b2b.tech.today.offlineSaved", "Offline: showing saved data from {time}. Something may have changed.")).replace("{time}", formatClock(stale, tz))}
+          {(online ? t("b2b.tech.today.staleList", "Job list last updated {time}. Something may have changed.") : t("b2b.tech.today.offlineSaved", "Offline: showing saved data from {time}. Something may have changed.")).replace("{time}", formatClock(stale, tz, locale))}
         </p>
       ) : null}
-      {list.length === 0 ? <p className="m-3 rounded border border-dashed border-ops-border-strong p-4 text-center text-ops-ink-muted">{t("b2b.tech.today.empty", "No jobs assigned to you today. List updated {time}.").replace("{time}", formatClock(stale ?? new Date(jobs.dataUpdatedAt).toISOString(), tz))}</p> : null}
+      {list.length === 0 ? <p className="m-3 rounded border border-dashed border-ops-border-strong p-4 text-center text-ops-ink-muted">{t("b2b.tech.today.empty", "No jobs assigned to you today. List updated {time}.").replace("{time}", formatClock(stale ?? new Date(jobs.dataUpdatedAt).toISOString(), tz, locale))}</p> : null}
       {split.next ? <section aria-label={t("b2b.tech.split.nextUp", "Next up")}><h3 className="px-3 pt-3 text-xs font-bold uppercase tracking-wider text-ops-ink-subtle">{t("b2b.tech.split.nextUp", "Next up")}</h3><ul className="mt-1">{row(split.next)}</ul></section> : null}
       {split.later.length > 0 ? <section aria-label={t("b2b.tech.today.later", "Later today")}><h3 className="px-3 pt-3 text-xs font-bold uppercase tracking-wider text-ops-ink-subtle">{t("b2b.tech.today.later", "Later today")}</h3><ul className="mt-1 divide-y divide-ops-border">{split.later.map(row)}</ul></section> : null}
       {split.done.length > 0 ? (

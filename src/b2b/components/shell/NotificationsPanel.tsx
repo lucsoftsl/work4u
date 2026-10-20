@@ -73,7 +73,7 @@ export function NotificationsBell({ orgId }: { orgId: string }) {
 
   return (
     <div className="relative">
-      <button ref={btnRef} type="button" aria-label={bellLabel(n)} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? panelId : undefined}
+      <button ref={btnRef} type="button" aria-label={bellLabel(n, t)} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? panelId : undefined}
         onClick={() => setOpen((v) => !v)} className="relative flex h-11 w-11 items-center justify-center rounded text-white hover:bg-white/10">
         <Bell className="h-5 w-5" aria-hidden="true" />
         {n > 0 ? (
@@ -89,9 +89,9 @@ export function NotificationsBell({ orgId }: { orgId: string }) {
               {t("b2b.notifications.markAll", "Mark all read")}
             </button>
           </div>
-          {latest.isPending ? <p role="status" className="px-4 py-6 text-sm text-ops-ink-muted">Loading</p>
+          {latest.isPending ? <p role="status" className="px-4 py-6 text-sm text-ops-ink-muted">{t("b2b.common.loading", "Loading")}</p>
             : pending ? <p className="px-4 py-6 text-sm text-ops-ink-muted">{t("b2b.notifications.unavailableTitle", "Notifications aren't available yet")}</p>
-            : latest.isError ? <p role="alert" className="px-4 py-6 text-sm">Couldn&apos;t load notifications.</p>
+            : latest.isError ? <p role="alert" className="px-4 py-6 text-sm">{t("b2b.notifications.loadError", "Couldn't load notifications.")}</p>
             : items.length === 0 ? <p className="px-4 py-6 text-sm text-ops-ink-muted">{t("b2b.notifications.empty", "No notifications yet")}</p>
             : (
               <ul className="divide-y divide-ops-border">

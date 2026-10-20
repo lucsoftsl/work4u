@@ -46,7 +46,7 @@ function SortHeader({ k, label, sort, dir, onSort }: { k: JobSort; label: string
 }
 
 export function JobsTable({ orgId, items, tz, sort, dir, nowMs, onSort }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const rows = items as JobRow[]; // already sorted by the server
   const showTeam = rows.some((r) => r.teamName || r.assigneeName);
   const grid = showTeam ? GRID : GRID_NO_TEAM;
@@ -76,9 +76,9 @@ export function JobsTable({ orgId, items, tz, sort, dir, nowMs, onSort }: Props)
               </span>
               <StatusPill status={j.status} className="justify-self-start" />
               <span className={cn("col-start-2 inline-flex h-6 w-fit items-center rounded px-1.5 text-xs font-bold lg:col-auto", priorityCls(j.priority))}>{cap(j.priority)}</span>
-              <span className="col-span-2 text-xs text-ops-ink-muted lg:col-auto lg:text-sm lg:text-ops-ink">{formatWindow(j.scheduledStart, j.scheduledEnd, tz)}</span>
+              <span className="col-span-2 text-xs text-ops-ink-muted lg:col-auto lg:text-sm lg:text-ops-ink">{formatWindow(j.scheduledStart, j.scheduledEnd, tz, locale)}</span>
               {showTeam && <span className="truncate text-xs text-ops-ink lg:text-sm">{(j as JobRow).teamName ?? (j as JobRow).assigneeName ?? "—"}</span>}
-              <span className="text-xs text-ops-ink-muted">{ago(Date.parse(j.updatedAt), nowMs)}</span>
+              <span className="text-xs text-ops-ink-muted">{ago(Date.parse(j.updatedAt), nowMs, locale)}</span>
             </Link>
             </div>
           </div>
@@ -89,9 +89,10 @@ export function JobsTable({ orgId, items, tz, sort, dir, nowMs, onSort }: Props)
 }
 
 export function JobsTableSkeleton() {
+  const { t } = useTranslation();
   return (
     <div role="status" aria-busy="true" className="overflow-hidden rounded-lg border border-ops-border bg-ops-surface">
-      <span className="sr-only">Loading jobs</span>
+      <span className="sr-only">{t("b2b.jobs.loading", "Loading jobs")}</span>
       <ul className="divide-y divide-ops-border">
         {Array.from({ length: 8 }).map((_, i) => (
           <li key={i} className="flex min-h-[64px] items-center gap-3 px-4">

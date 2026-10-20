@@ -35,7 +35,7 @@ const Icon = ({ tone }: { tone: BarView["tone"] }) => {
 
 /** Mobile-first field app shell: sync status bar (a link to the Sync tab), content, bottom tabs. */
 export function TechShell({ children }: { children: ReactNode }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { orgId, me } = useOrg();
   const { online, syncState, waitingCount, attention, lastSync } = useOffline();
   const storage = useStorage();
@@ -45,7 +45,7 @@ export function TechShell({ children }: { children: ReactNode }) {
   const syncHref = `/tech/${orgId}/sync`;
   const badge = waitingCount + attention.length;
   const split = splitRoute(pathname, orgId).isSplit;
-  const bar = statusBarView({ online, syncState, waitingCount, attentionCount: attention.length, lastSync, storageLow: !!storage?.low, clock: (iso) => formatClock(iso, tz), t });
+  const bar = statusBarView({ online, syncState, waitingCount, attentionCount: attention.length, lastSync, storageLow: !!storage?.low, locale, clock: (iso) => formatClock(iso, tz, locale), t });
 
   const tab = (href: string, active: boolean) => cn("relative flex min-h-[56px] flex-col items-center justify-center gap-0.5 text-xs font-bold", active ? "text-ops-accent" : "text-ops-ink-muted");
 

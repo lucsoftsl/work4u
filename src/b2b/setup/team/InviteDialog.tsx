@@ -1,5 +1,6 @@
 "use client";
 
+import { usePersonName } from "@/b2b/lib/usePersonName";
 import { useState, useId } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
@@ -22,6 +23,7 @@ export function InviteDialog({ orgId, member, online, onClose, onDone }: { orgId
 function InviteBody({ orgId, member, online, onClose, onDone }: { orgId: string; member: Member; online: boolean; onClose: () => void; onDone?: () => void }) {
   const headingId = useId();
   const { tr } = useTr();
+  const nameOf = usePersonName();
   const qc = useQueryClient();
   const [email, setEmail] = useState(member.workEmail ?? "");
   const [touched, setTouched] = useState(false);
@@ -47,7 +49,7 @@ function InviteBody({ orgId, member, online, onClose, onDone }: { orgId: string;
   };
   return (
     <div className="space-y-4">
-      <h2 id={headingId} data-modal-title className="text-lg font-bold">{tr("b2b.team.invite.title", "Invite {name} to the app", { name: member.displayName })}</h2>
+      <h2 id={headingId} data-modal-title className="text-lg font-bold">{tr("b2b.team.invite.title", "Invite {name} to the app", { name: nameOf(member.displayName) })}</h2>
       {result ? (
         <div className="space-y-3">
           {result.emailSent ? (
@@ -64,7 +66,7 @@ function InviteBody({ orgId, member, online, onClose, onDone }: { orgId: string;
         </div>
       ) : (
         <form noValidate onSubmit={(e) => { e.preventDefault(); setTouched(true); if (!missing && !invalid && online) send.mutate(); }} className="space-y-4">
-          <p className="text-sm text-ops-ink-muted">{tr("b2b.team.invite.lead", "We email a link. When {name} accepts, they keep their schedule and job history.", { name: member.displayName })}</p>
+          <p className="text-sm text-ops-ink-muted">{tr("b2b.team.invite.lead", "We email a link. When {name} accepts, they keep their schedule and job history.", { name: nameOf(member.displayName) })}</p>
           <Field label={tr("b2b.team.field.email", "Email")} error={emailError}>
             {(p) => <input id={p.id} type="email" autoComplete="off" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} onBlur={() => setTouched(true)} aria-invalid={p.invalid} aria-describedby={p.describedBy} className={inputCls} />}
           </Field>

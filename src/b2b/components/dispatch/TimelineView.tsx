@@ -10,6 +10,7 @@ import type { DispatchBoard, Job } from "@/b2b/api/types";
 import { LaneHeader, UnassignedColumn } from "./BoardView";
 import { timeWindow } from "./JobCard";
 import type { BoardViewProps } from "./types";
+import { jobStatusLabel } from "@/b2b/lib/status-label";
 
 const HOURS = Array.from({ length: TIMELINE_END_H - TIMELINE_START_H + 1 }, (_, i) => TIMELINE_START_H + i);
 const NOW_TICK_MS = 60_000;
@@ -31,6 +32,7 @@ function Row({ name, header, jobs, orgId, timezone, nowPct }: { name: string; he
         {nowPct !== null ? <span aria-hidden="true" data-testid="now-line" style={{ left: `${nowPct}%` }} className="pointer-events-none absolute inset-y-0 w-0.5 bg-sig-vermilion-ink" /> : null}
         {visible.map(({ job, block }, idx) => {
           const meta = JOB_STATUS_META[job.status];
+          const statusName = jobStatusLabel(t, job.status);
           const StatusIcon = meta.icon;
           return (
             <Link
@@ -38,11 +40,11 @@ function Row({ name, header, jobs, orgId, timezone, nowPct }: { name: string; he
               href={`/ops/${orgId}/jobs/${job.id}`}
               style={{ left: `${block!.left}%`, width: `${block!.width}%`, top: ROW_PAD_PX + tracks[idx] * TRACK_PX }}
               className={cn("absolute min-h-[44px] overflow-hidden rounded border px-1.5 py-1 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-ops-accent", FAMILY_CLASSES[meta.family].tint, "border-ops-border-strong")}
-              title={`${job.reference} ${job.title} · ${meta.label} · ${timeWindow(job, timezone)}`}
+              title={`${job.reference} ${job.title} · ${statusName} · ${timeWindow(job, timezone)}`}
             >
               <span className="block truncate font-mono font-bold">{job.reference}</span>
               <span className="block truncate">{job.title}</span>
-              <span className="flex items-center gap-1 truncate font-bold"><StatusIcon className="h-3 w-3 shrink-0" aria-hidden="true" />{meta.label}</span>
+              <span className="flex items-center gap-1 truncate font-bold"><StatusIcon className="h-3 w-3 shrink-0" aria-hidden="true" />{statusName}</span>
             </Link>
           );
         })}
@@ -68,7 +70,7 @@ export function TimelineView({ board, orgId, timezone, canAssign, onAssignTo, da
   return (
     <div className="grid gap-3 lg:grid-cols-[300px_minmax(0,1fr)]">
       <UnassignedColumn board={board} orgId={orgId} timezone={timezone} canAssign={canAssign} onAssignTo={onAssignTo} />
-      <div className="min-w-0 overflow-x-auto rounded border border-ops-border bg-ops-surface" role="table" aria-label={t("b2b.dispatch.timeline", "Timeline")}>
+      <div className="relative min-w-0 overflow-x-auto rounded border border-ops-border bg-ops-surface" role="table" aria-label={t("b2b.dispatch.timeline", "Timeline")}>
         <div className="min-w-[820px]">
           <div role="row" className={cn("grid", LABEL_COL)}>
             <div role="columnheader" className="p-2 text-xs font-bold uppercase tracking-wide text-ops-ink-muted">{t("b2b.dispatch.teamResource", "Team / resource")}</div>

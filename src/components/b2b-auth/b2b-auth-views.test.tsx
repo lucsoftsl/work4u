@@ -4,11 +4,19 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import en from "@/locales/en.json";
 
 const m = vi.hoisted(() => ({
+  effective: "EUR", remember: vi.fn(),
   replace: vi.fn(), push: vi.fn(), user: null as null | { displayName?: string | null; email?: string }, loading: false,
   orgs: vi.fn(), signup: vi.fn(), signInEmail: vi.fn(), createAccount: vi.fn(), google: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: m.replace, push: m.push }), usePathname: () => "/ops/signin" }));
 vi.mock("@/lib/i18n", () => ({ useTranslation: () => ({ locale: "en", t: (k: string, f?: string) => (en as Record<string, string>)[k] ?? f ?? k }) }));
+vi.mock("@/b2b/currency/useEffectiveCurrency", () => ({ useEffectiveCurrency: () => ({ currency: m.effective, companyCurrency: null, isSet: false, preferred: null, loading: false, remember: m.remember, refreshCompany: vi.fn() }) }));
+vi.mock("@/b2b/currency/useCurrencies", () => ({
+  useCurrencies: () => ({ status: "ready", refetch: vi.fn(), items: [
+    { code: "EUR", name: "Euro", symbol: "€", minorUnits: 2, popular: true }, { code: "USD", name: "US Dollar", symbol: "$", minorUnits: 2, popular: true },
+    { code: "RON", name: "Romanian Leu", symbol: "RON", minorUnits: 2, popular: true },
+  ] }),
+}));
 vi.mock("@/context/AuthContext", () => ({ useAuth: () => ({ user: m.user, loading: m.loading }) }));
 vi.mock("@/b2b/api/endpoints", async (o) => ({ ...(await o<typeof import("@/b2b/api/endpoints")>()), listMyOrgs: m.orgs, signupCompany: m.signup }));
 vi.mock("@/lib/b2b-auth", async (o) => ({ ...(await o<typeof import("@/lib/b2b-auth")>()), b2bSignInWithEmail: m.signInEmail, b2bCreateAccount: m.createAccount, b2bSignInWithGoogle: m.google, b2bSendPasswordReset: vi.fn() }));
@@ -104,6 +112,32 @@ describe("company start", () => {
     expect(m.signup).toHaveBeenCalledTimes(1);
     expect(m.signup.mock.calls[0][0]).toMatchObject({ name: "Costa Clima S.L.", country: "ES", phone: "+34 600 555 021", locale: "en" });
   });
+  it("the company currency is asked once, with the effective default pre-selected, and sent with the sign-up", async () => {
+    m.user = { email: "a@b.co", displayName: "Ana" };
+    m.effective = "USD"; // the user's remembered one
+    m.signup.mockResolvedValue({ org: { id: "org-1", name: "C", timezone: "UTC", status: "ACTIVE" }, member: { id: "m1", roleId: "r", roleTemplate: "ADMIN" } });
+    wrap(<StartView />);
+    const box = screen.getByRole("combobox", { name: "Company currency" }) as HTMLInputElement;
+    expect(box.value).toBe("USD · US Dollar ($)");
+    fill("Company name", "Costa");
+    fireEvent.click(screen.getByRole("button", { name: "Create my workspace" }));
+    await waitFor(() => expect(m.signup).toHaveBeenCalledWith(expect.objectContaining({ currency: "USD" })));
+    m.effective = "EUR";
+  });
+  it("picking another currency sends that one and remembers it for the next selector", async () => {
+    m.user = { email: "a@b.co", displayName: "Ana" };
+    m.signup.mockResolvedValue({ org: { id: "org-1", name: "C", timezone: "UTC", status: "ACTIVE" }, member: { id: "m1", roleId: "r", roleTemplate: "ADMIN" } });
+    wrap(<StartView />);
+    const box = screen.getByRole("combobox", { name: "Company currency" }) as HTMLInputElement;
+    expect(box.value).toBe("EUR · Euro (€)");
+    fireEvent.focus(box);
+    fireEvent.change(box, { target: { value: "romanian" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+    expect(m.remember).toHaveBeenCalledWith("RON");
+    fill("Company name", "Costa");
+    fireEvent.click(screen.getByRole("button", { name: "Create my workspace" }));
+    await waitFor(() => expect(m.signup).toHaveBeenCalledWith(expect.objectContaining({ currency: "RON" })));
+  });
   it("a company phone like '12' is refused on the client before any request; a national number needs a country", async () => {
     m.user = { email: "a@b.co", displayName: "Ana" };
     wrap(<StartView />);
@@ -117,6 +151,43 @@ describe("company start", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create my workspace" }));
     await vi.waitFor(() => expect(screen.getByRole("alert").textContent).toMatch(/international format/));
     expect(m.signup).not.toHaveBeenCalled();
+  });
+  it("'Your name' is required on the company step (labelled, never an email), prefilled from the Google name and sent as adminDisplayName", async () => {
+    m.user = { email: "ana@costa.es", displayName: "Ana Pop" };
+    m.signup.mockResolvedValue({ org: { id: "org-7", name: "Costa", timezone: "UTC", status: "ACTIVE" }, member: { id: "m1", roleId: "r", roleTemplate: "ADMIN" } });
+    wrap(<StartView />);
+    const name = screen.getByLabelText("Your name") as HTMLInputElement;
+    expect(name.value).toBe("Ana Pop");
+    expect(name.required).toBe(true);
+    fill("Company name", "Costa");
+    fill("Your name", "");
+    fireEvent.click(screen.getByRole("button", { name: "Create my workspace" }));
+    expect((await screen.findByText("Enter your name.")).id).toBe(name.getAttribute("aria-describedby"));
+    expect(name.getAttribute("aria-invalid")).toBe("true");
+    expect(document.activeElement).toBe(name); // focus moves to the first error
+    fill("Your name", "ana@costa.es");
+    fireEvent.click(screen.getByRole("button", { name: "Create my workspace" }));
+    expect(await screen.findByText("Enter your name, not an email address.")).toBeTruthy();
+    expect(m.signup).not.toHaveBeenCalled();
+    fill("Your name", "Ana Pop");
+    fireEvent.click(screen.getByRole("button", { name: "Create my workspace" }));
+    await waitFor(() => expect(m.signup).toHaveBeenCalledWith(expect.objectContaining({ adminDisplayName: "Ana Pop", name: "Costa" })));
+  });
+  it("a Google account whose name is an email does not prefill it", () => {
+    m.user = { email: "ana@costa.es", displayName: "ana@costa.es" };
+    wrap(<StartView />);
+    expect((screen.getByLabelText("Your name") as HTMLInputElement).value).toBe("");
+  });
+  it("maps the API's 400 fields.adminDisplayName to the name field", async () => {
+    m.user = { email: "a@b.co", displayName: "Ana" };
+    m.signup.mockRejectedValueOnce(new B2bError(400, "VALIDATION_ERROR", "x", { fields: { adminDisplayName: "Enter your name" } }));
+    wrap(<StartView />);
+    fill("Company name", "Costa");
+    fireEvent.click(screen.getByRole("button", { name: "Create my workspace" }));
+    expect(await screen.findByText("Enter your name.")).toBeTruthy();
+    expect(screen.getByLabelText("Your name").getAttribute("aria-invalid")).toBe("true");
+    expect(document.activeElement).toBe(screen.getByLabelText("Your name"));
+    expect(m.replace).not.toHaveBeenCalled();
   });
   it("short passwords are refused before any request; an existing account explains itself", async () => {
     wrap(<StartView />);

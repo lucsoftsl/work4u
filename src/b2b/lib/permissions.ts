@@ -7,7 +7,7 @@ export type PermissionKey =
   | "job.view" | "job.create" | "job.update" | "job.assign" | "job.schedule" | "job.transition" | "job.execute"
   | "job.complete" | "job.close" | "job.cancel" | "dispatch.view" | "dispatch.override_conflict"
   | "team.view" | "team.manage" | "team.status" | "customer.view" | "customer.manage" | "member.view"
-  | "member.manage" | "role.view" | "report.view" | "org.manage" | (string & {});
+  | "member.manage" | "role.view" | "report.view" | "org.manage" | "finance.view" | "jobType.manage" | (string & {});
 
 /** How the viewer relates to a specific resource (a job). Omit for list-level checks ("can I use this at all?"). */
 export interface Relation {

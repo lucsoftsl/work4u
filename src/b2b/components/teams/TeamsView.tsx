@@ -42,7 +42,7 @@ export function TeamsView() {
 
       <section aria-label={t("b2b.teams.title", "Teams")} className="space-y-3">
         {teams.isPending ? <ListSkeleton /> : teams.isError ? (
-          <ErrorAlert message={isForbidden(teams.error) ? "You don't have access to teams." : "Teams could not be loaded."} onRetry={isForbidden(teams.error) ? undefined : () => void teams.refetch()} />
+          <ErrorAlert message={isForbidden(teams.error) ? t("b2b.teams.noAccess", "You don't have access to teams.") : t("b2b.teams.loadError", "Teams could not be loaded.")} onRetry={isForbidden(teams.error) ? undefined : () => void teams.refetch()} />
         ) : teams.data.length === 0 ? (
           <EmptyState
             icon={Users}
@@ -55,12 +55,12 @@ export function TeamsView() {
         )}
       </section>
 
-      {skills.isError ? <ErrorAlert message={catalogErrorMessage(skills.error, "skill")} onRetry={() => void skills.refetch()} /> : !skills.isPending && (
+      {skills.isError ? <ErrorAlert message={catalogErrorMessage(skills.error, "skill", t)} onRetry={() => void skills.refetch()} /> : !skills.isPending && (
         <SkillsPanel orgId={org.orgId} skills={skillList} canManage={actions.manageSkills} />
       )}
 
       {showMembers && (members.isPending ? <ListSkeleton rows={2} /> : members.isError ? (
-        <ErrorAlert message="Members could not be loaded." onRetry={() => void members.refetch()} />
+        <ErrorAlert message={t("b2b.teams.membersError", "Members could not be loaded.")} onRetry={() => void members.refetch()} />
       ) : (
         <MembersPanel orgId={org.orgId} members={members.data} skills={skillList} canAssign={actions.assignSkills} />
       ))}

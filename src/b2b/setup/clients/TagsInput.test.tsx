@@ -5,7 +5,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 afterEach(cleanup);
 import { TagsInput } from "./TagsInput";
 
-vi.mock("@/b2b/setup/i18n", () => ({ useTr: () => ({ tr: (_k: string, f: string, v: Record<string, string | number> = {}) => Object.entries(v).reduce((s, [k, x]) => s.split(`{${k}}`).join(String(x)), f) }) }));
+const fill = (f: string, v: Record<string, string | number> = {}) => Object.entries(v).reduce((s, [k, x]) => s.split(`{${k}}`).join(String(x)), f);
+vi.mock("@/b2b/setup/i18n", () => ({
+  useTr: () => ({
+    tr: (_k: string, f: string, v: Record<string, string | number> = {}) => fill(f, v),
+    trn: (_b: string, t: { one: string; other: string }, n: number, v: Record<string, string | number> = {}) => fill(n === 1 ? t.one : t.other, { n, ...v }),
+  }),
+}));
 
 function Harness() {
   const [tags, setTags] = useState<string[]>([]);

@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslation } from "@/lib/i18n";
+
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { assignJob, checkAssignment, qk } from "@/b2b/api/endpoints";
@@ -19,6 +21,7 @@ interface Options { orgId: string; date: string; canOverride: boolean; /** Same 
 
 /** Drop / "Assign to..." flow: live check -> decide -> optimistic assign with rollback. */
 export function useAssignFlow({ orgId, date, canOverride, filtersKey }: Options) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const toast = useToast();
   const [dialog, setDialog] = useState<AssignDialogState | null>(null);
@@ -49,7 +52,7 @@ export function useAssignFlow({ orgId, date, canOverride, filtersKey }: Options)
       if (snapshot) qc.setQueryData<DispatchBoard>(boardKey, applyAssignmentToBoard(snapshot, job.id, teamId));
       try {
         await assignJob(orgId, job.id, { teamId }, override);
-        toast.push({ message: `${job.reference} assigned to ${teamName}`, tone: "success" });
+        toast.push({ message: t("b2b.dispatch.assigned", "{ref} assigned to {team}").replace("{ref}", job.reference).replace("{team}", teamName), tone: "success" });
         setDialog(null);
         void qc.invalidateQueries({ queryKey: qk.boardAll(orgId) });
         void qc.invalidateQueries({ queryKey: [...qk.org(orgId), "assign-check"] });
@@ -57,7 +60,7 @@ export function useAssignFlow({ orgId, date, canOverride, filtersKey }: Options)
       } catch (err) {
         const current = qc.getQueryData<DispatchBoard>(boardKey);
         if (current) qc.setQueryData<DispatchBoard>(boardKey, rollback(current, snapshot));
-        const info = mapAssignError(err);
+        const info = mapAssignError(err, t);
         const fresh = isB2bError(err) ? err.conflicts : info.conflicts ?? [];
         if (err instanceof Error && (err as { code?: string }).code === "ASSIGNMENT_CONFLICT" && fresh.length > 0) {
           setDialog(canOverride ? { mode: "override", job, teamId, teamName, conflicts: fresh, busy: false, error: info.message } : { mode: "blocked", job, teamName, conflicts: fresh });
@@ -70,7 +73,7 @@ export function useAssignFlow({ orgId, date, canOverride, filtersKey }: Options)
         return false;
       }
     },
-    [qc, boardKey, orgId, toast, canOverride, teamNameOf]
+    [qc, boardKey, orgId, toast, canOverride, teamNameOf, t]
   );
 
   /** Entry point for both a drop and the "Assign to..." menu. */
@@ -87,12 +90,12 @@ export function useAssignFlow({ orgId, date, canOverride, filtersKey }: Options)
         else if (decision.kind === "confirm-override") setDialog({ mode: "override", job, teamId, teamName, conflicts: decision.conflicts, busy: false });
         else if (decision.kind === "blocked") setDialog({ mode: "blocked", job, teamName, conflicts: decision.conflicts });
       } catch (err) {
-        setDialog({ mode: "error", job, teamId, teamName, info: mapAssignError(err) });
+        setDialog({ mode: "error", job, teamId, teamName, info: mapAssignError(err, t) });
       } finally {
         setPending(false);
       }
     },
-    [qc, boardKey, fetchCheck, doAssign, canOverride, teamNameOf]
+    [qc, boardKey, fetchCheck, doAssign, canOverride, teamNameOf, t]
   );
 
   const submitOverride = useCallback(

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePersonName } from "@/b2b/lib/usePersonName";
 import { useEffect, useRef, useState } from "react";
 import { MoreHorizontal } from "lucide-react";
 import { useTr } from "../i18n";
@@ -10,6 +11,7 @@ export type RowAction = "edit" | "invite" | "suspend" | "reactivate" | "remove";
 /** Row menu (disclosure with action buttons). Esc and outside click close it; focus returns to the trigger. */
 export function RowMenu({ member, canManage, onAction }: { member: Member; canManage: boolean; onAction: (a: RowAction) => void }) {
   const { tr } = useTr();
+  const nameOf = usePersonName();
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -23,11 +25,13 @@ export function RowMenu({ member, canManage, onAction }: { member: Member; canMa
   }, [open]);
   if (!canManage) return null;
   const item = "flex min-h-[44px] w-full items-center px-3 text-left text-sm font-bold text-ops-ink hover:bg-ops-canvas focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2";
-  const run = (a: RowAction) => { setOpen(false); onAction(a); };
+  // Move focus to the (persistent) trigger before the menu item unmounts, so a dialog opened by the action records the trigger as its
+  // opener and returns focus there when it closes (instead of the page start).
+  const run = (a: RowAction) => { trigger.current?.focus(); setOpen(false); onAction(a); };
   const suspended = member.status === "SUSPENDED";
   return (
     <div ref={wrap} className="relative">
-      <button ref={trigger} type="button" aria-expanded={open} aria-haspopup="true" aria-label={tr("b2b.team.menu", "Actions for {name}", { name: member.displayName })} onClick={() => setOpen((o) => !o)} className="inline-flex h-11 w-11 items-center justify-center rounded hover:bg-ops-canvas focus-visible:outline focus-visible:outline-2">
+      <button ref={trigger} type="button" aria-expanded={open} aria-haspopup="true" aria-label={tr("b2b.team.menu", "Actions for {name}", { name: nameOf(member.displayName) })} onClick={() => setOpen((o) => !o)} className="inline-flex h-11 w-11 items-center justify-center rounded hover:bg-ops-canvas focus-visible:outline focus-visible:outline-2">
         <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
       </button>
       {open && (

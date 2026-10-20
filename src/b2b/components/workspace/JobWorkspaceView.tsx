@@ -1,14 +1,17 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { SearchX } from "lucide-react";
 import { isB2bError } from "@/b2b/api/client";
 import { getJob, qk } from "@/b2b/api/endpoints";
+import { useTranslation } from "@/lib/i18n";
+import { setTitleState } from "@/b2b/lib/title-store";
 import { useOrg } from "@/b2b/context/OrgContext";
 import { RequirePermission } from "@/b2b/components/shell/RequirePermission";
+import { DraftEditor } from "@/b2b/components/jobs/new/DraftEditor";
 import { FilesTab } from "./FilesTab";
 import { JobHeader } from "./JobHeader";
 import { JobTabs, parseTab, type TabDef, type TabId } from "./JobTabs";
@@ -19,9 +22,10 @@ import { TimelineTab } from "./TimelineTab";
 import { ErrorRetry, Skeleton } from "./ui";
 
 function Loading() {
+  const { t } = useTranslation();
   return (
     <div role="status" aria-busy="true" className="space-y-4">
-      <span className="sr-only">Loading job</span>
+      <span className="sr-only">{t("b2b.job.loading", "Loading job")}</span>
       <Skeleton className="h-8 w-2/3" /><Skeleton className="h-5 w-1/2" /><Skeleton className="h-11 w-full" />
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]"><Skeleton className="h-64" /><Skeleton className="h-64" /></div>
     </div>
@@ -29,16 +33,18 @@ function Loading() {
 }
 
 function NotFound({ orgId }: { orgId: string }) {
+  const { t } = useTranslation();
   return (
     <div className="mx-auto flex max-w-md flex-col items-center gap-3 p-10 text-center">
       <SearchX className="h-8 w-8 text-ops-ink-subtle" aria-hidden="true" />
-      <h1 className="text-xl font-bold text-ops-ink">Job not found or you don&apos;t have access</h1>
-      <Link href={`/ops/${orgId}/dashboard`} className="inline-flex min-h-[44px] items-center rounded bg-ops-ink px-4 text-sm font-bold text-white">Back to dashboard</Link>
+      <h1 className="text-xl font-bold text-ops-ink">{t("b2b.job.notFound", "Job not found or you don't have access")}</h1>
+      <Link href={`/ops/${orgId}/dashboard`} className="inline-flex min-h-[44px] items-center rounded bg-ops-ink px-4 text-sm font-bold text-white">{t("b2b.job.backToDashboard", "Back to dashboard")}</Link>
     </div>
   );
 }
 
 function Workspace({ jobId }: { jobId: string }) {
+  const { t } = useTranslation();
   const { orgId, me, can } = useOrg();
   const router = useRouter();
   const pathname = usePathname();
@@ -59,20 +65,25 @@ function Workspace({ jobId }: { jobId: string }) {
   const tabs = useMemo<TabDef[]>(() => {
     const timelineCount = timeline.data ? `${timeline.data.pages.flat().length}${timeline.hasNextPage ? "+" : ""}` : undefined;
     return [
-      { id: "overview", label: "Overview" },
-      { id: "schedule", label: "Schedule & team", count: q.data?.assignments?.length || undefined },
-      { id: "files", label: "Files", count: files.migrationPending ? undefined : files.data?.items.length },
-      { id: "timeline", label: "Timeline", count: timelineCount },
+      { id: "overview", label: t("b2b.job.tab.overview", "Overview") },
+      { id: "schedule", label: t("b2b.job.tab.schedule", "Schedule & team"), count: q.data?.assignments?.length || undefined },
+      { id: "files", label: t("b2b.job.tab.files", "Files"), count: files.migrationPending ? undefined : files.data?.items.length },
+      { id: "timeline", label: t("b2b.job.tab.timeline", "Timeline"), count: timelineCount },
     ];
-  }, [q.data, files.data, files.migrationPending, timeline.data, timeline.hasNextPage]);
+  }, [t, q.data, files.data, files.migrationPending, timeline.data, timeline.hasNextPage]);
+
+  const jobRef = q.data?.reference;
+  useEffect(() => setTitleState({ jobRef, tab }), [jobRef, tab]);
 
   if (q.isPending) return <Loading />;
   if (q.isError && !q.data) {
     if (isB2bError(q.error) && q.error.isNotFound) return <NotFound orgId={orgId} />;
-    return <div><h1 className="sr-only">Job</h1><ErrorRetry message="Couldn't load this job." onRetry={() => void q.refetch()} /></div>;
+    return <div><h1 className="sr-only">{t("b2b.job.title", "Job")}</h1><ErrorRetry message={t("b2b.job.loadError", "Couldn't load this job.")} onRetry={() => void q.refetch()} /></div>;
   }
   const job = q.data;
   if (!job) return <Loading />;
+  // A draft has no schedule, team, files or timeline yet: its page is the editor (Create job / Save draft / Discard).
+  if (job.status === "DRAFT") return <DraftEditor job={job} justSaved={search.get("saved") === "1"} />;
 
   return (
     <div className="space-y-4">

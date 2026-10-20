@@ -1,9 +1,10 @@
+import { fallback, type Translate } from "./plural";
 import type { WeekdayKey, WorkingHours } from "@/b2b/api/types";
 
 // Team working hours (PATCH /teams/:id {workingHours}). `null` = default hours.
 
 export const WEEKDAYS: readonly WeekdayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-export const WEEKDAY_LABEL: Record<WeekdayKey, string> = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun" };
+export const WEEKDAY_LABEL: Record<WeekdayKey, string> = { mon: fallback("Mon"), tue: fallback("Tue"), wed: fallback("Wed"), thu: fallback("Thu"), fri: fallback("Fri"), sat: fallback("Sat"), sun: fallback("Sun") };
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export interface DayDraft { on: boolean; start: string; end: string }
@@ -30,13 +31,13 @@ export function fromDraft(draft: HoursDraft): WorkingHours {
 }
 
 /** Per-day error (only for days that are on): valid 24 h times and end after start. */
-export function validateDraft(draft: HoursDraft): Partial<Record<WeekdayKey, string>> {
+export function validateDraft(draft: HoursDraft, t: Translate = (_k, f) => f): Partial<Record<WeekdayKey, string>> {
   const errors: Partial<Record<WeekdayKey, string>> = {};
   for (const d of WEEKDAYS) {
     const { on, start, end } = draft[d];
     if (!on) continue;
-    if (!TIME_RE.test(start) || !TIME_RE.test(end)) errors[d] = "Enter a start and end time.";
-    else if (end <= start) errors[d] = "The end must be after the start.";
+    if (!TIME_RE.test(start) || !TIME_RE.test(end)) errors[d] = t("b2b.teams.hoursNeedBoth", "Enter a start and end time.");
+    else if (end <= start) errors[d] = t("b2b.job.win.endAfter", "The end must be after the start.");
   }
   return errors;
 }
@@ -44,7 +45,8 @@ export function validateDraft(draft: HoursDraft): Partial<Record<WeekdayKey, str
 export const draftChanged = (a: HoursDraft, b: HoursDraft): boolean => JSON.stringify(fromDraft(a)) !== JSON.stringify(fromDraft(b));
 
 /** "Mon–Fri 08:00–16:00, Sat 09:00–12:00"; null/empty -> null (the caller shows "Default"). */
-export function summarizeHours(hours: WorkingHours | null | undefined): string | null {
+export function summarizeHours(hours: WorkingHours | null | undefined, t: Translate = (_k, f) => f): string | null {
+  const day = (d: WeekdayKey) => t(`b2b.teams.day.${d}`, WEEKDAY_LABEL[d]);
   if (!hours) return null;
   const groups: Array<{ days: WeekdayKey[]; range: string }> = [];
   for (const d of WEEKDAYS) {
@@ -58,6 +60,6 @@ export function summarizeHours(hours: WorkingHours | null | undefined): string |
   }
   if (groups.length === 0) return "";
   return groups
-    .map((g) => `${g.days.length > 1 ? `${WEEKDAY_LABEL[g.days[0]]}–${WEEKDAY_LABEL[g.days[g.days.length - 1]]}` : WEEKDAY_LABEL[g.days[0]]} ${g.range}`)
+    .map((g) => `${g.days.length > 1 ? `${day(g.days[0])}–${day(g.days[g.days.length - 1])}` : day(g.days[0])} ${g.range}`)
     .join(", ");
 }

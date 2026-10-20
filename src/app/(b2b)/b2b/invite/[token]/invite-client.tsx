@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isB2bError } from "@/b2b/api/client";
+import { isEmailLike, personName, personNameProblem } from "@/b2b/lib/person";
+import { useFocusFirstInvalid } from "@/b2b/setup/useFocusFirstInvalid";
 import Link from "@/components/LocaleLink";
 import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle2, MailWarning } from "lucide-react";
@@ -53,6 +56,17 @@ export default function InviteClient({ token }: { token: string }) {
   const [state, setState] = useState<State>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const { ref: formRef, focusFirstInvalid } = useFocusFirstInvalid<HTMLDivElement>();
+  const [name, setName] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
+  // Prefill with the account's own name (never an email).
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current || !user?.displayName || isEmailLike(user.displayName)) return;
+    prefilled.current = true;
+    setName((current) => current || user.displayName || "");
+  }, [user]);
 
   useEffect(() => {
     let active = true;
@@ -62,20 +76,44 @@ export default function InviteClient({ token }: { token: string }) {
     return () => { active = false; };
   }, [token, attempt]);
 
-  useEffect(() => { headingRef.current?.focus(); }, [state.kind]);
+  // A failed accept that only needs a name returns to "ready" with the field error: focus goes to that field, not the heading.
+  const keepFieldFocus = useRef(false);
+  useEffect(() => {
+    if (keepFieldFocus.current) { keepFieldFocus.current = false; return; }
+    headingRef.current?.focus();
+  }, [state.kind]);
+
+  const nameMessage = (problem: "required" | "email") =>
+    problem === "email" ? t("b2b.setup.account.nameNotEmail", "Enter your name, not an email address.") : t("b2b.setup.account.nameRequired", "Enter your name.");
 
   const accept = useCallback(async (invite: InvitePreview) => {
+    // A planned employee keeps the name the company set; everyone else tells us their own name.
+    const needsName = !invite.claim;
+    if (needsName) {
+      const problem = personNameProblem(name);
+      if (problem) { setNameError(nameMessage(problem)); nameRef.current?.focus(); return; }
+    }
+    setNameError(null);
     setState({ kind: "joining", invite });
     try {
-      const { orgId } = await acceptInvitation(token);
+      const { orgId } = await acceptInvitation(token, needsName ? { displayName: name.trim() } : undefined);
       setState({ kind: "joined", invite });
       let template: string | null = null;
       try { template = (await getMe(orgId)).role.template; } catch { /* default destination */ }
       router.replace(afterJoinPath(orgId, template));
     } catch (err) {
+      if (isB2bError(err) && err.status === 400 && err.fields.displayName) {
+        // The invitation stays pending: ask for the name and let them retry.
+        setState({ kind: "ready", invite });
+        setNameError(nameMessage("required"));
+        keepFieldFocus.current = true;
+        focusFirstInvalid(); // after the error and the re-enabled field have rendered
+        return;
+      }
       setState({ kind: "problem", problem: inviteProblem(err), invite });
     }
-  }, [token, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, router, name, focusFirstInvalid]);
 
   const returnTo = invitePath(token);
   const tr = (pair: [string, string], vars: Record<string, string> = {}) =>
@@ -132,9 +170,9 @@ export default function InviteClient({ token }: { token: string }) {
     <div className={wrap}>
       <div className={card}>
         <h1 ref={headingRef} tabIndex={-1} className={h1}>{tr(["b2b.invite.joinTitle", "Join {org}"], { org: invite.orgName })}</h1>
-        {invite.claim && invite.memberName ? (
+        {invite.claim ? (
           <>
-            <p className="mt-3 text-body text-ink-muted">{tr(["b2b.invite.joiningAs", "You are joining as {name}, {role}."], { name: invite.memberName, role: invite.roleName })}</p>
+            <p className="mt-3 text-body text-ink-muted">{tr(["b2b.invite.joiningAs", "You are joining as {name}, {role}."], { name: personName(invite.memberName, t("b2b.member.unnamed", "Team member")), role: invite.roleName })}</p>
             <p className="mt-1 text-body text-ink-muted">{t("b2b.invite.onSchedule", "You are already on the schedule. After you join you will see your jobs in the app.")}</p>
           </>
         ) : (
@@ -149,8 +187,20 @@ export default function InviteClient({ token }: { token: string }) {
             {tr(["b2b.invite.joined", "You joined {org}. Opening your workspace…"], { org: invite.orgName })}
           </p>
         ) : user ? (
-          <div className="mt-6 space-y-3">
+          <div ref={formRef} className="mt-6 space-y-3">
             <p className="text-label font-normal text-ink-muted">{tr(["b2b.invite.signedInAs", "Signed in as {email}."], { email: user.email ?? "" })}</p>
+            {!invite.claim ? (
+              <div>
+                <label htmlFor="invite-name" className="block text-label font-bold text-ink">{t("b2b.setup.account.name", "Your name")}</label>
+                <input id="invite-name" ref={nameRef} autoComplete="name" required maxLength={200} value={name} disabled={busy}
+                  onChange={(e) => { setName(e.target.value); setNameError(null); }}
+                  aria-invalid={nameError ? true : undefined} aria-describedby={nameError ? "invite-name-err" : "invite-name-hint"}
+                  className="mt-1 block min-h-[48px] w-full rounded-control border border-line-strong bg-surface px-3 text-body text-ink focus:outline-none focus-visible:shadow-focus aria-[invalid=true]:border-ember-text" />
+                {nameError
+                  ? <p id="invite-name-err" className="mt-1 text-caption font-bold text-ember-text">{nameError}</p>
+                  : <p id="invite-name-hint" className="mt-1 text-caption text-ink-muted">{t("b2b.invite.nameHint", "This is how your team will see you. It can't be an email address.")}</p>}
+              </div>
+            ) : null}
             <button type="button" disabled={busy} aria-busy={busy || undefined} onClick={() => void accept(invite)} className={buttonClasses("primary", "lg")}>
               {state.kind === "joining" ? t("b2b.invite.joining", "Joining…") : t("b2b.invite.accept", "Accept invitation")}
             </button>

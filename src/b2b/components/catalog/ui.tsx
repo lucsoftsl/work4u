@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslation } from "@/lib/i18n";
+
 import { useId, type ReactNode } from "react";
 import { TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,20 +23,22 @@ export function Field({ label, error, hint, children }: { label: string; error?:
   );
 }
 
-export function ErrorAlert({ message, onRetry, retryLabel = "Retry" }: { message: string; onRetry?: () => void; retryLabel?: string }) {
+export function ErrorAlert({ message, onRetry, retryLabel }: { message: string; onRetry?: () => void; retryLabel?: string }) {
+  const { t } = useTranslation();
   return (
     <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-sig-vermilion-ink bg-ops-surface p-4">
       <TriangleAlert className="h-5 w-5 shrink-0 text-sig-vermilion-ink" aria-hidden="true" />
       <p className="min-w-0 flex-1 text-sm text-ops-ink">{message}</p>
-      {onRetry && <button type="button" onClick={onRetry} className={btnPrimary}>{retryLabel}</button>}
+      {onRetry && <button type="button" onClick={onRetry} className={btnPrimary}>{retryLabel ?? t("b2b.common.retry", "Retry")}</button>}
     </div>
   );
 }
 
 export function ListSkeleton({ rows = 3 }: { rows?: number }) {
+  const { t } = useTranslation();
   return (
     <div role="status" aria-busy="true" className="space-y-3">
-      <span className="sr-only">Loading</span>
+      <span className="sr-only">{t("b2b.common.loading", "Loading")}</span>
       {Array.from({ length: rows }, (_, i) => <div key={i} className="h-24 animate-pulse rounded-lg bg-ops-border motion-reduce:animate-none" />)}
     </div>
   );

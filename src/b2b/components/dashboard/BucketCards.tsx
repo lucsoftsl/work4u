@@ -10,9 +10,9 @@ import type { BucketCounts, BucketKey } from "@/b2b/lib/dashboard";
 import { bucketHref } from "@/b2b/lib/dashboard";
 import { FAMILY_CLASSES, type Family } from "@/b2b/lib/status";
 
-interface BucketDef { key: BucketKey; label: string; hint: string; icon: LucideIcon; family: Family }
+export interface BucketDef { key: BucketKey; label: string; hint: string; icon: LucideIcon; family: Family }
 
-const BUCKETS: readonly BucketDef[] = [
+export const BUCKETS: readonly BucketDef[] = [
   { key: "live", label: "Live", hint: "Dispatched to blocked", icon: Activity, family: "sky" },
   { key: "scheduledToday", label: "Scheduled today", hint: "Starting today", icon: CalendarDays, family: "blue" },
   { key: "upcoming", label: "Upcoming", hint: "After today", icon: CalendarClock, family: "blue" },
@@ -62,9 +62,9 @@ export function BucketCards({ orgId, counts, cappedKeys, now, tz, canReview }: P
               </span>
               <span className="flex items-end justify-between gap-2">
                 {counts ? (
-                  <span className="font-mono text-3xl font-bold leading-none text-ops-ink" aria-label={`${text}${cappedKeys.has(b.key) ? " or more" : ""}`}>{text}</span>
+                  <span className="font-mono text-3xl font-bold leading-none text-ops-ink" aria-label={cappedKeys.has(b.key) ? t("b2b.dashboard.orMore", "{n} or more").replace("{n}", text.replace("+", "")) : text}>{text}</span>
                 ) : (
-                  <span className="h-[30px] w-12 animate-pulse rounded bg-ops-border motion-reduce:animate-none" role="status"><span className="sr-only">Loading</span></span>
+                  <span className="h-[30px] w-12 animate-pulse rounded bg-ops-border motion-reduce:animate-none" role="status"><span className="sr-only">{t("b2b.common.loading", "Loading")}</span></span>
                 )}
                 <span className="text-right text-xs text-ops-ink-muted">{t(`b2b.dashboard.bucketHint.${b.key}`, b.hint)}</span>
               </span>

@@ -26,4 +26,8 @@ describe("assigneeGroups", () => {
   it("is empty only when nobody is assignable", () => {
     expect(assigneeGroups([], [], "No team")).toEqual([]);
   });
+  it("people without a name are listed (as unnamed, last) instead of being dropped", () => {
+    const g = assigneeGroups([], [{ id: "x", displayName: null }, { id: "y", displayName: "Zoe" }], "No team");
+    expect(g[0].members.map((m) => m.id)).toEqual(["y", "x"]);
+  });
 });

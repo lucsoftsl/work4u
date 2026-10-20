@@ -4,6 +4,8 @@ import { compactPhone, isPlausiblePhone } from "@/lib/b2b-phone";
 export interface ProfileForm {
   name: string; legalName: string; taxId: string; country: string; phone: string; timezone: string; locale: string;
   addressLine: string; city: string; postalCode: string;
+  /** ISO 4217, upper case; "" while the API does not report one. */
+  currency: string;
 }
 export type ProfileErrors = Partial<Record<keyof ProfileForm, string>>;
 
@@ -13,7 +15,7 @@ export const LOGO_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 export function settingsToForm(s: CompanySettings): ProfileForm {
   return {
     name: s.name, legalName: s.legalName ?? "", taxId: s.taxId ?? "", country: s.country ?? "", phone: s.phone ?? "", timezone: s.timezone,
-    locale: s.locale ?? "", addressLine: s.addressLine ?? "", city: s.city ?? "", postalCode: s.postalCode ?? "",
+    locale: s.locale ?? "", addressLine: s.addressLine ?? "", city: s.city ?? "", postalCode: s.postalCode ?? "", currency: s.currency ?? "",
   };
 }
 
@@ -35,9 +37,9 @@ export function profilePatch(initial: ProfileForm, next: ProfileForm): SettingsP
   (Object.keys(next) as Array<keyof ProfileForm>).forEach((k) => {
     let a = next[k].trim();
     if (k === "phone") a = compactPhone(a);
-    if (k === "country") a = a.toUpperCase();
+    if (k === "country" || k === "currency") a = a.toUpperCase();
     if (a === initial[k].trim()) return;
-    const required = k === "name" || k === "timezone";
+    const required = k === "name" || k === "timezone" || k === "currency";
     patch[k] = a === "" && !required ? null : a;
   });
   return patch as SettingsPatch;

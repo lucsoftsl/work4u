@@ -33,8 +33,13 @@ export interface CompanySettings {
   id: string; name: string; legalName: string | null; taxId: string | null; phone: string | null; addressLine: string | null;
   city: string | null; postalCode: string | null; country: string | null; timezone: string; locale: string | null;
   logoUrl: string | null; createdAt: string; canEdit: boolean;
+  /** ISO 4217, upper case; null until the company has chosen one (there is no default). Locked (409 CURRENCY_IN_USE) once any job or job type has an amount. */
+  currency?: string | null;
+  currencyIsSet?: boolean;
+  /** What a currency selector pre-selects: the company currency, else the user's remembered one, else EUR. */
+  effectiveCurrency?: string;
 }
-export type SettingsPatch = Partial<Pick<CompanySettings, "name" | "legalName" | "taxId" | "phone" | "addressLine" | "city" | "postalCode" | "country" | "timezone" | "locale">>;
+export type SettingsPatch = Partial<Pick<CompanySettings, "name" | "legalName" | "taxId" | "phone" | "addressLine" | "city" | "postalCode" | "country" | "timezone" | "locale" | "currency">>;
 export const getSettings = (orgId: string) => b2b<CompanySettings>(orgPath(orgId, "/settings"));
 export const patchSettings = (orgId: string, patch: SettingsPatch) => send<CompanySettings>(orgId, "/settings", "PATCH", patch);
 export const uploadLogo = (orgId: string, file: File) => {
@@ -55,7 +60,7 @@ export type LoginStatus = "NONE" | "INVITED" | "ACTIVE";
 export type MemberStatus = "ACTIVE" | "SUSPENDED" | "REMOVED";
 export interface Role { id: string; name: string; template: string; isSystem?: boolean }
 export interface Member {
-  id: string; displayName: string; workEmail: string | null; phone: string | null; externalId: string | null;
+  id: string; displayName: string | null; workEmail: string | null; phone: string | null; externalId: string | null;
   memberType: "EMPLOYEE" | "CONTRACTOR"; status: MemberStatus; loginStatus: LoginStatus; notifyChannel?: string;
   workingHours?: unknown; role: { id: string; name: string; template: string };
   /** From the list only: false = the viewer may not edit/suspend/remove this person (an Administrator, viewed by a non-admin). */
@@ -162,7 +167,7 @@ export interface ClientLocation {
   latitude?: number | null; longitude?: number | null; accessInstructions?: string | null; safetyInstructions?: string | null;
 }
 export interface ClientNote {
-  id: string; body: string; pinned: boolean; author: { memberId: string; name: string } | null; createdAt: string; editedAt: string | null;
+  id: string; body: string; pinned: boolean; author: { memberId: string; name: string | null } | null; createdAt: string; editedAt: string | null;
   canEdit: boolean; canDelete: boolean;
 }
 export interface ClientPage extends Client {
@@ -171,7 +176,8 @@ export interface ClientPage extends Client {
 }
 export interface ClientInput { name: string; type: "COMPANY" | "PERSON"; email: string | null; phone: string | null; billingAddress: string | null; externalId?: string | null; tags?: string[] }
 export const getClientPage = (orgId: string, id: string) => b2b<ClientPage>(orgPath(orgId, `/customers/${id}`));
-export const createClient = (orgId: string, input: Omit<ClientInput, "tags">) => send<Client>(orgId, "/customers", "POST", input);
+/** `allowDuplicate`: create it although a client that looks the same exists (after a 409 DUPLICATE_CUSTOMER). */
+export const createClient = (orgId: string, input: Omit<ClientInput, "tags"> & { allowDuplicate?: boolean }) => send<Client>(orgId, "/customers", "POST", input);
 export const updateClient = (orgId: string, id: string, input: Partial<Omit<ClientInput, "tags">>) => send<Client>(orgId, `/customers/${id}`, "PATCH", input);
 export const setClientTags = (orgId: string, id: string, tags: string[]) => send<{ tags: string[] }>(orgId, `/customers/${id}/tags`, "PUT", { tags });
 export const archiveClient = (orgId: string, id: string) => send<unknown>(orgId, `/customers/${id}/archive`, "POST");
@@ -197,7 +203,11 @@ export const listClientJobs = (orgId: string, id: string, params: { status?: str
 export interface TimelineItem { type: "NOTE" | "JOB_CREATED" | "JOB_COMPLETED" | "CLIENT_EVENT" | string; at: string; [k: string]: unknown }
 export const getClientTimeline = (orgId: string, id: string) => b2b<{ items: TimelineItem[] }>(orgPath(orgId, `/customers/${id}/timeline`), { query: { limit: 50 } });
 
-export interface DuplicateGroup { reason: "EMAIL" | "PHONE" | "NAME"; key: string; customers: Array<{ id: string; name: string; email: string | null; phone: string | null }> }
+/**
+ * `id` (g_ + 16 hex) is the stable group identity: use it for links, React keys and selection. `key` is display-only and masked
+ * (two different emails can mask to the same key). `customers[].email/phone` are masked too; full values come from GET /customers/:id.
+ */
+export interface DuplicateGroup { id?: string; reason: "EMAIL" | "PHONE" | "NAME"; key: string; customers: Array<{ id: string; name: string; email: string | null; phone: string | null }> }
 export const findDuplicates = (orgId: string) => b2b<{ groups: DuplicateGroup[] }>(orgPath(orgId, "/customers/duplicates"));
 export interface MergeResult { targetId: string; merges: Array<{ mergeId: string; sourceId: string; moved: { jobs: number; locations: number; contacts: number; notes: number; tags: number } }> }
 export const mergeClients = (orgId: string, targetId: string, sourceIds: string[]) => send<MergeResult>(orgId, `/customers/${targetId}/merge`, "POST", { sourceIds });

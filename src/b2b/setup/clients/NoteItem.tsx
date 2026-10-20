@@ -8,7 +8,7 @@ import { deleteNote, updateNote, type ClientNote } from "@/b2b/setup/api";
 import { setupErrorMessage } from "@/b2b/setup/errors";
 import { Modal } from "@/b2b/components/catalog/Modal";
 import { ErrorAlert, btnDanger, btnPrimary, btnSecondary, inputCls } from "@/b2b/components/catalog/ui";
-import { NOTE_MAX, canDeleteNote, canEditNote, canPinNote, noteExcerpt, validateNoteBody } from "./noteRules";
+import { NOTE_MAX, canDeleteNote, canEditNote, canPinNote, noteExcerpt, validateNoteBody, noteAuthorLabel } from "./noteRules";
 import { shortDate } from "./parts";
 
 export function NoteItem({ orgId, clientId, note, can, offline }: { orgId: string; clientId: string; note: ClientNote; can: (p: string) => boolean; offline: boolean }) {
@@ -27,7 +27,7 @@ export function NoteItem({ orgId, clientId, note, can, offline }: { orgId: strin
   return (
     <li className="rounded-lg border border-ops-border bg-ops-surface p-3">
       <div className="flex flex-wrap items-center gap-2 text-xs text-ops-ink-muted">
-        <span className="font-bold text-ops-ink">{note.author?.name ?? tr("b2b.clients.note.unknownAuthor", "Former member")}</span>
+        <span className="font-bold text-ops-ink">{noteAuthorLabel(note.author, tr("b2b.member.unnamed", "Team member"), tr("b2b.clients.note.formerAuthor", "Former team member"))}</span>
         <span>{shortDate(note.createdAt)}</span>
         {note.editedAt && <span>{tr("b2b.clients.note.edited", "Edited")}</span>}
         {note.pinned && <span className="inline-flex items-center gap-1 font-bold text-ops-ink"><Pin className="h-3 w-3" aria-hidden="true" />{tr("b2b.clients.note.pinned", "Pinned")}</span>}

@@ -5,9 +5,11 @@ import { LIVE_STATUSES } from "./status";
 // Jobs-list filters <-> URL query string. Pure so the URL stays the single source of truth.
 
 export const JOB_STATUSES: readonly JobStatus[] = [
-  "NEW", "PLANNING", "WAITING_FOR_PARTS", "READY_TO_SCHEDULE", "SCHEDULED", "DISPATCHED",
+  "DRAFT", "NEW", "PLANNING", "WAITING_FOR_PARTS", "READY_TO_SCHEDULE", "SCHEDULED", "DISPATCHED",
   "EN_ROUTE", "ON_SITE", "IN_PROGRESS", "BLOCKED", "COMPLETED", "REVIEW", "CLOSED", "CANCELLED",
 ];
+/** The status chips of the filter bar: drafts have their own view, not a chip among real statuses. */
+export const CHIP_STATUSES: readonly JobStatus[] = JOB_STATUSES.filter((s) => s !== "DRAFT");
 export const PAGE_SIZE = 25;
 
 export const PRIORITIES = ["URGENT", "HIGH", "NORMAL", "LOW"] as const;
@@ -45,6 +47,8 @@ export interface JobListFilters {
   status: JobStatus[];
   teamId?: string;
   unassigned: boolean;
+  /** Drafts view: only the ones I created (GET /jobs?mine=true). */
+  mine: boolean;
   from?: string; // YYYY-MM-DD
   to?: string;
   q?: string;
@@ -56,19 +60,25 @@ export interface JobListFilters {
   cursor?: string;
 }
 
-export const DEFAULT_FILTERS: JobListFilters = { status: [], unassigned: false, priority: [], sort: "updatedAt", dir: "desc", page: 1 };
+export const DEFAULT_FILTERS: JobListFilters = { status: [], unassigned: false, mine: false, priority: [], sort: "updatedAt", dir: "desc", page: 1 };
 
-export type PresetKey = "all" | "live" | "unassigned" | "scheduled" | "completed" | "review";
+export type PresetKey = "all" | "live" | "unassigned" | "scheduled" | "completed" | "review" | "drafts";
+type PresetPatch = Pick<JobListFilters, "status" | "unassigned" | "mine">;
 
 /** Spec §25 sub-nav, expressed as filter patches. */
-export const PRESETS: ReadonlyArray<{ key: PresetKey; label: string; patch: Pick<JobListFilters, "status" | "unassigned"> }> = [
-  { key: "all", label: "All", patch: { status: [], unassigned: false } },
-  { key: "live", label: "Live", patch: { status: [...LIVE_STATUSES], unassigned: false } },
-  { key: "unassigned", label: "Unassigned", patch: { status: [], unassigned: true } },
-  { key: "scheduled", label: "Scheduled", patch: { status: ["SCHEDULED"], unassigned: false } },
-  { key: "completed", label: "Completed", patch: { status: ["COMPLETED", "CLOSED"], unassigned: false } },
-  { key: "review", label: "Review", patch: { status: ["REVIEW"], unassigned: false } },
+export const PRESETS: ReadonlyArray<{ key: PresetKey; label: string; patch: PresetPatch }> = [
+  { key: "all", label: "All", patch: { status: [], unassigned: false, mine: false } },
+  { key: "live", label: "Live", patch: { status: [...LIVE_STATUSES], unassigned: false, mine: false } },
+  { key: "unassigned", label: "Unassigned", patch: { status: [], unassigned: true, mine: false } },
+  { key: "scheduled", label: "Scheduled", patch: { status: ["SCHEDULED"], unassigned: false, mine: false } },
+  { key: "completed", label: "Completed", patch: { status: ["COMPLETED", "CLOSED"], unassigned: false, mine: false } },
+  { key: "review", label: "Review", patch: { status: ["REVIEW"], unassigned: false, mine: false } },
+  // Drafts are hidden from every other list; this view opens on "created by me" (the person's own work in progress).
+  { key: "drafts", label: "Drafts", patch: { status: ["DRAFT"], unassigned: false, mine: true } },
 ];
+
+/** The Drafts view is on: draft-only layout, "Created by" switch, no scheduling columns. */
+export const isDraftsView = (f: Pick<JobListFilters, "status">): boolean => f.status.length === 1 && f.status[0] === "DRAFT";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const isStatus = (v: string): v is JobStatus => (JOB_STATUSES as readonly string[]).includes(v);
@@ -90,6 +100,7 @@ export function parseJobFilters(input: string | URLSearchParams): JobListFilters
     status,
     teamId: text("team"),
     unassigned: sp.get("unassigned") === "true" || sp.get("unassigned") === "1",
+    mine: sp.get("mine") === "true" || sp.get("mine") === "1",
     from: date("from"),
     to: date("to"),
     q: text("q"),
@@ -107,6 +118,7 @@ export function serializeJobFilters(f: JobListFilters): string {
   for (const s of f.status) sp.append("status", s);
   if (f.teamId) sp.set("team", f.teamId);
   if (f.unassigned) sp.set("unassigned", "true");
+  if (f.mine) sp.set("mine", "true");
   if (f.from) sp.set("from", f.from);
   if (f.to) sp.set("to", f.to);
   if (f.q) sp.set("q", f.q);
@@ -122,7 +134,7 @@ export function serializeJobFilters(f: JobListFilters): string {
 export function withFilterChange(f: JobListFilters, patch: Partial<JobListFilters>): JobListFilters {
   const next = { ...f, ...patch };
   const touchesPage = "page" in patch;
-  const filterChanged = (["status", "teamId", "unassigned", "from", "to", "q", "priority", "sort", "dir"] as const).some(
+  const filterChanged = (["status", "teamId", "unassigned", "mine", "from", "to", "q", "priority", "sort", "dir"] as const).some(
     (k) => JSON.stringify(f[k]) !== JSON.stringify(next[k])
   );
   if (filterChanged) return { ...next, page: 1, cursor: undefined };
@@ -156,6 +168,7 @@ export function toApiFilters(f: JobListFilters, pageSize: number = PAGE_SIZE): J
     ...(f.status.length ? { status: f.status } : {}),
     ...(f.teamId ? { teamId: f.teamId } : {}),
     ...(f.unassigned ? { unassigned: true } : {}),
+    ...(f.mine ? { mine: true } : {}),
     ...(f.from ? { from: f.from } : {}),
     ...(f.to ? { to: f.to } : {}),
     ...(f.q ? { q: f.q } : {}),

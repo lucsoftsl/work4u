@@ -25,6 +25,8 @@ import { deleteDraft, readDraft, saveDraft } from "@/b2b/offline/store";
 import { completionLabel, missingForCompletion, techErrorMessage, techPlan } from "@/b2b/lib/tech-actions";
 import { formatClock, formatWindow } from "@/b2b/lib/tz-format";
 import { useTranslation } from "@/lib/i18n";
+import { setTitleState } from "@/b2b/lib/title-store";
+import { plural } from "@/b2b/lib/plural";
 
 // Loaded only on the completion step, so the pad library isn't part of the Today screen.
 const SignaturePad = dynamic(() => import("@/b2b/components/tech/SignaturePad"), { ssr: false, loading: () => <div className="h-40 animate-pulse rounded bg-ops-border motion-reduce:animate-none" /> });
@@ -33,7 +35,7 @@ const MIN_REASON = 3;
 const DRAFT_SAVE_MS = 500;
 
 function JobScreen({ jobId }: { jobId: string }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { orgId, me } = useOrg();
   const tz = me?.org.timezone ?? "UTC";
   const { items, online, submitAction, submitChecklist, submitPause, submitResumeWork, submitPhoto, queueSignature } = useOffline();
@@ -72,6 +74,8 @@ function JobScreen({ jobId }: { jobId: string }) {
 
   const view = useMemo(() => (query.data ? applyPending(query.data, items) : null), [query.data, items]);
   const onPad = useCallback((drawn: boolean) => setSignatureDrawn(drawn), []);
+  const jobRefForTitle = view?.job.reference;
+  useEffect(() => setTitleState({ jobRef: jobRefForTitle }), [jobRefForTitle]);
 
   if (query.isPending) {
     return <div role="status" aria-busy="true" className="space-y-3"><span className="sr-only">{t("b2b.tech.job.loading", "Loading job")}</span><div className="h-10 animate-pulse rounded bg-ops-border motion-reduce:animate-none" /><div className="h-64 animate-pulse rounded bg-ops-border motion-reduce:animate-none" /></div>;
@@ -150,7 +154,7 @@ function JobScreen({ jobId }: { jobId: string }) {
       <Link href={`/tech/${orgId}/today`} className="inline-flex min-h-[44px] items-center gap-1 font-bold text-ops-accent md:hidden"><ArrowLeft className="h-4 w-4" aria-hidden="true" /> {t("b2b.tech.tab.today", "Today")}</Link>
 
       {query.data.cachedAt ? (
-        <p role="status" className="rounded border border-sig-orange-ink/40 bg-sig-orange-tint p-2 text-sm font-bold text-sig-orange-ink">{t("b2b.tech.job.savedCopy", "Saved copy from {time}. Changes will be sent when you're online.").replace("{time}", formatClock(query.data.cachedAt, tz))}</p>
+        <p role="status" className="rounded border border-sig-orange-ink/40 bg-sig-orange-tint p-2 text-sm font-bold text-sig-orange-ink">{t("b2b.tech.job.savedCopy", "Saved copy from {time}. Changes will be sent when you're online.").replace("{time}", formatClock(query.data.cachedAt, tz, locale))}</p>
       ) : null}
       {held.length > 0 ? (
         <section role="alert" className="rounded border-2 border-sig-orange-ink bg-sig-orange-tint p-3 text-sig-orange-ink">
@@ -167,7 +171,7 @@ function JobScreen({ jobId }: { jobId: string }) {
           <StatusPill status={job.status} />
           <PausedChip time={job.time} />
           {view.unconfirmed || view.pendingCount > 0 ? <span className="inline-flex items-center gap-1 text-sm font-bold text-sig-orange-ink"><CloudOff className="h-4 w-4" aria-hidden="true" /> {t("b2b.tech.job.savedOnPhone", "Saved on phone · {n} waiting").replace("{n}", String(view.pendingCount))}</span> : null}
-          <span className="font-mono text-sm font-bold text-ops-accent">{formatWindow(job.scheduledStart, job.scheduledEnd, tz)}</span>
+          <span className="font-mono text-sm font-bold text-ops-accent">{formatWindow(job.scheduledStart, job.scheduledEnd, tz, { t, locale })}</span>
         </div>
         {job.time && job.time.state !== "NOT_STARTED" ? <div className="mt-2"><TimerChip time={job.time} offline={view.pendingCount > 0} estimateMin={job.estimatedDurationMin} /></div> : null}
         {job.status === "BLOCKED" && job.statusReason ? <p className="mt-2 text-sig-vermilion-ink">{t("b2b.tech.job.blockedReason", "Blocked: {reason}").replace("{reason}", job.statusReason)}</p> : null}
@@ -214,7 +218,7 @@ function JobScreen({ jobId }: { jobId: string }) {
           <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded border border-ops-border-strong font-bold disabled:opacity-45">
             <Camera className="h-5 w-5" aria-hidden="true" /> {t("b2b.tech.job.addPhoto", "Add photo")}
           </button>
-          <p className="text-sm text-ops-ink-muted">{t("b2b.tech.job.photoCount", "{n} photo(s) on this job").replace("{n}", String((job.photoKeys?.length ?? 0) + view.pendingPhotos))}{view.pendingPhotos > 0 ? t("b2b.tech.job.photosWaiting", " ({n} waiting to upload)").replace("{n}", String(view.pendingPhotos)) : ""}</p>
+          <p className="text-sm text-ops-ink-muted">{plural(t, locale, "b2b.tech.job.photoCount", { one: "{n} photo on this job", other: "{n} photos on this job" }, (job.photoKeys?.length ?? 0) + view.pendingPhotos)}{view.pendingPhotos > 0 ? t("b2b.tech.job.photosWaiting", " ({n} waiting to upload)").replace("{n}", String(view.pendingPhotos)) : ""}</p>
           <label className="block font-bold">{t("b2b.tech.job.notes", "Notes")}
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-1 w-full rounded border border-ops-border-strong p-2 font-normal" />
           </label>

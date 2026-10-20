@@ -1,3 +1,4 @@
+import type { Translate } from "./plural";
 import type { Conflict, ConflictCheck, DispatchBoard, Job, JobStatus } from "@/b2b/api/types";
 
 // Pure dispatch-board logic: drop decisions, optimistic board updates, lane badges, error messages.
@@ -95,12 +96,12 @@ export function teamHours(jobs: readonly Job[], capacity = DEFAULT_CAPACITY_HOUR
 export type LaneBadgeTone = "fits" | "conflict" | "skill" | "checking";
 export interface LaneBadge { tone: LaneBadgeTone; text: string }
 
-export function laneBadge(check: ConflictCheck | null | undefined): LaneBadge {
-  if (!check) return { tone: "checking", text: "Checking…" };
-  if (check.conflicts.length === 0) return { tone: "fits", text: "Fits" };
+export function laneBadge(check: ConflictCheck | null | undefined, t: Translate = (_k, f) => f): LaneBadge {
+  if (!check) return { tone: "checking", text: t("b2b.dispatch.badge.checking", "Checking…") };
+  if (check.conflicts.length === 0) return { tone: "fits", text: t("b2b.dispatch.badge.fits", "Fits") };
   const nonSkill = check.conflicts.find((c) => c.type !== "SKILL_MISSING");
-  if (nonSkill) return { tone: "conflict", text: `Conflict: ${nonSkill.message}` };
-  return { tone: "skill", text: "Missing skill" };
+  if (nonSkill) return { tone: "conflict", text: t("b2b.dispatch.badge.conflict", "Conflict: {message}").replace("{message}", nonSkill.message) };
+  return { tone: "skill", text: t("b2b.dispatch.badge.skill", "Missing skill") };
 }
 
 export const checkCacheKey = (jobId: string, laneId: string) => `${jobId}:${laneId}`;
@@ -117,24 +118,24 @@ export interface AssignErrorInfo {
 
 interface ErrLike { code?: string; status?: number; conflicts?: Conflict[] }
 
-export function mapAssignError(err: unknown): AssignErrorInfo {
+export function mapAssignError(err: unknown, t: Translate = (_k, f) => f): AssignErrorInfo {
   const e = (err ?? {}) as ErrLike;
   switch (e.code) {
     case "ASSIGNMENT_CONFLICT":
-      return { message: "Someone changed this team's schedule. Review the new conflicts.", conflicts: e.conflicts ?? [] };
+      return { message: t("b2b.dispatch.err.conflict", "Someone changed this team's schedule. Review the new conflicts."), conflicts: e.conflicts ?? [] };
     case "SCHEDULE_REQUIRED":
-      return { message: "Set a time window first", linkToJob: true };
+      return { message: t("b2b.dispatch.err.schedule", "Set a time window first"), linkToJob: true };
     case "ASSIGNMENT_LOCKED":
-      return { message: "This job has already started; its team can't be changed" };
+      return { message: t("b2b.dispatch.err.locked", "This job has already started; its team can't be changed") };
     case "OVERRIDE_FORBIDDEN":
-      return { message: "You don't have permission to override scheduling conflicts." };
+      return { message: t("b2b.dispatch.err.override", "You don't have permission to override scheduling conflicts.") };
     case "FORBIDDEN":
-      return { message: "You don't have permission to assign jobs." };
+      return { message: t("b2b.dispatch.err.forbidden", "You don't have permission to assign jobs.") };
     case "NETWORK":
-      return { message: "Can't reach the server. Check your connection and try again.", retryable: true };
+      return { message: t("b2b.dispatch.err.network", "Can't reach the server. Check your connection and try again."), retryable: true };
     default:
-      if (e.status === 403) return { message: "You don't have permission to do that." };
-      return { message: "The job could not be assigned. Please try again.", retryable: true };
+      if (e.status === 403) return { message: t("b2b.dispatch.err.denied", "You don't have permission to do that.") };
+      return { message: t("b2b.dispatch.err.generic", "The job could not be assigned. Please try again."), retryable: true };
   }
 }
 

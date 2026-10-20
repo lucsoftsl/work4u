@@ -32,6 +32,15 @@ describe("company profile form", () => {
     expect(isDirty(f, { ...f, legalName: "" })).toBe(true);
     expect(isDirty(f, { ...f, name: "Costa Clima " })).toBe(false); // trailing spaces are not a change
   });
+  it("carries the company currency (upper case); an older API without one leaves it blank and never sends it", () => {
+    expect(settingsToForm({ ...base, currency: "EUR" }).currency).toBe("EUR");
+    const f = settingsToForm(base);
+    expect(f.currency).toBe("");
+    expect(profilePatch(f, { ...f })).toEqual({});
+    const g = settingsToForm({ ...base, currency: "RON" });
+    expect(profilePatch(g, { ...g, currency: "eur" })).toEqual({ currency: "EUR" });
+    expect(profilePatch(g, { ...g, currency: "" })).toEqual({ currency: "" }); // a required value is never turned into null
+  });
   it("refuses a bad logo before uploading: JPEG/PNG/WebP up to 2 MB, no SVG", () => {
     expect(logoProblem({ type: "image/png", size: 1000 })).toBeNull();
     expect(logoProblem({ type: "image/svg+xml", size: 10 })).toBe("type");

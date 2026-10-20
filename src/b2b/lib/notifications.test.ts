@@ -29,3 +29,27 @@ describe("notifications helpers", () => {
     expect(bellLabel(0)).toBe("Notifications");
   });
 });
+
+describe("notifications in the user's language", () => {
+  const dict: Record<string, string> = {
+    "b2b.notifications.kind.job.sent_back": "Returnată",
+    "b2b.notifications.bell": "Notificări",
+    "b2b.notifications.bellUnread": "Notificări, {n} necitite",
+  };
+  const t = (k: string, f: string) => dict[k] ?? f;
+  it("names the kind through a key", () => {
+    expect(notificationKind("job.sent_back", t).label).toBe("Returnată");
+    expect(notificationKind("weird.kind", t).label).toBe("Update");
+  });
+  it("labels the bell through keys", () => {
+    expect(bellLabel(0, t)).toBe("Notificări");
+    expect(bellLabel(3, t)).toBe("Notificări, 3 necitite");
+  });
+  it("writes relative time with Intl outside English and keeps the short English forms", () => {
+    const now = Date.parse("2026-10-12T12:00:00Z");
+    expect(relativeTime("2026-10-12T11:55:00Z", now, "en")).toBe("5 min ago");
+    expect(relativeTime("2026-10-12T11:55:00Z", now, "ro")).toMatch(/5/);
+    expect(relativeTime("2026-10-12T11:55:00Z", now, "ro")).not.toMatch(/ago/);
+    expect(relativeTime("2026-10-12T09:00:00Z", now, "es")).toMatch(/3/);
+  });
+});

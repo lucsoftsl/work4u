@@ -1,3 +1,5 @@
+import { isValidEmail } from "@/b2b/lib/email";
+import { personNameProblem } from "@/b2b/lib/person";
 import type { Invitation, LoginStatus, Member } from "../api";
 
 export type MemberBadge = "active" | "invited" | "planning" | "suspended";
@@ -51,8 +53,8 @@ export function buildInviteLink(origin: string, token: string): string {
   return `${origin.replace(/\/+$/, "")}/b2b/invite/${encodeURIComponent(token)}`;
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-export const isEmail = (v: string): boolean => EMAIL_RE.test(v.trim());
+/** Same rule as the API's member email check, so an invite or a save is never refused for a format the form accepted. */
+export const isEmail = (v: string): boolean => isValidEmail(v);
 
 /** Roles the viewer may pick: Administrator only for Administrators; falls back to the current role when the list is unavailable. */
 export function selectableRoles<R extends { id: string; template: string }>(roles: readonly R[] | undefined, viewerTemplate: string | undefined, current?: R): R[] {
@@ -66,7 +68,7 @@ export function selectableRoles<R extends { id: string; template: string }>(role
 export function buildMemberPatch(form: MemberForm, original: Member): Record<string, unknown> {
   const patch: Record<string, unknown> = {};
   const nn = (v: string) => (v.trim() === "" ? null : v.trim());
-  if (form.displayName.trim() !== original.displayName) patch.displayName = form.displayName.trim();
+  if (form.displayName.trim() !== (original.displayName ?? "")) patch.displayName = form.displayName.trim();
   if (nn(form.workEmail) !== (original.workEmail ?? null)) patch.workEmail = nn(form.workEmail);
   if (nn(form.phone) !== (original.phone ?? null)) patch.phone = nn(form.phone);
   if (nn(form.externalId) !== (original.externalId ?? null)) patch.externalId = nn(form.externalId);
@@ -98,4 +100,29 @@ export function canManageRow(member: Pick<Member, "canManage" | "role">, viewerC
   if (!viewerCanManage) return false;
   if (typeof member.canManage === "boolean") return member.canManage;
   return member.role.template !== "ADMIN" || viewerTemplate === "ADMIN";
+}
+
+/** A name a manager types for a person: required, and never an email address (the API refuses both with 400 fields.displayName). */
+export const memberNameProblem = (name: string): "required" | "email" | null => personNameProblem(name);
+
+/** Drawer fields in display order (focus goes to the first invalid one). */
+export const MEMBER_FIELDS = ["displayName", "phone", "workEmail", "roleId", "memberType", "externalId"] as const;
+export type MemberField = (typeof MEMBER_FIELDS)[number];
+/** API keys that belong to a drawer field under another name (DUPLICATE_MEMBER says "email"; roleTemplate is the role). */
+export const MEMBER_FIELD_ALIASES: Readonly<Record<string, MemberField>> = { email: "workEmail", external_id: "externalId", roleTemplate: "roleId" };
+
+// The API's members rule: E.164 after removing spaces, dots, dashes and brackets (no national numbers, unlike clients).
+const MEMBER_PHONE = /^\+[1-9]\d{7,14}$/;
+export const isMemberPhone = (v: string): boolean => MEMBER_PHONE.test(v.trim().replace(/[\s().-]/g, ""));
+
+export type MemberProblem = "required" | "notEmail" | "invalid";
+/** Client-side checks that mirror the API's createMember/updateMember schema; empty optional fields are fine. */
+export function memberFormProblems(form: MemberForm): Partial<Record<MemberField, MemberProblem>> {
+  const out: Partial<Record<MemberField, MemberProblem>> = {};
+  const name = memberNameProblem(form.displayName);
+  if (name) out.displayName = name === "email" ? "notEmail" : "required";
+  if (form.phone.trim() && !isMemberPhone(form.phone)) out.phone = "invalid";
+  if (form.workEmail.trim() && !isValidEmail(form.workEmail)) out.workEmail = "invalid";
+  if (form.externalId.trim().length > 100) out.externalId = "invalid";
+  return out;
 }

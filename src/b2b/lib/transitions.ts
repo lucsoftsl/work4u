@@ -5,6 +5,8 @@ import { can, type PermissionKey, type Relation, type Viewer } from "./permissio
 // moves the server would accept. The server stays the authority: it answers 409 INVALID_TRANSITION otherwise.
 
 export const GRAPH: Record<JobStatus, readonly JobStatus[]> = {
+  // DRAFT -> NEW only through POST /promote (never /transitions); a draft is discarded with DRAFT -> CANCELLED.
+  DRAFT: ["CANCELLED"],
   NEW: ["PLANNING", "CANCELLED"],
   PLANNING: ["WAITING_FOR_PARTS", "READY_TO_SCHEDULE", "CANCELLED"],
   WAITING_FOR_PARTS: ["READY_TO_SCHEDULE", "CANCELLED"],
@@ -92,10 +94,10 @@ export function allowedTransitions(job: JobForTransitions, viewer: Viewer): Tran
 }
 
 /** Why a move is not offered (for a disabled state or tooltip), e.g. "SCHEDULED needs a time window and an assignee". */
-export function blockedReason(job: JobForTransitions, to: JobStatus): string | null {
+export function blockedReason(job: JobForTransitions, to: JobStatus, t: (key: string, fallback: string) => string = (_k, f) => f): string | null {
   if (!GRAPH[job.status].includes(to) && !(job.status === "BLOCKED" && job.blockedFromStatus === to)) return null;
-  if (to === "SCHEDULED" && (!job.scheduledStart || !job.scheduledEnd)) return "Set a time window first";
-  if (to === "SCHEDULED" && !(job.assignmentCount ?? 0)) return "Assign a team or technician first";
-  if (to === "DISPATCHED" && !(job.assignmentCount ?? 0)) return "Assign a team or technician first";
+  if (to === "SCHEDULED" && (!job.scheduledStart || !job.scheduledEnd)) return t("b2b.job.block.window", "Set a time window first");
+  if (to === "SCHEDULED" && !(job.assignmentCount ?? 0)) return t("b2b.job.block.assign", "Assign a team or technician first");
+  if (to === "DISPATCHED" && !(job.assignmentCount ?? 0)) return t("b2b.job.block.assign", "Assign a team or technician first");
   return null;
 }

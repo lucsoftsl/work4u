@@ -42,7 +42,7 @@ export function SkillsPanel({ orgId, skills, canManage }: { orgId: string; skill
         </ul>
       )}
       {dialog && (
-        <Modal open title={dialog.kind === "create" ? "New skill" : dialog.kind === "rename" ? `Rename ${dialog.skill.name}` : `Delete ${dialog.skill.name}?`} onClose={close}>
+        <Modal open title={dialog.kind === "create" ? t("b2b.skills.new", "New skill") : dialog.kind === "rename" ? t("b2b.skills.rename", "Rename {name}").replace("{name}", dialog.skill.name) : t("b2b.skills.deleteAsk", "Delete {name}?").replace("{name}", dialog.skill.name)} onClose={close}>
           {dialog.kind === "delete" ? <DeleteSkill orgId={orgId} skill={dialog.skill} onDone={close} /> : <SkillForm orgId={orgId} skill={dialog.kind === "rename" ? dialog.skill : undefined} onDone={close} />}
         </Modal>
       )}
@@ -55,17 +55,17 @@ function SkillForm({ orgId, skill, onDone }: { orgId: string; skill?: Skill; onD
   const qc = useQueryClient();
   const [name, setName] = useState(skill?.name ?? "");
   const [touched, setTouched] = useState(false);
-  const error = touched ? validateName(name, 80, "Skill name") : undefined;
+  const error = touched ? validateName(name, 80, t("b2b.catalog.label.skill", "Skill name"), t) : undefined;
   const save = useMutation({
     mutationFn: () => (skill ? renameSkill(orgId, skill.id, name.trim()) : createSkill(orgId, name.trim())),
     onSuccess: async () => { await qc.invalidateQueries({ queryKey: ["org", orgId, "skills"] }); onDone(); },
   });
   return (
-    <form noValidate className="space-y-4" onSubmit={(e) => { e.preventDefault(); setTouched(true); if (!validateName(name, 80, "Skill name")) save.mutate(); }}>
+    <form noValidate className="space-y-4" onSubmit={(e) => { e.preventDefault(); setTouched(true); if (!validateName(name, 80, t("b2b.catalog.label.skill", "Skill name"), t)) save.mutate(); }}>
       <Field label={t("b2b.skills.name", "Skill name")} error={error}>
         {(p) => <input id={p.id} aria-describedby={p.describedBy} aria-invalid={p.invalid} autoFocus value={name} maxLength={80} onChange={(e) => setName(e.target.value)} className={inputCls} />}
       </Field>
-      {save.isError && <ErrorAlert message={catalogErrorMessage(save.error, "skill")} />}
+      {save.isError && <ErrorAlert message={catalogErrorMessage(save.error, "skill", t)} />}
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onDone} className={btnSecondary}>{t("b2b.common.cancel", "Cancel")}</button>
         <button type="submit" disabled={save.isPending} className={btnPrimary}>{t("b2b.common.save", "Save")}</button>
@@ -84,7 +84,7 @@ function DeleteSkill({ orgId, skill, onDone }: { orgId: string; skill: Skill; on
   return (
     <div className="space-y-4">
       <p className="text-sm text-ops-ink">{t("b2b.skills.deleteBody", "This removes the skill from all technicians. You can't delete a skill that a job requires.")}</p>
-      {del.isError && <ErrorAlert message={catalogErrorMessage(del.error, "skill")} />}
+      {del.isError && <ErrorAlert message={catalogErrorMessage(del.error, "skill", t)} />}
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onDone} className={btnSecondary}>{t("b2b.common.cancel", "Cancel")}</button>
         <button type="button" disabled={del.isPending} onClick={() => del.mutate()} className={btnDanger}>{t("b2b.common.delete", "Delete")}</button>

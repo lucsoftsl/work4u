@@ -14,7 +14,7 @@ export const MAX_CONTACTS = 50;
 type Dlg = { kind: "form"; contact?: ClientContact } | { kind: "delete"; contact: ClientContact } | null;
 
 export function ContactsCard({ orgId, clientId, contacts, canManage, offline }: { orgId: string; clientId: string; contacts: ClientContact[]; canManage: boolean; offline: boolean }) {
-  const { tr } = useTr();
+  const { tr, trn } = useTr();
   const qc = useQueryClient();
   const [dlg, setDlg] = useState<Dlg>(null);
   const del = useMutation({
@@ -28,7 +28,7 @@ export function ContactsCard({ orgId, clientId, contacts, canManage, offline }: 
         <h2 id="contacts-h" className="text-lg font-bold text-ops-ink">{tr("b2b.clients.contacts", "Contacts")}</h2>
         {canManage && <button type="button" disabled={offline || atMax} onClick={() => setDlg({ kind: "form" })} className={btnSecondary}><Plus className="h-4 w-4" aria-hidden="true" />{tr("b2b.clients.contact.add", "Add contact")}</button>}
       </div>
-      {atMax && <p className="mt-2 text-sm text-ops-ink-muted">{tr("b2b.clients.contact.max", "You can add up to {n} contacts.", { n: MAX_CONTACTS })}</p>}
+      {atMax && <p className="mt-2 text-sm text-ops-ink-muted">{trn("b2b.clients.contact.max", { one: "You can add up to {n} contact.", other: "You can add up to {n} contacts." }, MAX_CONTACTS)}</p>}
       {contacts.length === 0 ? <p className="mt-3 text-sm text-ops-ink-muted">{tr("b2b.clients.contact.empty", "No contacts yet.")}</p> : (
         <ul className="mt-3 divide-y divide-ops-border">
           {contacts.map((c) => (

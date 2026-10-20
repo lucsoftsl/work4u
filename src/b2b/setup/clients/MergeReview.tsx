@@ -8,14 +8,14 @@ import { useTr } from "@/b2b/setup/i18n";
 import { getClientPage, sk, type DuplicateGroup } from "@/b2b/setup/api";
 import { useOnlineStatus } from "@/b2b/setup/useOnlineStatus";
 import { ErrorAlert, btnPrimary, btnSecondary } from "@/b2b/components/catalog/ui";
-import { MAX_MERGE_SOURCES, canMergeGroup, maskPhone, sourceIdsFor } from "./merge";
+import { MAX_MERGE_SOURCES, canMergeGroup, maskEmail, maskPhone, sourceIdsFor } from "./merge";
 import { shortDate } from "./parts";
 import { useMerge } from "./useMerge";
 
 interface Props { orgId: string; group: DuplicateGroup; listHref: string; onMerged: (targetId: string) => void }
 
 export function MergeReview({ orgId, group, listHref, onMerged }: Props) {
-  const { tr } = useTr();
+  const { tr, trn } = useTr();
   const online = useOnlineStatus();
   const [keepId, setKeepId] = useState(group.customers[0].id);
   const { mutation, errorMessage } = useMerge(orgId, onMerged);
@@ -31,8 +31,8 @@ export function MergeReview({ orgId, group, listHref, onMerged }: Props) {
     const d = details[i]?.data;
     const isKeep = c.id === keep.id;
     const rows: Array<[string, string]> = [
-      [tr("b2b.customers.email", "Email"), c.email ?? dash],
-      [tr("b2b.customers.phone", "Phone"), maskPhone(c.phone) ?? dash],
+      [tr("b2b.customers.email", "Email"), maskEmail(d?.email ?? c.email) ?? dash], // full value from GET /customers/:id, shown masked
+      [tr("b2b.customers.phone", "Phone"), maskPhone(d?.phone ?? c.phone) ?? dash],
       [tr("b2b.customers.billing", "Billing address"), d ? d.billingAddress ?? dash : "…"],
       [tr("b2b.clients.col.added", "Added"), d ? shortDate(d.createdAt) || dash : "…"],
     ];
@@ -76,14 +76,14 @@ export function MergeReview({ orgId, group, listHref, onMerged }: Props) {
           <li>{tr("b2b.clients.merge.canUndo", "You can undo this merge right after it is done.")}</li>
         </ul>
       </section>
-      {tooMany && <p role="alert" className="text-sm font-bold text-sig-vermilion-ink">{tr("b2b.clients.merge.tooMany", "You can merge up to {n} clients at once.", { n: MAX_MERGE_SOURCES })}</p>}
+      {tooMany && <p role="alert" className="text-sm font-bold text-sig-vermilion-ink">{trn("b2b.clients.merge.tooMany", { one: "You can merge up to {n} client at once.", other: "You can merge up to {n} clients at once." }, MAX_MERGE_SOURCES)}</p>}
       {errorMessage && <ErrorAlert message={errorMessage} />}
       {!online && <p role="status" className="text-sm font-bold text-ops-ink">{tr("b2b.clients.offline", "You're offline. Reconnect to save changes.")}</p>}
       <div className="sticky bottom-0 flex flex-wrap justify-end gap-2 border-t border-ops-border bg-ops-canvas py-3">
         <Link href={listHref} className={btnSecondary}>{tr("b2b.common.cancel", "Cancel")}</Link>
         <button type="button" disabled={!online || mutation.isPending || !canMergeGroup(group, keep.id)} className={btnPrimary}
           onClick={() => mutation.mutate({ targetId: keep.id, sourceIds: sources, targetName: keep.name })}>
-          {mutation.isPending ? tr("b2b.clients.merge.merging", "Merging…") : tr("b2b.clients.merge.action", "Merge {n} clients", { n: group.customers.length })}
+          {mutation.isPending ? tr("b2b.clients.merge.merging", "Merging…") : trn("b2b.clients.merge.action", { one: "Merge {n} client", other: "Merge {n} clients" }, group.customers.length)}
         </button>
       </div>
     </div>

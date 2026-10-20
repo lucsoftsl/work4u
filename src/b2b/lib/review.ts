@@ -1,15 +1,16 @@
-import { formatClock } from "./tz-format";
+import { dateLocale, formatClock } from "./tz-format";
+import { fmt, type Translate } from "./plural";
 import { isValidReason } from "./workspace";
 import { parsePage } from "./paging";
 
 export const MIN_SEND_BACK_REASON = 3;
 
 /** "12 min", "3 h 5 min", "2 d 4 h" — time spent waiting for review. */
-export function formatWaiting(sinceIso: string, now: number = Date.now()): string {
+export function formatWaiting(sinceIso: string, now: number = Date.now(), t?: Translate): string {
   const ms = now - new Date(sinceIso).getTime();
   if (!Number.isFinite(ms)) return "—";
   const min = Math.max(0, Math.floor(ms / 60_000));
-  if (min < 1) return "just now";
+  if (min < 1) return t ? t("b2b.review.justNow", "just now") : "just now";
   if (min < 60) return `${min} min`;
   const h = Math.floor(min / 60);
   if (h < 24) return min % 60 ? `${h} h ${min % 60} min` : `${h} h`;
@@ -18,19 +19,19 @@ export function formatWaiting(sinceIso: string, now: number = Date.now()): strin
 }
 
 /** "12 Oct, 14:05" in the org timezone. */
-export function formatAbsolute(iso: string, tz: string): string {
+export function formatAbsolute(iso: string, tz: string, locale = "en"): string {
   let day: string;
   try {
-    day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: tz }).format(new Date(iso));
+    day = new Intl.DateTimeFormat(dateLocale(locale), { day: "numeric", month: "short", timeZone: tz }).format(new Date(iso));
   } catch {
-    day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(iso));
+    day = new Intl.DateTimeFormat(dateLocale(locale), { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(iso));
   }
-  return `${day}, ${formatClock(iso, tz)}`;
+  return `${day}, ${formatClock(iso, tz, locale)}`;
 }
 
-export function validateSendBackReason(value: string): { ok: boolean; message: string | null } {
+export function validateSendBackReason(value: string, t: Translate = (_k, f) => f): { ok: boolean; message: string | null } {
   if (isValidReason(value)) return { ok: true, message: null };
-  return { ok: false, message: `Tell the team what to fix (at least ${MIN_SEND_BACK_REASON} characters).` };
+  return { ok: false, message: fmt(t("b2b.review.err.reason", "Tell the team what to fix (at least {n} characters)."), { n: MIN_SEND_BACK_REASON }) };
 }
 
 export interface Removal<T> { next: T[]; removed: T | null; index: number }
@@ -62,17 +63,17 @@ export function reviewActionVisibility(can: (p: string) => boolean): { approve: 
 
 export type ReviewErrorKind = "stale" | "forbidden" | "precondition" | "generic";
 
-export function classifyReviewError(e: { status?: number; code?: string; body?: Record<string, unknown> }): { kind: ReviewErrorKind; message: string } {
-  if (e.code === "EVIDENCE_UNAVAILABLE") return { kind: "generic", message: "Evidence can't be checked right now; try again later or ask an administrator." };
+export function classifyReviewError(e: { status?: number; code?: string; body?: Record<string, unknown> }, t: Translate = (_k, f) => f): { kind: ReviewErrorKind; message: string } {
+  if (e.code === "EVIDENCE_UNAVAILABLE") return { kind: "generic", message: t("b2b.review.err.unavailable", "Evidence can't be checked right now; try again later or ask an administrator.") };
   if (e.code === "EVIDENCE_REQUIRED") {
     const details = (e.body?.details ?? {}) as { missing?: unknown };
     const missing = Array.isArray(details.missing) ? details.missing.map(String) : [];
-    return { kind: "generic", message: `Required evidence is missing${missing.length ? `: ${missing.join(", ")}` : ""}. Send the job back so the team can add it.` };
+    return { kind: "generic", message: missing.length ? fmt(t("b2b.review.err.missingItems", "Required evidence is missing: {items}. Send the job back so the team can add it."), { items: missing.join(", ") }) : t("b2b.review.err.missing", "Required evidence is missing. Send the job back so the team can add it.") };
   }
-  if (e.code === "VERSION_CONFLICT" || e.status === 409) return { kind: "stale", message: "Someone else changed this job. Refresh the queue to see its current state." };
-  if (e.status === 403 || e.code === "FORBIDDEN") return { kind: "forbidden", message: "You don't have permission to review this job." };
-  if (e.status === 428 || e.code === "PRECONDITION_REQUIRED") return { kind: "precondition", message: "Couldn't save safely. Refresh the queue and try again." };
-  return { kind: "generic", message: "Something went wrong. Please try again." };
+  if (e.code === "VERSION_CONFLICT" || e.status === 409) return { kind: "stale", message: t("b2b.review.err.stale", "Someone else changed this job. Refresh the queue to see its current state.") };
+  if (e.status === 403 || e.code === "FORBIDDEN") return { kind: "forbidden", message: t("b2b.review.err.forbidden", "You don't have permission to review this job.") };
+  if (e.status === 428 || e.code === "PRECONDITION_REQUIRED") return { kind: "precondition", message: t("b2b.review.err.precondition", "Couldn't save safely. Refresh the queue and try again.") };
+  return { kind: "generic", message: t("b2b.review.err.generic", "Something went wrong. Please try again.") };
 }
 
 // ---- order (GET /jobs/review-queue?dir=): asc = oldest first (default), desc = newest first

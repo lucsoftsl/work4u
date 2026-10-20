@@ -1,5 +1,6 @@
 import type { Job, JobStatus, TechAction } from "@/b2b/api/types";
 import { B2bError } from "@/b2b/api/client";
+import { fallback } from "./plural";
 
 /** Translate function shape: (key, English fallback). Default returns the fallback. */
 export type Translate = (key: string, fallback: string) => string;
@@ -67,10 +68,10 @@ export function missingForCompletion(job: Pick<Job, "requirements" | "checklist"
 }
 
 export const COMPLETION_LABEL: Record<CompletionItem, string> = {
-  checklist: "Finish the checklist",
-  notes: "Add completion notes",
-  photo: "Add at least one photo",
-  signature: "Get the customer's name and signature",
+  checklist: fallback("Finish the checklist"),
+  notes: fallback("Add completion notes"),
+  photo: fallback("Add at least one photo"),
+  signature: fallback("Get the customer's name and signature"),
 };
 
 /** Translated completion hint; falls back to the English COMPLETION_LABEL. */

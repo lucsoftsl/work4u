@@ -13,7 +13,7 @@ export default function SettingsIndex() {
   const target = firstSettingsPage(orgId, can);
   useEffect(() => { router.replace(target); }, [router, target]);
   return (
-    <RequirePermission anyOf={["org.manage", "member.view", "customer.view"]}>
+    <RequirePermission anyOf={["org.manage", "member.view", "customer.view", "jobType.manage"]}>
       <div role="status" aria-busy="true" className="p-6 text-ops-ink-muted">…</div>
     </RequirePermission>
   );

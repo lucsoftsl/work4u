@@ -1,7 +1,7 @@
 export interface Skill { id: string; name: string; memberIds: string[] }
 
 export interface OrgMemberRow {
-  id: string; displayName: string; workEmail?: string | null; memberType?: string; status?: string;
+  id: string; displayName: string | null; workEmail?: string | null; memberType?: string; status?: string;
   role?: { id: string; name: string; template?: string } | null;
 }
 

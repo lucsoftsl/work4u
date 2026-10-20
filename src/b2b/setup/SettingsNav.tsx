@@ -16,9 +16,10 @@ export function SettingsNav() {
     { href: `${base}/settings/profile`, label: tr("b2b.setup.nav.profile", "Company profile"), show: true, match: `${base}/settings/profile` },
     { href: `${base}/settings/team`, label: tr("b2b.setup.nav.team", "Team & employees"), show: can("member.view"), match: `${base}/settings/team` },
     { href: `${base}/customers`, label: tr("b2b.nav.customers", "Clients"), show: can("customer.view"), match: `${base}/customers` },
+    { href: `${base}/settings/job-types`, label: tr("b2b.jobTypes.title", "Job types"), show: can("jobType.manage"), match: `${base}/settings/job-types` },
   ].filter((i) => i.show);
   return (
-    <nav aria-label={tr("b2b.setup.nav.label", "Company setup")} className="-mx-4 overflow-x-auto px-4 lg:mx-0 lg:overflow-visible lg:px-0">
+    <nav aria-label={tr("b2b.setup.nav.label", "Company setup")} className="relative -mx-4 overflow-x-auto px-4 lg:mx-0 lg:overflow-visible lg:px-0">
       <ul className="flex gap-1 lg:flex-col">
         {items.map((i) => {
           const active = pathname === i.match || pathname.startsWith(`${i.match}/`);

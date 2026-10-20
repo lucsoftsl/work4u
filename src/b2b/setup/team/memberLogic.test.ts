@@ -96,3 +96,14 @@ describe("canManageRow", () => {
     expect(canManageRow({ ...tech, canManage: true }, false, "ADMIN")).toBe(false);
   });
 });
+
+import { memberNameProblem } from "./memberLogic";
+describe("memberNameProblem (d886968d: a manager can't save an email as a person's name)", () => {
+  it("blank and email-shaped names are refused; real names pass", () => {
+    expect(memberNameProblem("")).toBe("required");
+    expect(memberNameProblem("   ")).toBe("required");
+    expect(memberNameProblem("ana.pop@costa.es")).toBe("email");
+    expect(memberNameProblem("Ana <ana@costa.es>")).toBe("email");
+    expect(memberNameProblem(" Ana Pop ")).toBeNull();
+  });
+});

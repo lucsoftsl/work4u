@@ -27,3 +27,15 @@ describe("note rules", () => {
     expect(feed.map((f) => (f.kind === "note" ? f.note.id : f.item.type))).toEqual(["old", "new", "JOB_CREATED", "mid"]);
   });
 });
+
+
+import { noteAuthorLabel } from "./noteRules";
+describe("noteAuthorLabel (d886968d)", () => {
+  it("deleted author → 'Former team member'; nameless or email author → 'Team member'; real names as is", () => {
+    expect(noteAuthorLabel(null, "Team member", "Former team member")).toBe("Former team member");
+    expect(noteAuthorLabel({ name: null }, "Team member", "Former team member")).toBe("Team member");
+    expect(noteAuthorLabel({ name: "ana@x.es" }, "Team member", "Former team member")).toBe("Team member");
+    expect(noteAuthorLabel({ name: "Former team member" }, "Team member", "Former team member")).toBe("Former team member");
+    expect(noteAuthorLabel({ name: "Ana Pop" }, "Team member", "Former team member")).toBe("Ana Pop");
+  });
+});

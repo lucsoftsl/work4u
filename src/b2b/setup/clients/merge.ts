@@ -26,8 +26,8 @@ export const canMergeGroup = (group: Pick<DuplicateGroup, "customers">, keepId: 
   return group.customers.some((c) => c.id === keepId) && n >= 1 && n <= MAX_MERGE_SOURCES;
 };
 
-/** Stable URL id for a group (?group=): reason + key. */
-export const groupId = (g: Pick<DuplicateGroup, "reason" | "key">): string => `${g.reason}:${g.key}`;
+/** Stable id for a group (?group=, React keys): the API's opaque `id`; `reason:key` only for an older API without ids (keys are masked and not unique). */
+export const groupId = (g: Pick<DuplicateGroup, "id" | "reason" | "key">): string => g.id ?? `${g.reason}:${g.key}`;
 export const findGroup = (groups: readonly DuplicateGroup[], id: string | null | undefined): DuplicateGroup | undefined =>
   id ? groups.find((g) => groupId(g) === id) : undefined;
 
@@ -43,4 +43,13 @@ export function maskPhone(phone: string | null | undefined): string | null {
   if (v.length <= 4) return "•••";
   const prefix = v.startsWith("+") ? `${v.slice(0, 3)} ` : "";
   return `${prefix}••• ••• ${v.slice(-3)}`;
+}
+
+/** "a•••@example.com": enough to recognise a duplicate without showing the whole address. */
+export function maskEmail(email: string | null | undefined): string | null {
+  const v = (email ?? "").trim();
+  if (!v) return null;
+  const at = v.lastIndexOf("@");
+  if (at <= 0) return "•••";
+  return `${v[0]}•••${v.slice(at)}`;
 }

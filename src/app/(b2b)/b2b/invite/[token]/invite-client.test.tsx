@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { B2bError } from "@/b2b/api/client";
 import InviteClient from "./invite-client";
 
-const m = vi.hoisted(() => ({ user: null as null | { email: string }, replace: vi.fn(), signOut: vi.fn(async () => undefined), preview: vi.fn(), accept: vi.fn(), me: vi.fn() }));
+const m = vi.hoisted(() => ({ user: null as null | { email: string; displayName?: string | null }, replace: vi.fn(), signOut: vi.fn(async () => undefined), preview: vi.fn(), accept: vi.fn(), me: vi.fn() }));
 vi.mock("@/lib/i18n", () => ({ useTranslation: () => ({ t: (_k: string, f: string) => f }) }));
 vi.mock("next/link", () => ({ default: ({ href, children, ...r }: { href: string; children: React.ReactNode }) => <a href={href} {...r}>{children}</a> }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: m.replace }) }));
@@ -26,16 +26,16 @@ describe("B2B invite page", () => {
     expect(m.accept).not.toHaveBeenCalled(); // never accepts on its own
   });
   it("signed in: accepts on click, then opens the technician app for a technician role", async () => {
-    m.user = { email: "ana@acme.test" };
+    m.user = { email: "ana@acme.test", displayName: "Ana Pop" };
     m.accept.mockResolvedValue({ orgId: "org1", memberId: "m1" });
     m.me.mockResolvedValue({ role: { template: "TECHNICIAN" } });
     render(<InviteClient token={TOKEN} />);
     fireEvent.click(await screen.findByRole("button", { name: "Accept invitation" }));
     await waitFor(() => expect(m.replace).toHaveBeenCalledWith("/tech/org1/today"));
-    expect(m.accept).toHaveBeenCalledWith(TOKEN);
+    expect(m.accept).toHaveBeenCalledWith(TOKEN, { displayName: "Ana Pop" }); // prefilled from the account name
   });
   it("other roles go to the ops console, and a failed profile read still gets them in", async () => {
-    m.user = { email: "ana@acme.test" };
+    m.user = { email: "ana@acme.test", displayName: "Ana Pop" };
     m.accept.mockResolvedValue({ orgId: "org1", memberId: "m1" });
     m.me.mockRejectedValue(new Error("x"));
     render(<InviteClient token={TOKEN} />);
@@ -53,7 +53,7 @@ describe("B2B invite page", () => {
     });
   }
   it("email mismatch offers sign-out-and-switch that returns to this invitation", async () => {
-    m.user = { email: "other@x.test" };
+    m.user = { email: "other@x.test", displayName: "Other Person" };
     m.accept.mockRejectedValue(new B2bError(403, "INVITE_EMAIL_MISMATCH", "x"));
     render(<InviteClient token={TOKEN} />);
     fireEvent.click(await screen.findByRole("button", { name: "Accept invitation" }));
@@ -68,5 +68,54 @@ describe("B2B invite page", () => {
     render(<InviteClient token={TOKEN} />);
     fireEvent.click(await screen.findByRole("button", { name: "Try again" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Join Acme HVAC" })).toBeTruthy();
+  });
+  it("a new member must give a name (labelled, required, never an email) before accepting", async () => {
+    m.user = { email: "ana@acme.test", displayName: null };
+    m.accept.mockResolvedValue({ orgId: "org1", memberId: "m1" });
+    m.me.mockResolvedValue({ role: { template: "TECHNICIAN" } });
+    render(<InviteClient token={TOKEN} />);
+    const name = (await screen.findByLabelText("Your name")) as HTMLInputElement;
+    expect(name.value).toBe("");
+    expect(name.required).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Accept invitation" }));
+    expect((await screen.findByText("Enter your name.")).id).toBe(name.getAttribute("aria-describedby"));
+    expect(document.activeElement).toBe(name);
+    fireEvent.change(name, { target: { value: "ana@acme.test" } });
+    fireEvent.click(screen.getByRole("button", { name: "Accept invitation" }));
+    expect(await screen.findByText("Enter your name, not an email address.")).toBeTruthy();
+    expect(m.accept).not.toHaveBeenCalled();
+    fireEvent.change(name, { target: { value: "Ana Pop" } });
+    fireEvent.click(screen.getByRole("button", { name: "Accept invitation" }));
+    await waitFor(() => expect(m.accept).toHaveBeenCalledWith(TOKEN, { displayName: "Ana Pop" }));
+  });
+  it("the API's 400 fields.displayName shows under the field and a retry works (the invitation stays pending)", async () => {
+    m.user = { email: "ana@acme.test", displayName: "Ana Pop" };
+    m.accept.mockRejectedValueOnce(new B2bError(400, "VALIDATION_ERROR", "x", { fields: { displayName: "Enter your name" } })).mockResolvedValue({ orgId: "org1", memberId: "m1" });
+    m.me.mockResolvedValue({ role: { template: "OPS_MANAGER" } });
+    render(<InviteClient token={TOKEN} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Accept invitation" }));
+    expect(await screen.findByText("Enter your name.")).toBeTruthy();
+    expect(screen.getByLabelText("Your name").getAttribute("aria-invalid")).toBe("true");
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Your name")));
+    fireEvent.change(screen.getByLabelText("Your name"), { target: { value: "Ana Maria Pop" } });
+    fireEvent.click(screen.getByRole("button", { name: "Accept invitation" }));
+    await waitFor(() => expect(m.replace).toHaveBeenCalledWith("/ops/org1/dashboard"));
+    expect(m.accept).toHaveBeenLastCalledWith(TOKEN, { displayName: "Ana Maria Pop" });
+  });
+  it("claiming a planned employee needs no name: no field, accepted without a body", async () => {
+    m.preview.mockResolvedValue({ ...invite, claim: true, memberName: "Elena Stan" });
+    m.user = { email: "elena@acme.test", displayName: null };
+    m.accept.mockResolvedValue({ orgId: "org1", memberId: "m9" });
+    m.me.mockResolvedValue({ role: { template: "TECHNICIAN" } });
+    render(<InviteClient token={TOKEN} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Accept invitation" }));
+    expect(screen.queryByLabelText("Your name")).toBeNull();
+    await waitFor(() => expect(m.accept).toHaveBeenCalledWith(TOKEN, undefined));
+  });
+  it("a claim whose planned name is missing says 'Team member', never an email", async () => {
+    m.preview.mockResolvedValue({ ...invite, claim: true, memberName: null });
+    m.user = { email: "elena@acme.test" };
+    render(<InviteClient token={TOKEN} />);
+    expect(await screen.findByText(/You are joining as Team member, Technician\./)).toBeTruthy();
   });
 });

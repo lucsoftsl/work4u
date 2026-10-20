@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslation } from "@/lib/i18n";
+
 import Link from "next/link";
 import type { NotificationItem } from "@/b2b/api/types";
 import { JobRef } from "@/b2b/components/StatusPill";
@@ -10,7 +12,8 @@ interface Props { orgId: string; item: NotificationItem; onOpen: (item: Notifica
 
 /** One notification: kind icon + text label (never icon alone), title/body, job link, relative time. */
 export function NotificationRow({ orgId, item, onOpen, compact }: Props) {
-  const { icon: Icon, label } = notificationKind(item.kind);
+  const { t, locale } = useTranslation();
+  const { icon: Icon, label } = notificationKind(item.kind, t);
   const content = (
     <>
       <span className={cn("mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded", item.read ? "bg-ops-canvas text-ops-ink-muted" : "bg-ops-ink text-white")}>
@@ -20,8 +23,8 @@ export function NotificationRow({ orgId, item, onOpen, compact }: Props) {
         <span className="flex flex-wrap items-center gap-x-2 text-xs text-ops-ink-muted">
           <span className="font-bold">{label}</span>
           {item.jobReference ? <JobRef reference={item.jobReference} /> : null}
-          <time dateTime={item.createdAt}>{relativeTime(item.createdAt)}</time>
-          {!item.read ? <span className="font-bold text-ops-ink">Unread</span> : null}
+          <time dateTime={item.createdAt}>{relativeTime(item.createdAt, undefined, locale)}</time>
+          {!item.read ? <span className="font-bold text-ops-ink">{t("b2b.notifications.unread", "Unread")}</span> : null}
         </span>
         <span className={cn("block", item.read ? "font-medium" : "font-bold")}>{item.title}</span>
         {!compact && item.body ? <span className="block text-sm text-ops-ink-muted">{item.body}</span> : null}

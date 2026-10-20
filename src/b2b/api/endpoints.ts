@@ -33,6 +33,8 @@ export const createOrg = (input: { name: string; timezone?: string }) =>
 export interface CompanySignupInput {
   name: string; adminDisplayName?: string; timezone?: string; legalName?: string; taxId?: string; phone?: string;
   addressLine?: string; city?: string; postalCode?: string; country?: string; locale?: string;
+  /** Optional: the company currency, chosen at creation. Omitted = the company starts without one. */
+  currency?: string;
 }
 export const signupCompany = (input: CompanySignupInput) =>
   b2b<{ org: { id: string; name: string; timezone: string; status: string }; member: { id: string; roleId: string; roleTemplate: string } }>("/signup", { method: "POST", json: input });
@@ -53,6 +55,8 @@ export const listTeams = (orgId: string) => b2b<Team[]>(orgPath(orgId, "/teams")
 // ---- jobs
 export interface JobFilters {
   status?: JobStatus[]; teamId?: string; memberId?: string; customerId?: string; unassigned?: boolean;
+  /** DRAFT view: only drafts created by the caller. */
+  mine?: boolean; jobTypeId?: string;
   from?: string; to?: string; q?: string; limit?: number; offset?: number; cursor?: string;
   sort?: JobSortKey; dir?: SortDirection;
 }
@@ -60,6 +64,9 @@ export const listJobs = (orgId: string, filters: JobFilters = {}, signal?: Abort
   b2b<JobList>(orgPath(orgId, "/jobs"), { query: { ...filters, status: filters.status }, signal });
 export const createJob = (orgId: string, input: CreateJobInput) =>
   b2b<Job>(orgPath(orgId, "/jobs"), { method: "POST", json: input });
+/** Draft -> NEW (same number). 422 DRAFT_INCOMPLETE {missing}; the body is {} because an empty JSON body is a 400. */
+export const promoteJob = (orgId: string, jobId: string, version?: number) =>
+  b2b<Job>(orgPath(orgId, `/jobs/${jobId}/promote`), { method: "POST", json: {}, ...(version !== undefined ? { ifMatch: version } : {}) });
 export const getJob = (orgId: string, jobId: string) => b2b<JobWorkspace>(orgPath(orgId, `/jobs/${jobId}`));
 export const patchJob = (orgId: string, jobId: string, version: number, patch: Record<string, unknown>) =>
   b2b<Job>(orgPath(orgId, `/jobs/${jobId}`), { method: "PATCH", json: patch, ifMatch: version });
@@ -101,7 +108,9 @@ export const getBoard = (orgId: string, date: string, filters: BoardQuery = {}, 
 // ---- invitations (public preview, then accept as the signed-in invitee)
 export interface InvitePreview { orgName: string; roleName: string; memberType: string; emailHint: string; expiresAt: string; /** A planned employee claims an existing member (keeps schedule and history). */ claim?: boolean; memberName?: string | null }
 export const previewInvitation = (token: string) => b2b<InvitePreview>(`/invitations/${encodeURIComponent(token)}`);
-export const acceptInvitation = (token: string) => b2b<{ orgId: string; memberId: string }>(`/invitations/${encodeURIComponent(token)}/accept`, { method: "POST" });
+/** `body.displayName`: the new member's own name (required by the API when the account has none; not used when claiming a planned employee). */
+export const acceptInvitation = (token: string, body?: { displayName: string }) =>
+  b2b<{ orgId: string; memberId: string }>(`/invitations/${encodeURIComponent(token)}/accept`, body ? { method: "POST", json: body } : { method: "POST" });
 
 // ---- technician
 export const getMyJobs = (orgId: string, date?: string, since?: string) => b2b<MyJobs>(orgPath(orgId, "/me/jobs"), { query: { date, since } });

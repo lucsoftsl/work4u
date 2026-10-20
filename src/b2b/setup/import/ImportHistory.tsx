@@ -9,7 +9,7 @@ import type { Kind } from "./importLogic";
 /** Past imports of this kind: file name, date, counts, status. A failure to load is not worth an alert here. */
 export function ImportHistory({ kind }: { kind: Kind }) {
   const { orgId } = useOrg();
-  const { tr, locale } = useTr();
+  const { tr, trn, locale } = useTr();
   const q = useQuery({ queryKey: sk.imports(orgId, kind), queryFn: () => listImports(orgId, kind), retry: false });
   const items = (q.data?.items ?? []).filter((i) => i.status !== "DISCARDED" && i.status !== "VALIDATED" && i.status !== "UPLOADED");
   if (items.length === 0) return null;
@@ -23,7 +23,7 @@ export function ImportHistory({ kind }: { kind: Kind }) {
           <li key={i.id} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-3 py-2 text-sm">
             <span className="min-w-0 break-all font-bold">{i.fileName ?? "-"}</span>
             <span className="text-ops-ink-muted">{fmt.format(new Date(i.committedAt ?? i.createdAt))}</span>
-            <span>{tr("b2b.import.historyCounts", "{c} created, {u} updated, {e} errors", { c: i.counts.create, u: i.counts.update, e: i.counts.error })}</span>
+            <span>{tr("b2b.import.historyCounts", "{c} created, {u} updated, {e}", { c: i.counts.create, u: i.counts.update, e: trn("b2b.import.errorsCount", { one: "{n} error", other: "{n} errors" }, i.counts.error) })}</span>
             <span className="font-bold">{status(i.status)}</span>
           </li>
         ))}

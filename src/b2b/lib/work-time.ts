@@ -1,5 +1,6 @@
 import type { WorkTime } from "@/b2b/api/types";
 import type { QueueItem } from "@/b2b/offline/types";
+import { plural, type Translate } from "./plural";
 
 const MS = 1000;
 
@@ -31,12 +32,17 @@ export function formatHms(totalSeconds: number): string {
 }
 
 /** Plain-words duration for screen readers ("1 hour 12 minutes"); seconds are never read out. */
-export function timerSpeech(totalSeconds: number): string {
+export function timerSpeech(totalSeconds: number, i18n: { t?: Translate; locale?: string } = {}): string {
+  const t: Translate = i18n.t ?? ((_key, fallback) => fallback);
+  const locale = i18n.locale ?? "en";
   const s = Math.max(0, Math.floor(totalSeconds));
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
-  const parts = [h ? `${h} hour${h === 1 ? "" : "s"}` : "", m ? `${m} minute${m === 1 ? "" : "s"}` : ""].filter(Boolean);
-  return parts.length ? parts.join(" ") : "less than a minute";
+  const parts = [
+    h ? plural(t, locale, "b2b.tech.timer.hours", { one: "{n} hour", other: "{n} hours" }, h) : "",
+    m ? plural(t, locale, "b2b.tech.timer.minutes", { one: "{n} minute", other: "{n} minutes" }, m) : "",
+  ].filter(Boolean);
+  return parts.length ? parts.join(" ") : t("b2b.tech.timer.lessThanMinute", "less than a minute");
 }
 
 const baseTime = (at: string): WorkTime => ({ state: "NOT_STARTED", workedSeconds: 0, pausedSeconds: 0, correctionSeconds: 0, runningSince: null, pausedSince: null, pauseReason: null, pauseNote: null, workStartedAt: null, workEndedAt: null, serverTime: at });

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { B2bError } from "@/b2b/api/client";
-import type { Job } from "@/b2b/api/types";
+import type { Job, JobStatus } from "@/b2b/api/types";
+import enDict from "@/locales/en.json";
+import roDict from "@/locales/ro.json";
+import esDict from "@/locales/es.json";
 import { missingForCompletion, splitToday, techErrorMessage, techPlan } from "./tech-actions";
 
 const job = (over: Partial<Job> = {}): Job => ({
@@ -96,5 +99,19 @@ describe("custom translate function", () => {
     expect(completionLabel("photo", t)).toBe("T:b2b.tech.completion.photo");
     expect(techErrorMessage(new B2bError(0, "NETWORK", "x"), t).message).toBe("T:b2b.tech.err.network");
     expect(techErrorMessage(new Error("x")).message).toBe("Something went wrong.");
+  });
+});
+
+describe("technician primary buttons have a label in every shipped language", () => {
+  const DICTS: Record<string, Record<string, string>> = { en: enDict, ro: roDict, es: esDict };
+  const FLOW: JobStatus[] = ["DISPATCHED", "EN_ROUTE", "ON_SITE", "IN_PROGRESS", "BLOCKED"];
+  it.each(["en", "ro", "es"])("%s: every step of the flow reads from a key, and ro/es are not the English words", (lang) => {
+    const dict = DICTS[lang];
+    const t = (key: string) => dict[key] ?? `MISSING(${key})`;
+    for (const status of FLOW) {
+      const label = techPlan(status, t).primary!.label;
+      expect(label, `${lang} ${status}`).not.toMatch(/^MISSING/);
+      if (lang !== "en") expect(label, `${lang} ${status}`).not.toBe(techPlan(status).primary!.label);
+    }
   });
 });

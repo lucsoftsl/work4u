@@ -15,7 +15,7 @@ const META = {
 
 /** Status badge: text + icon + shape (planning-only is dashed). The planning note is always visible text. */
 export function StatusBadge({ badge, invitedAt }: { badge: MemberBadge; invitedAt?: string }) {
-  const { tr } = useTr();
+  const { tr, trn } = useTr();
   const { Icon, cls } = META[badge];
   const label = {
     active: tr("b2b.team.status.active", "Active"),
@@ -30,7 +30,7 @@ export function StatusBadge({ badge, invitedAt }: { badge: MemberBadge; invitedA
         <span className="whitespace-normal text-left">{label}</span>
       </span>
       {badge === "planning" && <p className="text-xs text-ops-ink-muted">{tr("b2b.team.status.planningNote", "No app login. Scheduled by the office.")}</p>}
-      {badge === "invited" && invitedAt && <p className="text-xs text-ops-ink-muted">{tr("b2b.team.status.invitedAgo", "Invitation sent {n} days ago", { n: daysSince(invitedAt) })}</p>}
+      {badge === "invited" && invitedAt && <p className="text-xs text-ops-ink-muted">{trn("b2b.team.status.invitedAgo", { one: "Invitation sent {n} day ago", other: "Invitation sent {n} days ago" }, daysSince(invitedAt))}</p>}
     </div>
   );
 }

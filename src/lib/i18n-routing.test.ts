@@ -89,8 +89,8 @@ describe("decideRoute (the proxy)", () => {
   });
   it("unknown screens inside the logged-in B2B app are a 404 rendered in the B2B shell; real screens are untouched", () => {
     const nf = { action: "rewrite", to: "/b2b/not-found-page", status: 404, headers: { "X-Robots-Tag": "noindex, nofollow" } };
-    for (const p of ["/ops/o1/zzz", "/ops/o1/zzz/yyy", "/tech/o1/zzz", "/ops/o1/jobs/x/y/z".replace("/jobs", "/nope")]) expect(go(p, "ro"), p).toEqual(nf);
-    for (const p of ["/ops", "/ops/signin", "/ops/start", "/ops/o1", "/ops/o1/dashboard", "/ops/o1/jobs/j1", "/ops/o1/settings/team/import", "/ops/o1/customers/import", "/ops/o1/setup", "/tech", "/tech/o1", "/tech/o1/today", "/tech/o1/jobs/j9", "/tech/o1/sync", "/b2b/invite/abc"]) {
+    for (const p of ["/b2b", "/b2b/zzz", "/b2b/invite", "/b2b/invite/abc/extra", "/b2b/not-found-page/x", "/ops/o1/zzz", "/ops/o1/zzz/yyy", "/tech/o1/zzz", "/ops/o1/jobs/x/y/z".replace("/jobs", "/nope")]) expect(go(p, "ro"), p).toEqual(nf);
+    for (const p of ["/ops", "/ops/signin", "/ops/start", "/ops/o1", "/ops/o1/dashboard", "/ops/o1/jobs/j1", "/ops/o1/settings/team/import", "/ops/o1/customers/import", "/ops/o1/setup", "/tech", "/tech/o1", "/tech/o1/today", "/tech/o1/jobs/j9", "/tech/o1/sync", "/b2b/invite/abc", "/b2b/not-found-page"]) {
       expect(go(p), p).toEqual({ action: "next" });
     }
   });

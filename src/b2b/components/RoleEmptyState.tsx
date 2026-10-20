@@ -11,7 +11,7 @@ const LINK = "inline-flex min-h-[44px] items-center rounded bg-ops-ink px-4 text
 interface Copy { icon: LucideIcon; title: string; body: string; action?: { label: string; href: (orgId: string) => string } }
 
 // TODO(routes): /jobs/new is the job-create route this console is expected to get; teams lives at /teams.
-const COPY: Record<EmptyVariant, Copy> = {
+export const EMPTY_COPY: Record<EmptyVariant, Copy> = {
   "create-first-job": { icon: Inbox, title: "No jobs yet", body: "Create the first job to start planning work.", action: { label: "Create the first job", href: (o) => `/ops/${o}/jobs/new` } },
   "ask-manager-jobs": { icon: Inbox, title: "No jobs yet", body: "Ask a manager to create the first job. It will show up here as soon as it exists." },
   "set-up-teams": { icon: Users, title: "No teams yet", body: "Add a team and its technicians so jobs can be assigned.", action: { label: "Set up teams", href: (o) => `/ops/${o}/teams` } },
@@ -25,7 +25,7 @@ const COPY: Record<EmptyVariant, Copy> = {
 
 export function RoleEmptyState({ variant, orgId, extra }: { variant: EmptyVariant; orgId: string; extra?: React.ReactNode }) {
   const { t } = useTranslation();
-  const c = COPY[variant];
+  const c = EMPTY_COPY[variant];
   const action = c.action ? (
     <Link href={c.action.href(orgId)} className={LINK}>{t(`b2b.empty.${variant}.action`, c.action.label)}</Link>
   ) : extra;

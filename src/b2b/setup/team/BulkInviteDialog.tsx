@@ -1,5 +1,6 @@
 "use client";
 
+import { usePersonName } from "@/b2b/lib/usePersonName";
 import { useState, useId } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Modal } from "@/b2b/components/catalog/Modal";
@@ -21,6 +22,7 @@ export function BulkInviteDialog({ orgId, members, online, onClose, onDone }: { 
 function Body({ orgId, members, online, onClose, onDone }: { orgId: string; members: Member[]; online: boolean; onClose: () => void; onDone: () => void }) {
   const headingId = useId();
   const { tr, trn } = useTr();
+  const nameOf = usePersonName();
   const qc = useQueryClient();
   const { invitable, skipped } = splitInvitable(members);
   const [busy, setBusy] = useState(false);
@@ -35,9 +37,9 @@ function Body({ orgId, members, online, onClose, onDone }: { orgId: string; memb
     for (const m of invitable) {
       try {
         const r = await createInvitation(orgId, { email: m.workEmail as string, memberId: m.id });
-        if (r.emailSent) sent += 1; else failed.push(m.displayName);
+        if (r.emailSent) sent += 1; else failed.push(nameOf(m.displayName));
       } catch (err) {
-        failed.push(m.displayName);
+        failed.push(nameOf(m.displayName));
         setError(setupErrorMessage(err, tr));
       }
     }
@@ -54,7 +56,7 @@ function Body({ orgId, members, online, onClose, onDone }: { orgId: string; memb
       <h2 id={headingId} data-modal-title className="text-lg font-bold">{tr("b2b.team.bulk.title", "Invite selected ({n})", { n: members.length })}</h2>
       {report ? (
         <div role="status" className="space-y-2 text-sm">
-          <p>{tr("b2b.team.bulk.result", "{n} invitations sent.", { n: report.sent })}</p>
+          <p>{trn("b2b.team.bulk.result", { one: "{n} invitation sent.", other: "{n} invitations sent." }, report.sent)}</p>
           {report.failed.length > 0 && <p>{tr("b2b.team.bulk.failed", "Not sent: {names}. Open each person to copy the link or try again.", { names: report.failed.join(", ") })}</p>}
           {error && <ErrorAlert message={error} />}
           <div className="flex justify-end"><button type="button" onClick={onClose} className={btnPrimary}>{tr("b2b.common.done", "Done")}</button></div>
@@ -65,7 +67,7 @@ function Body({ orgId, members, online, onClose, onDone }: { orgId: string; memb
           {skipped.length > 0 && (
             <div className="rounded border border-ops-border-strong p-3 text-sm">
               <p className="font-bold">{tr("b2b.team.bulk.skipped", "Skipped: no email address ({n})", { n: skipped.length })}</p>
-              <ul className="mt-1 list-disc pl-5">{skipped.map((m) => <li key={m.id}>{m.displayName}</li>)}</ul>
+              <ul className="mt-1 list-disc pl-5">{skipped.map((m) => <li key={m.id}>{nameOf(m.displayName)}</li>)}</ul>
             </div>
           )}
           {!online && <p role="status" className="text-sm font-bold">{tr("b2b.setup.offline", "You're offline. Reconnect to save.")}</p>}

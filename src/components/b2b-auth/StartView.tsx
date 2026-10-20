@@ -7,10 +7,13 @@ import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/lib/i18n";
 import { GoogleIcon } from "@/components/ui/GoogleIcon";
 import { isB2bError } from "@/b2b/api/client";
+import { CurrencySelect } from "@/b2b/currency/CurrencySelect";
+import { useEffectiveCurrency } from "@/b2b/currency/useEffectiveCurrency";
 import { qk, signupCompany } from "@/b2b/api/endpoints";
 import { b2bAuthProblem, b2bCreateAccount, b2bSignInWithGoogle, type B2bAuthProblem } from "@/lib/b2b-auth";
 import { B2B_WORKSPACES, b2bSignInPath } from "@/lib/b2b-paths";
 import { isPlausiblePhone } from "@/lib/b2b-phone";
+import { isEmailLike, personNameProblem } from "@/b2b/lib/person";
 import { ORG_LANGUAGES as LANGUAGES, countryOptions, languageLabel, timeZones } from "@/lib/b2b-geo";
 import { B2bAuthFrame, fieldCls, labelCls, primaryBtn, secondaryBtn } from "./B2bAuthFrame";
 import { PROBLEM_TEXT } from "./SignInView";
@@ -19,6 +22,13 @@ import { useB2bRedirect, useContinueToWorkspace } from "./useContinueToWorkspace
 
 
 const MIN_PASSWORD = 8;
+
+const NAME_ERROR = {
+  required: ["b2b.setup.account.nameRequired", "Enter your name."],
+  email: ["b2b.setup.account.nameNotEmail", "Enter your name, not an email address."],
+} as const;
+/** The admin's name for the API (`adminDisplayName`): required, and never an email address. */
+const adminNameProblem = personNameProblem;
 
 const browserZone = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch { return "UTC"; } };
 
@@ -62,11 +72,17 @@ export function StartView() {
   const [country, setCountry] = useState(locale === "ro" ? "RO" : locale === "es" ? "ES" : "");
   const [phone, setPhone] = useState("");
   const [zone, setZone] = useState(browserZone);
+  // Currency: follows the effective default (the user's remembered one, else EUR) until the person picks.
+  const eff = useEffectiveCurrency();
+  const [pickedCurrency, setPickedCurrency] = useState<string | null>(null);
+  const currency = pickedCurrency ?? eff.currency;
   const [orgLocale, setOrgLocale] = useState<(typeof LANGUAGES)[number]>((LANGUAGES as readonly string[]).includes(locale) ? (locale as (typeof LANGUAGES)[number]) : "en");
   const [companyError, setCompanyError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
   const errorRef = useRef<HTMLParagraphElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
   const continued = useRef(false);
 
   const zones = useMemo(() => timeZones(), []);
@@ -83,7 +99,13 @@ export function StartView() {
   }, [accountOnly, signedIn, go]);
 
   useEffect(() => { if (authProblem || companyError) errorRef.current?.focus(); }, [authProblem, companyError]);
-  useEffect(() => { if (user?.displayName && !name) setName(user.displayName); }, [user, name]);
+  // Prefill from the sign-in provider (Google) name, never from an email.
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current || !user?.displayName || isEmailLike(user.displayName)) return;
+    prefilled.current = true;
+    setName((current) => current || user.displayName || "");
+  }, [user]);
 
   const createAccount = async (ev: FormEvent) => {
     ev.preventDefault();
@@ -101,25 +123,30 @@ export function StartView() {
   const createCompany = async (ev: FormEvent) => {
     ev.preventDefault();
     if (submitting.current) return; // a double click creates one organisation
+    const nameProblem = adminNameProblem(name);
+    setNameError(nameProblem ? t(NAME_ERROR[nameProblem][0], NAME_ERROR[nameProblem][1]) : null);
+    if (nameProblem) { nameRef.current?.focus(); return; }
     if (company.trim().length < 2) { setCompanyError(t("b2b.setup.company.err.name", "Enter your company name (at least 2 characters).")); return; }
     if (!isPlausiblePhone(phone, country)) { setCompanyError(t("b2b.setup.company.err.phone", "Enter the phone number in international format, e.g. +34 600 555 021, or choose a country to use a local number.")); return; }
     submitting.current = true; setBusy(true); setCompanyError(null);
     try {
       const res = await signupCompany({
         name: company.trim(),
-        adminDisplayName: name.trim() || undefined,
+        adminDisplayName: name.trim(),
         timezone: zone || undefined,
         country: country || undefined,
         phone: phone.trim() || undefined,
         locale: orgLocale,
+        currency,
       });
       await qc.invalidateQueries({ queryKey: qk.myOrgs });
       router.replace(`/ops/${encodeURIComponent(res.org.id)}/setup`); // continue with employees and clients
     } catch (e) {
       submitting.current = false; setBusy(false);
-      if (isB2bError(e) && e.code === "EMAIL_IN_USE") setCompanyError(t("b2b.setup.company.err.emailInUse", "This email address is already used by another sign-in. Sign in with that one instead."));
+      if (isB2bError(e) && e.status === 400 && e.fields.adminDisplayName) { setNameError(t(NAME_ERROR.required[0], NAME_ERROR.required[1])); nameRef.current?.focus(); }
+      else if (isB2bError(e) && e.code === "EMAIL_IN_USE") setCompanyError(t("b2b.setup.company.err.emailInUse", "This email address is already used by another sign-in. Sign in with that one instead."));
       else if (isB2bError(e) && e.code === "EMAIL_REQUIRED") setCompanyError(t("b2b.setup.company.err.emailRequired", "Your account has no email address. Use an account with an email."));
-      else if (isB2bError(e) && e.isRateLimited) setCompanyError(t("b2b.setup.company.err.busy", "Too many attempts. Wait a minute and try again."));
+      else if (isB2bError(e) && e.isRateLimited) setCompanyError(t("b2b.setup.company.err.busy", "Too many attempts. Try again shortly."));
       else if (isB2bError(e) && e.status === 400) setCompanyError(t("b2b.setup.company.err.invalid", "Check the details you entered (the phone number needs the country code, like +34 600 555 021)."));
       else setCompanyError(t("b2b.setup.company.err.generic", "We couldn't create your company. Try again in a moment."));
     }
@@ -175,7 +202,11 @@ export function StartView() {
             </div>
             <div>
               <label htmlFor="co-admin" className={labelCls}>{t("b2b.setup.account.name", "Your name")}</label>
-              <input id="co-admin" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className={fieldCls} />
+              <input id="co-admin" ref={nameRef} autoComplete="name" required maxLength={200} value={name} onChange={(e) => { setName(e.target.value); setNameError(null); }}
+                aria-invalid={nameError ? true : undefined} aria-describedby={nameError ? "co-admin-err" : "co-admin-hint"} className={fieldCls} />
+              {nameError
+                ? <p id="co-admin-err" className="mt-1 text-caption font-bold text-ember-text">{nameError}</p>
+                : <p id="co-admin-hint" className="mt-1 text-caption text-ink-muted">{t("b2b.setup.account.nameHint", "Your team sees this name. It can't be an email address.")}</p>}
             </div>
             <div>
               <label htmlFor="co-country" className={labelCls}>{t("b2b.setup.company.country", "Country")}</label>
@@ -201,6 +232,11 @@ export function StartView() {
                 {LANGUAGES.map((l) => <option key={l} value={l} lang={l}>{languageLabel(l)}</option>)}
               </select>
             </div>
+            <CurrencySelect
+              id="co-currency" label={t("b2b.setup.currency.label", "Company currency")} labelClassName={labelCls} value={currency} disabled={busy}
+              onChange={(code) => { setPickedCurrency(code); eff.remember(code); }}
+              hint={t("b2b.setup.currency.wizardHint", "Used for job prices, costs and Finance. You can change it later until the first price is entered.")}
+            />
             <button type="submit" disabled={busy} aria-busy={busy || undefined} className={primaryBtn}>{busy ? t("b2b.setup.company.creating", "Creating your workspace…") : t("b2b.setup.company.submit", "Create my workspace")}</button>
           </form>
           <p className="mt-6"><a href={B2B_WORKSPACES} className="inline-flex min-h-[44px] items-center text-label text-ink underline decoration-2 underline-offset-4 hover:text-primary">{t("b2b.setup.company.back", "Back to my workspaces")}</a></p>

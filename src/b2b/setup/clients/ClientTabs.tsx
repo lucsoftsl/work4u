@@ -24,7 +24,7 @@ export function ClientTabs({ active, onChange, counts, enabled }: Props) {
     }
   };
   return (
-    <div className="overflow-x-auto border-b border-ops-border">
+    <div className="relative overflow-x-auto border-b border-ops-border">
       <div role="tablist" aria-label={tr("b2b.clients.tabs", "Client sections")} className="flex min-w-max gap-1"
         onKeyDown={(e) => {
           const next = nextTab(active, e.key, enabled);

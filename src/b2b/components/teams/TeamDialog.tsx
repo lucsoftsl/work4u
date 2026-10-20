@@ -1,5 +1,7 @@
 "use client";
 
+import { personSortKey } from "@/b2b/lib/person";
+import { usePersonName } from "@/b2b/lib/usePersonName";
 import { useState } from "react";
 import { isB2bError } from "@/b2b/api/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,8 +19,9 @@ interface Props { orgId: string; team?: Team; members: OrgMemberRow[] | undefine
 
 /** Create or edit a team: name, members (checklist), lead, active. Mounted only while open (fresh state per open). */
 export function TeamDialog({ orgId, team, members, onClose }: Props) {
+  const { t } = useTranslation();
   return (
-    <Modal open title={team ? `Edit ${team.name}` : "New team"} onClose={onClose}>
+    <Modal open title={team ? t("b2b.teams.edit", "Edit {name}").replace("{name}", team.name) : t("b2b.teams.new", "New team")} onClose={onClose}>
       <TeamForm orgId={orgId} team={team} members={members} onClose={onClose} />
     </Modal>
   );
@@ -26,6 +29,7 @@ export function TeamDialog({ orgId, team, members, onClose }: Props) {
 
 function TeamForm({ orgId, team, members, onClose }: Props) {
   const { t } = useTranslation();
+  const nameOf = usePersonName();
   const qc = useQueryClient();
   const initialIds = team?.members.map((m) => m.id) ?? [];
   const [name, setName] = useState(team?.name ?? "");
@@ -39,12 +43,14 @@ function TeamForm({ orgId, team, members, onClose }: Props) {
   const [hoursError, setHoursError] = useState<string | null>(null);
   const hoursChanged = useDefaultHours ? !!team?.workingHours : !team?.workingHours || draftChanged(hours, initialHours);
 
-  const nameError = touched ? validateName(name, 120, "Team name") : undefined;
+  const nameError = touched ? validateName(name, 120, t("b2b.catalog.label.team", "Team name"), t) : undefined;
   // Members we know the name of; keep existing members visible even if the members list is unavailable.
-  const known = new Map<string, string>();
+  const known = new Map<string, string | null>();
   for (const m of team?.members ?? []) known.set(m.id, m.displayName);
   for (const m of members ?? []) known.set(m.id, m.displayName);
-  const options = [...known.entries()].map(([id, displayName]) => ({ id, displayName })).sort((a, b) => a.displayName.localeCompare(b.displayName));
+  const options = [...known.entries()]
+    .map(([id, name]) => ({ id, displayName: nameOf(name), sort: personSortKey(name) }))
+    .sort((a, b) => a.sort.localeCompare(b.sort) || a.displayName.localeCompare(b.displayName));
   const effectiveLead = leadAfterMemberChange(lead, ids) ?? "";
 
   const save = useMutation({
@@ -75,8 +81,8 @@ function TeamForm({ orgId, team, members, onClose }: Props) {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
-    if (validateName(name, 120, "Team name")) return;
-    if (team && !useDefaultHours && Object.keys(validateDraft(hours)).length > 0) return;
+    if (validateName(name, 120, t("b2b.catalog.label.team", "Team name"), t)) return;
+    if (team && !useDefaultHours && Object.keys(validateDraft(hours, t)).length > 0) return;
     setHoursError(null);
     save.mutate();
   };
@@ -127,7 +133,7 @@ function TeamForm({ orgId, team, members, onClose }: Props) {
       )}
       {hoursError && <ErrorAlert message={hoursError} />}
 
-      {save.isError && <ErrorAlert message={catalogErrorMessage(save.error, "team")} />}
+      {save.isError && <ErrorAlert message={catalogErrorMessage(save.error, "team", t)} />}
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onClose} className={btnSecondary}>{t("b2b.common.cancel", "Cancel")}</button>
         <button type="submit" disabled={save.isPending} className={btnPrimary}>{save.isPending ? t("b2b.common.saving", "Saving…") : t("b2b.common.save", "Save")}</button>

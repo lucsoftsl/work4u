@@ -9,15 +9,17 @@ import { useTranslation } from "@/lib/i18n";
 import { listJobs, listTeams, qk } from "@/b2b/api/endpoints";
 import { isB2bError } from "@/b2b/api/client";
 import { useOrg } from "@/b2b/context/OrgContext";
+import { replaceQuery } from "@/b2b/lib/client-nav";
 import { useNow } from "@/b2b/components/dashboard/useNow";
 import {
-  PAGE_SIZE, activeFilterCount, nextSort, filterByPriority, clearFilters, parseJobFilters, serializeJobFilters, toApiFilters, withFilterChange, type JobListFilters, type JobSort,
+  PAGE_SIZE, activeFilterCount, nextSort, filterByPriority, clearFilters, isDraftsView, parseJobFilters, serializeJobFilters, toApiFilters, withFilterChange, type JobListFilters, type JobSort,
 } from "@/b2b/lib/job-filters";
 import { RoleEmptyState } from "@/b2b/components/RoleEmptyState";
 import { emptyCaps, jobsListVariant } from "@/b2b/lib/empty-states";
 import { hasNextPage, readTotal, type JobListWithTotal } from "@/b2b/lib/paging";
 import { JobFiltersBar } from "./JobFiltersBar";
 import { JobsPager } from "./JobsPager";
+import { DraftsTable } from "./DraftsTable";
 import { JobsTable, JobsTableSkeleton } from "./JobsTable";
 
 const ACTION = "min-h-[44px] rounded bg-ops-ink px-4 text-sm font-bold text-white";
@@ -37,12 +39,12 @@ export function JobsView() {
   const replace = useCallback(
     (next: JobListFilters) => {
       const qs = serializeJobFilters(next);
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      replaceQuery(router, qs ? `${pathname}?${qs}` : pathname);
     },
     [router, pathname]
   );
   const change = useCallback((patch: Partial<JobListFilters>) => replace(withFilterChange(parseJobFilters(window.location.search), patch)), [replace]);
-  const preset = useCallback((p: Pick<JobListFilters, "status" | "unassigned">) => change({ ...p }), [change]);
+  const preset = useCallback((p: Pick<JobListFilters, "status" | "unassigned" | "mine">) => change({ ...p }), [change]);
   const clear = useCallback(() => replace(clearFilters(parseJobFilters(window.location.search))), [replace]);
 
   const api = useMemo(() => toApiFilters(filters), [filters]);
@@ -51,6 +53,10 @@ export function JobsView() {
     queryFn: ({ signal }) => listJobs(org.orgId, api, signal),
     placeholderData: keepPreviousData,
   });
+  // The Drafts tab shows how many of my drafts there are (drafts are hidden from every other list and count).
+  const draftCountQ = useQuery({ queryKey: qk.jobs(org.orgId, { view: "draft-count" }), queryFn: ({ signal }) => listJobs(org.orgId, { status: ["DRAFT"], mine: true, limit: 1 }, signal), staleTime: 30_000, retry: false });
+  const draftCount = draftCountQ.data ? readTotal(draftCountQ.data as JobListWithTotal) : undefined;
+  const drafts = isDraftsView(filters);
   const canTeams = org.can("team.view");
   const teams = useQuery({ queryKey: qk.teams(org.orgId), queryFn: () => listTeams(org.orgId), enabled: canTeams });
 
@@ -74,7 +80,7 @@ export function JobsView() {
           </Link>
         )}
       </div>
-      <JobFiltersBar filters={filters} teams={canTeams ? teams.data : undefined} onChange={change} onPreset={preset} onClear={clear} />
+      <JobFiltersBar filters={filters} teams={canTeams ? teams.data : undefined} draftCount={draftCount} onChange={change} onPreset={preset} onClear={clear} />
 
       <div aria-live="polite" className={jobs.isFetching && items ? "opacity-80" : undefined}>
         {jobs.isPending ? (
@@ -89,6 +95,12 @@ export function JobsView() {
               <button type="button" onClick={() => void jobs.refetch()} className="min-h-[44px] rounded bg-ops-ink px-4 text-sm font-bold text-white">{t("b2b.common.retry", "Retry")}</button>
             )}
           </div>
+        ) : shown && shown.length === 0 && drafts ? (
+          <div className="rounded-lg border border-dashed border-ops-border-strong bg-ops-surface p-6 text-center">
+            <p className="text-sm text-ops-ink">{t("b2b.jobs.draft.empty", "No drafts. Use Save as draft in Create job to keep work in progress.")}</p>
+            {org.can("job.create") && <Link href={`/ops/${encodeURIComponent(org.orgId)}/jobs/new`} className={`${ACTION} mt-3 inline-flex items-center`}>{t("b2b.jobs.new", "New job")}</Link>}
+            {filters.mine && <button type="button" onClick={() => change({ mine: false })} className="ml-2 mt-3 min-h-[44px] rounded border border-ops-border-strong px-4 text-sm font-bold text-ops-ink">{t("b2b.jobs.draft.showAnyone", "Show drafts from anyone")}</button>}
+          </div>
         ) : shown && shown.length === 0 ? (
           <RoleEmptyState
             variant={jobsListVariant(caps, { filtered, page: filters.page })}
@@ -102,7 +114,12 @@ export function JobsView() {
         ) : shown ? (
           <>
             {jobs.isError && <p role="status" className="mb-2 text-xs text-ops-ink-muted">{t("b2b.jobs.stale", "Showing the last loaded jobs; refresh failed.")}</p>}
-            <JobsTable orgId={org.orgId} items={shown} tz={tz} sort={filters.sort} dir={filters.dir} nowMs={nowMs} onSort={onSort} />
+            {drafts
+              ? <>
+                  <p role="note" className="mb-2 text-xs text-ops-ink-muted">{t("b2b.jobs.draft.note", "Drafts aren't scheduled and aren't on the dispatch board. Technicians can't see them.")}</p>
+                  <DraftsTable orgId={org.orgId} items={shown} nowMs={nowMs} canPromote={org.can("job.create")} canDiscard={org.can("job.cancel")} />
+                </>
+              : <JobsTable orgId={org.orgId} items={shown} tz={tz} sort={filters.sort} dir={filters.dir} nowMs={nowMs} onSort={onSort} />}
           </>
         ) : null}
       </div>

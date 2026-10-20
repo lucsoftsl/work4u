@@ -18,7 +18,7 @@ import { Banner, btnClass, Card, fieldClass, ReasonField } from "./ui";
 import { useJobCache } from "./useJobCache";
 
 export function ScheduleForm({ job, timezone }: { job: JobWorkspace; timezone: string }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { orgId, can } = useOrg();
   const toast = useToast();
   const { merge, refresh } = useJobCache(orgId, job.id);
@@ -52,7 +52,7 @@ export function ScheduleForm({ job, timezone }: { job: JobWorkspace; timezone: s
   const mutation = useMutation({
     mutationFn: (v: { start: string; end: string; override?: { reason: string } }) => scheduleJob(orgId, job.id, { ...v, expectedVersion: job.version }),
     onSuccess: (updated) => { merge(updated); setError(null); setReason(""); toast.push({ message: t("b2b.job.scheduleUpdated", "Schedule updated"), tone: "success" }); },
-    onError: (e) => setError(describeB2bError(e)),
+    onError: (e) => setError(describeB2bError(e, { t, locale })),
   });
 
   if (!allowed) return null;
@@ -73,7 +73,7 @@ export function ScheduleForm({ job, timezone }: { job: JobWorkspace; timezone: s
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null); setError(null);
-    const w = validateWindow(start, end, timezone);
+    const w = validateWindow(start, end, timezone, { t, locale });
     if (!w.ok) { setLocalError(w.message); return; }
     if (!gate.canSave) return;
     mutation.mutate({ start: w.start, end: w.end, override: gate.showOverride ? { reason: reason.trim() } : undefined });
@@ -88,7 +88,7 @@ export function ScheduleForm({ job, timezone }: { job: JobWorkspace; timezone: s
     <Card title={t("b2b.job.schedule", "Schedule")} icon={<CalendarClock className="h-4 w-4" aria-hidden="true" />}>
       <form onSubmit={submit} className="space-y-3">
         <p className="text-sm text-ops-ink-muted">
-          {job.scheduledStart ? <>{t("b2b.job.currently", "Currently")} <strong className="text-ops-ink">{formatInZone(job.scheduledStart, timezone)}</strong> {t("b2b.job.to", "to")} {formatInZone(job.scheduledEnd, timezone, { timeStyle: "short" })}. </> : `${t("b2b.job.notScheduled", "Not scheduled yet.")} `}
+          {job.scheduledStart ? <>{t("b2b.job.currently", "Currently")} <strong className="text-ops-ink">{formatInZone(job.scheduledStart, timezone, undefined, locale)}</strong> {t("b2b.job.to", "to")} {formatInZone(job.scheduledEnd, timezone, { timeStyle: "short" }, locale)}. </> : `${t("b2b.job.notScheduled", "Not scheduled yet.")} `}
           {t("b2b.job.timesIn", "Times are in")} {timezone}.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">

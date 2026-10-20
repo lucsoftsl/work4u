@@ -19,7 +19,7 @@ interface Props {
 }
 
 export function ReviewRow({ orgId, tz, item, can, busy, onApprove, onSendBack }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const vis = reviewActionVisibility(can);
   const files = totalAttachments(item.attachmentCounts);
   const reopened = item.reopenedCount ?? 0;
@@ -42,8 +42,8 @@ export function ReviewRow({ orgId, tz, item, can, busy, onApprove, onSendBack }:
       <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm lg:w-72">
         <div>
           <dt className="text-xs text-ops-ink-subtle">{t("b2b.review.waiting", "Waiting")}</dt>
-          <dd className="font-bold">{formatWaiting(item.awaitingSince)}</dd>
-          <dd className="text-xs text-ops-ink-muted">{t("b2b.review.since", "since")} {formatAbsolute(item.awaitingSince, tz)}</dd>
+          <dd className="font-bold">{formatWaiting(item.awaitingSince, undefined, t)}</dd>
+          <dd className="text-xs text-ops-ink-muted">{t("b2b.review.since", "since")} {formatAbsolute(item.awaitingSince, tz, locale)}</dd>
         </div>
         <div>
           <dt className="text-xs text-ops-ink-subtle">{t("b2b.review.photos", "Files")}</dt>

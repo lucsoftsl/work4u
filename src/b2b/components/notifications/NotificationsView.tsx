@@ -67,9 +67,9 @@ export function NotificationsView() {
       {markAll.isError ? <p role="alert" className="text-sm text-sig-vermilion-ink">{t("b2b.notifications.markFailed", "Couldn't mark notifications as read. Try again.")}</p> : null}
 
       {q.isPending ? (
-        <div role="status" aria-busy="true" className="space-y-2"><span className="sr-only">Loading</span><Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div>
+        <div role="status" aria-busy="true" className="space-y-2"><span className="sr-only">{t("b2b.common.loading", "Loading")}</span><Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div>
       ) : q.isError ? (
-        <ErrorRetry message="Couldn't load notifications." onRetry={() => void q.refetch()} />
+        <ErrorRetry message={t("b2b.notifications.loadError", "Couldn't load notifications.")} onRetry={() => void q.refetch()} />
       ) : items.length === 0 ? (
         <EmptyState icon={Bell} title={unreadOnly ? t("b2b.notifications.noUnread", "You're all caught up") : t("b2b.notifications.empty", "No notifications yet")}
           body={t("b2b.notifications.emptyBody", "You'll be told when jobs are assigned to you, rescheduled, or need your review.")} />

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePersonName } from "@/b2b/lib/usePersonName";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, Tags } from "lucide-react";
@@ -12,6 +13,7 @@ import { ErrorAlert, btnPrimary, btnSecondary, inputCls } from "@/b2b/components
 
 export function MembersPanel({ orgId, members, skills, canAssign }: { orgId: string; members: OrgMemberRow[]; skills: Skill[]; canAssign: boolean }) {
   const { t } = useTranslation();
+  const nameOf = usePersonName();
   const [q, setQ] = useState("");
   const [skillId, setSkillId] = useState("");
   const [editing, setEditing] = useState<OrgMemberRow | null>(null);
@@ -39,7 +41,7 @@ export function MembersPanel({ orgId, members, skills, canAssign }: { orgId: str
           {rows.map((m) => (
             <li key={m.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2">
               <div className="min-w-[10rem] flex-1">
-                <p className="text-sm font-bold text-ops-ink">{m.displayName}</p>
+                <p className="text-sm font-bold text-ops-ink">{nameOf(m.displayName)}</p>
                 <p className="text-xs text-ops-ink-muted">{[m.role?.name, m.status && m.status !== "ACTIVE" ? m.status.toLowerCase() : null].filter(Boolean).join(" · ")}</p>
               </div>
               <span className="flex flex-1 flex-wrap gap-1">
@@ -47,7 +49,7 @@ export function MembersPanel({ orgId, members, skills, canAssign }: { orgId: str
               </span>
               {canAssign && (
                 <button type="button" onClick={() => setEditing(m)} className={btnSecondary}>
-                  <Tags className="h-4 w-4" aria-hidden="true" />{t("b2b.members.skills", "Skills")}<span className="sr-only"> {m.displayName}</span>
+                  <Tags className="h-4 w-4" aria-hidden="true" />{t("b2b.members.skills", "Skills")}<span className="sr-only"> {nameOf(m.displayName)}</span>
                 </button>
               )}
             </li>
@@ -55,7 +57,7 @@ export function MembersPanel({ orgId, members, skills, canAssign }: { orgId: str
         </ul>
       )}
       {editing && (
-        <Modal open title={`Skills for ${editing.displayName}`} onClose={() => setEditing(null)}>
+        <Modal open title={t("b2b.members.skillsFor", "Skills for {name}").replace("{name}", nameOf(editing.displayName))} onClose={() => setEditing(null)}>
           <MemberSkillsForm orgId={orgId} member={editing} skills={skills} onDone={() => setEditing(null)} />
         </Modal>
       )}
@@ -89,7 +91,7 @@ function MemberSkillsForm({ orgId, member, skills, onDone }: { orgId: string; me
           </ul>
         </fieldset>
       )}
-      {save.isError && <ErrorAlert message={catalogErrorMessage(save.error, "skill")} />}
+      {save.isError && <ErrorAlert message={catalogErrorMessage(save.error, "skill", t)} />}
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onDone} className={btnSecondary}>{t("b2b.common.cancel", "Cancel")}</button>
         <button type="submit" disabled={save.isPending || skills.length === 0} className={btnPrimary}>{t("b2b.common.save", "Save")}</button>

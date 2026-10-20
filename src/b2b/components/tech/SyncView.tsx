@@ -12,6 +12,7 @@ import type { QueueItem } from "@/b2b/offline/types";
 import { formatClock } from "@/b2b/lib/tz-format";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+import { plural } from "@/b2b/lib/plural";
 
 const KIND_ICON = { action: Zap, checklist: CheckCircle2, photo: Camera, signature: PenLine, pause: PauseCircle, "resume-work": Zap, undo: RotateCcw, part: Puzzle } as const;
 const STATUS: Record<QueueItem["status"], { label: string; key: string; cls: string; Icon: typeof Clock }> = {
@@ -21,10 +22,13 @@ const STATUS: Record<QueueItem["status"], { label: string; key: string; cls: str
   conflict: { label: "Draft", key: "conflict", cls: "bg-sig-orange-tint text-sig-orange-ink", Icon: FileText },
 };
 
+/** Queue item statuses with their English fallback, for the locale guard. */
+export const SYNC_STATUS_LABELS: ReadonlyArray<readonly [key: string, label: string]> = Object.values(STATUS).map((s) => [s.key, s.label] as const);
+
 const mb = (bytes: number) => (bytes / 1024 / 1024).toFixed(bytes > 1024 ** 3 ? 0 : 1);
 
 export function SyncView() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { orgId, me } = useOrg();
   const tz = me?.org.timezone ?? "UTC";
   const { items, online, waitingCount, syncState, lastSync, flush } = useOffline();
@@ -43,8 +47,7 @@ export function SyncView() {
   const conflicts = items.filter((i) => i.status === "conflict");
   const conflictJobs = [...new Set(conflicts.map((i) => i.jobId))];
   const pending = items.filter((i) => i.status !== "conflict");
-  const clock = (iso: string) => formatClock(iso, tz);
-  const plural = (n: number, key: string, one: string, other: string) => t(`${key}.${n === 1 ? "one" : "other"}`, n === 1 ? one : other).replace("{n}", String(n));
+  const clock = (iso: string) => formatClock(iso, tz, locale);
 
   return (
     <div className="space-y-5">
@@ -52,7 +55,7 @@ export function SyncView() {
 
       {!online ? (
         <section role="status" className="rounded border-2 border-sig-orange-ink bg-sig-orange-tint p-4 text-sig-orange-ink">
-          <p className="font-bold">{waitingCount > 0 ? t("b2b.sync.offlineWaiting", "Offline · {changes} waiting").replace("{changes}", plural(waitingCount, "b2b.sync.changes", "{n} change", "{n} changes")) : t("b2b.sync.offline", "Offline")}</p>
+          <p className="font-bold">{waitingCount > 0 ? t("b2b.sync.offlineWaiting", "Offline · {changes} waiting").replace("{changes}", plural(t, locale, "b2b.sync.changes", { one: "{n} change", other: "{n} changes" }, waitingCount)) : t("b2b.sync.offline", "Offline")}</p>
           <p className="text-sm">{t("b2b.sync.savedOnPhone", "Saved on this phone. We'll send them when you're back online.")}</p>
         </section>
       ) : null}
@@ -75,8 +78,8 @@ export function SyncView() {
             </div>
             <p className="mt-2">{group[0].error}</p>
             <p className="mt-1 text-sm text-ops-ink-muted">{photos
-              ? t("b2b.sync.keptWithPhotos", "{items} kept, including {photos}.").replace("{items}", plural(group.length, "b2b.sync.items", "{n} item", "{n} items")).replace("{photos}", plural(photos, "b2b.sync.photos", "{n} photo", "{n} photos"))
-              : t("b2b.sync.kept", "{items} kept.").replace("{items}", plural(group.length, "b2b.sync.items", "{n} item", "{n} items"))}</p>
+              ? t("b2b.sync.keptWithPhotos", "{items} kept, including {photos}.").replace("{items}", plural(t, locale, "b2b.sync.items", { one: "{n} item", other: "{n} items" }, group.length)).replace("{photos}", plural(t, locale, "b2b.sync.photos", { one: "{n} photo", other: "{n} photos" }, photos))
+              : t("b2b.sync.kept", "{items} kept.").replace("{items}", plural(t, locale, "b2b.sync.items", { one: "{n} item", other: "{n} items" }, group.length))}</p>
             {freshError === jobId ? <p role="alert" className="mt-2 text-sm text-sig-vermilion-ink">{t("b2b.sync.retryFreshFailed", "Couldn't load the latest version of this job. Check your connection and try again.")}</p> : null}
             <div className="mt-3 grid grid-cols-2 gap-2">
               <button type="button" disabled={!online} onClick={() => void retryFresh(jobId)} className="col-span-2 min-h-[48px] rounded bg-ops-accent font-bold text-white disabled:opacity-45">{t("b2b.sync.retryFresh", "Retry with latest")}</button>
@@ -90,7 +93,7 @@ export function SyncView() {
       <section aria-labelledby="pending-h">
         <div className="flex items-baseline justify-between">
           <h2 id="pending-h" className="text-lg font-bold">{t("b2b.sync.pendingTitle", "Pending queue items")}</h2>
-          <span className="font-mono text-sm text-ops-ink-muted">{plural(pending.length, "b2b.sync.items", "{n} item", "{n} items")}</span>
+          <span className="font-mono text-sm text-ops-ink-muted">{plural(t, locale, "b2b.sync.items", { one: "{n} item", other: "{n} items" }, pending.length)}</span>
         </div>
         {pending.length === 0 ? (
           <p className="mt-3 rounded border border-dashed border-ops-border-strong bg-ops-surface p-5 text-center text-ops-ink-muted">{discarded ? t("b2b.sync.draftDiscarded", "Draft discarded. No queued changes.") : lastSync ? t("b2b.sync.empty", "No queued changes.") : t("b2b.sync.emptyNeverSynced", "No queued changes. Nothing has been synced from this phone yet.")}</p>
@@ -138,7 +141,7 @@ export function SyncView() {
         className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded bg-ops-ink px-4 text-lg font-bold text-white disabled:opacity-45"
       >
         <RefreshCw className={cn("h-5 w-5", syncState === "syncing" && "motion-safe:animate-spin")} aria-hidden="true" />
-        {syncState === "syncing" ? t("b2b.sync.sending", "Sending…") : t("b2b.sync.syncNow", "Sync now ({items})").replace("{items}", plural(waitingCount, "b2b.sync.items", "{n} item", "{n} items"))}
+        {syncState === "syncing" ? t("b2b.sync.sending", "Sending…") : t("b2b.sync.syncNow", "Sync now ({items})").replace("{items}", plural(t, locale, "b2b.sync.items", { one: "{n} item", other: "{n} items" }, waitingCount))}
       </button>
     </div>
   );

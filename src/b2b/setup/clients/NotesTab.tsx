@@ -1,5 +1,6 @@
 "use client";
 
+import { personName } from "@/b2b/lib/person";
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,7 +19,7 @@ function SystemEntry({ orgId, item }: { orgId: string; item: TimelineItem }) {
   const { tr } = useTr();
   const ref = typeof item.reference === "string" ? item.reference : "";
   const title = typeof item.title === "string" ? item.title : "";
-  const actor = typeof item.actorName === "string" ? item.actorName : "";
+  const actor = typeof item.actorName === "string" ? personName(item.actorName, "") : ""; // a real name only, never an email
   const Icon = item.type === "JOB_COMPLETED" ? CheckCircle2 : item.type === "JOB_CREATED" ? Briefcase : History;
   let text: string;
   if (item.type === "JOB_CREATED") text = tr("b2b.clients.timeline.jobCreated", "Job created: {job}", { job: [ref, title].filter(Boolean).join(" ") });

@@ -1,24 +1,22 @@
 import type { SyncState } from "./OfflineProvider";
+import { plural } from "@/b2b/lib/plural";
 
 export type Translate = (key: string, fallback: string) => string;
 const identity: Translate = (_key, fallback) => fallback;
 
-export interface BarInput { online: boolean; syncState: SyncState; waitingCount: number; attentionCount: number; lastSync: string | null; storageLow: boolean; clock: (iso: string) => string; t?: Translate }
+export interface BarInput { online: boolean; syncState: SyncState; waitingCount: number; attentionCount: number; lastSync: string | null; storageLow: boolean; clock: (iso: string) => string; t?: Translate; locale?: string }
 export interface BarView { tone: "ok" | "syncing" | "offline" | "attention" | "warning"; text: string }
 
 /** Wording for the always-visible status bar (ux-direction §5.3). */
 export function statusBarView(i: BarInput): BarView {
   const t = i.t ?? identity;
-  const changes = (n: number) =>
-    n === 1
-      ? t("b2b.tech.bar.changes.one", "{n} change").replace("{n}", String(n))
-      : t("b2b.tech.bar.changes.other", "{n} changes").replace("{n}", String(n));
+  const locale = i.locale ?? "en";
+  // The language picks the form (Romanian "2 modificări", "25 de modificări"), never `n === 1`.
+  const changes = (n: number) => plural(t, locale, "b2b.tech.bar.changes", { one: "{n} change", other: "{n} changes" }, n);
   if (i.attentionCount > 0) {
     return {
       tone: "attention",
-      text: i.attentionCount === 1
-        ? t("b2b.tech.bar.attention.one", "{n} needs your attention").replace("{n}", String(i.attentionCount))
-        : t("b2b.tech.bar.attention.other", "{n} need your attention").replace("{n}", String(i.attentionCount)),
+      text: plural(t, locale, "b2b.tech.bar.attention", { one: "{n} needs your attention", other: "{n} need your attention" }, i.attentionCount),
     };
   }
   if (!i.online) {

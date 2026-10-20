@@ -1,5 +1,8 @@
+import { fmt, fallback } from "./plural";
+import { identityT, type Translate } from "./tech-actions";
 import { isB2bError } from "@/b2b/api/client";
 import type { CustomerDetail, CustomerInput, CustomerLocation, LocationInput, OrgMemberRow, Skill } from "@/b2b/api/catalog-types";
+import { isValidEmail } from "./email";
 import type { PermissionKey } from "./permissions";
 
 // Pure helpers for the Teams and Customers screens.
@@ -28,7 +31,7 @@ export function filterMembers(members: readonly OrgMemberRow[], query: string, s
   const q = norm(query);
   const allowed = skillId ? new Set(skills.find((s) => s.id === skillId)?.memberIds ?? []) : null;
   return members.filter(
-    (m) => (!allowed || allowed.has(m.id)) && (!q || norm(m.displayName).includes(q) || norm(m.workEmail ?? "").includes(q))
+    (m) => (!allowed || allowed.has(m.id)) && (!q || norm(m.displayName ?? "").includes(q) || norm(m.workEmail ?? "").includes(q))
   );
 }
 
@@ -67,27 +70,26 @@ export function leadAfterMemberChange(leadId: string | null | undefined, memberI
 
 export type FieldErrors<K extends string = string> = Partial<Record<K, string>>;
 
-export function validateName(name: string, max: number, label: string): string | undefined {
+export function validateName(name: string, max: number, label: string, t: Translate = identityT): string | undefined {
   const v = name.trim();
-  if (!v) return `${label} is required.`;
-  if (v.length > max) return `${label} must be ${max} characters or fewer.`;
+  if (!v) return fmt(t("b2b.catalog.required", "{label} is required."), { label });
+  if (v.length > max) return fmt(t("b2b.catalog.tooLong", "{label} must be {max} characters or fewer."), { label, max });
   return undefined;
 }
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const emptyToNull = (s: string) => (s.trim() ? s.trim() : null);
 
 export interface CustomerForm { name: string; type: "COMPANY" | "PERSON"; email: string; phone: string; billingAddress: string; notes: string }
 export const EMPTY_CUSTOMER_FORM: CustomerForm = { name: "", type: "COMPANY", email: "", phone: "", billingAddress: "", notes: "" };
 
-export function validateCustomer(f: CustomerForm): FieldErrors<keyof CustomerForm> {
+export function validateCustomer(f: CustomerForm, t: Translate = identityT): FieldErrors<keyof CustomerForm> {
   const errors: FieldErrors<keyof CustomerForm> = {};
-  const name = validateName(f.name, 200, "Name");
+  const name = validateName(f.name, 200, t("b2b.catalog.label.name", "Name"), t);
   if (name) errors.name = name;
-  if (f.email.trim() && (!EMAIL.test(f.email.trim()) || f.email.trim().length > 255)) errors.email = "Enter a valid email address.";
-  if (f.phone.trim().length > 40) errors.phone = "Phone must be 40 characters or fewer.";
-  if (f.billingAddress.trim().length > 500) errors.billingAddress = "Billing address must be 500 characters or fewer.";
-  if (f.notes.trim().length > 5000) errors.notes = "Notes must be 5000 characters or fewer.";
+  if (f.email.trim() && !isValidEmail(f.email)) errors.email = t("b2b.catalog.email", "Enter a valid email address.");
+  if (f.phone.trim().length > 40) errors.phone = fmt(t("b2b.catalog.tooLong", "{label} must be {max} characters or fewer."), { label: t("b2b.catalog.label.phone", "Phone"), max: 40 });
+  if (f.billingAddress.trim().length > 500) errors.billingAddress = fmt(t("b2b.catalog.tooLong", "{label} must be {max} characters or fewer."), { label: t("b2b.catalog.label.billing", "Billing address"), max: 500 });
+  if (f.notes.trim().length > 5000) errors.notes = fmt(t("b2b.catalog.tooLong", "{label} must be {max} characters or fewer."), { label: t("b2b.catalog.label.notes", "Notes"), max: 5000 });
   return errors;
 }
 
@@ -111,18 +113,18 @@ function parseCoord(raw: string): number | null | "invalid" {
   return Number.isFinite(n) ? n : "invalid";
 }
 
-export function validateLocation(f: LocationForm): FieldErrors<keyof LocationForm> {
+export function validateLocation(f: LocationForm, t: Translate = identityT): FieldErrors<keyof LocationForm> {
   const errors: FieldErrors<keyof LocationForm> = {};
-  const label = validateName(f.label, 200, "Label");
+  const label = validateName(f.label, 200, t("b2b.catalog.label.label", "Label"), t);
   if (label) errors.label = label;
-  const addr = validateName(f.addressLine, 300, "Address");
+  const addr = validateName(f.addressLine, 300, t("b2b.catalog.label.address", "Address"), t);
   if (addr) errors.addressLine = addr;
-  if (f.country.trim() && f.country.trim().length !== 2) errors.country = "Use a 2-letter country code, for example ES.";
+  if (f.country.trim() && f.country.trim().length !== 2) errors.country = t("b2b.catalog.country", "Use a 2-letter country code, for example ES.");
   const lat = parseCoord(f.latitude), lng = parseCoord(f.longitude);
-  if (lat === "invalid" || (typeof lat === "number" && (lat < -90 || lat > 90))) errors.latitude = "Latitude must be between -90 and 90.";
-  if (lng === "invalid" || (typeof lng === "number" && (lng < -180 || lng > 180))) errors.longitude = "Longitude must be between -180 and 180.";
-  if (f.accessInstructions.trim().length > 5000) errors.accessInstructions = "Access instructions must be 5000 characters or fewer.";
-  if (f.safetyInstructions.trim().length > 5000) errors.safetyInstructions = "Safety instructions must be 5000 characters or fewer.";
+  if (lat === "invalid" || (typeof lat === "number" && (lat < -90 || lat > 90))) errors.latitude = t("b2b.catalog.lat", "Latitude must be between -90 and 90.");
+  if (lng === "invalid" || (typeof lng === "number" && (lng < -180 || lng > 180))) errors.longitude = t("b2b.catalog.lng", "Longitude must be between -180 and 180.");
+  if (f.accessInstructions.trim().length > 5000) errors.accessInstructions = fmt(t("b2b.catalog.tooLong", "{label} must be {max} characters or fewer."), { label: t("b2b.catalog.label.access", "Access instructions"), max: 5000 });
+  if (f.safetyInstructions.trim().length > 5000) errors.safetyInstructions = fmt(t("b2b.catalog.tooLong", "{label} must be {max} characters or fewer."), { label: t("b2b.catalog.label.safety", "Safety instructions"), max: 5000 });
   return errors;
 }
 
@@ -146,28 +148,36 @@ export function locationToForm(l: CustomerLocation): LocationForm {
 
 export type CatalogSubject = "team" | "skill" | "customer" | "location";
 
+/** English fallbacks for "no longer exists", per subject (keys b2b.catalog.err.gone.*). */
+export const GONE: Record<CatalogSubject, string> = {
+  team: fallback("This team no longer exists. Refresh the page."),
+  skill: fallback("This skill no longer exists. Refresh the page."),
+  customer: fallback("This customer no longer exists. Refresh the page."),
+  location: fallback("This location no longer exists. Refresh the page."),
+};
+
 /** Plain-language message for a failed catalog request. */
-export function catalogErrorMessage(err: unknown, subject: CatalogSubject): string {
-  if (!isB2bError(err)) return "Something went wrong. Try again.";
-  if (err.code === "NETWORK") return "Can't reach the server. Check your connection and try again.";
-  if (err.code === "MIGRATION_PENDING" || err.isMigrationPending) return "This feature isn't available yet for your workspace. Ask an administrator to finish the setup.";
-  if (err.status === 403) return "You don't have permission to do that. Ask a manager or administrator.";
-  if (err.status === 404) return `This ${subject} no longer exists. Refresh the page.`;
+export function catalogErrorMessage(err: unknown, subject: CatalogSubject, t: Translate = identityT): string {
+  if (!isB2bError(err)) return t("b2b.catalog.err.generic", "Something went wrong. Try again.");
+  if (err.code === "NETWORK") return t("b2b.catalog.err.network", "Can't reach the server. Check your connection and try again.");
+  if (err.code === "MIGRATION_PENDING" || err.isMigrationPending) return t("b2b.catalog.err.pending", "This feature isn't available yet for your workspace. Ask an administrator to finish the setup.");
+  if (err.status === 403) return t("b2b.catalog.err.forbidden", "You don't have permission to do that. Ask a manager or administrator.");
+  if (err.status === 404) return t(`b2b.catalog.err.gone.${subject}`, GONE[subject]);
   if (err.code === "RESOURCE_IN_USE") {
     const msg: Record<CatalogSubject, string> = {
-      skill: "This skill is required by a job, so it can't be deleted. Remove it from those jobs first.",
-      customer: "This customer has jobs, so it can't be deleted.",
-      location: "Jobs are scheduled at this location, so it can't be deleted.",
-      team: "This team is in use and can't be removed. Deactivate it instead.",
+      skill: fallback("This skill is required by a job, so it can't be deleted. Remove it from those jobs first."),
+      customer: fallback("This customer has jobs, so it can't be deleted."),
+      location: fallback("Jobs are scheduled at this location, so it can't be deleted."),
+      team: fallback("This team is in use and can't be removed. Deactivate it instead."),
     };
-    return msg[subject];
+    return t(`b2b.catalog.err.inUse.${subject}`, msg[subject]);
   }
   if (err.code === "VALIDATION_ERROR" || err.code === "INVALID_REFERENCE") {
     const first = Object.values(err.fields)[0];
-    return first ? `Check the form: ${first}` : "Check the form and try again.";
+    return first ? fmt(t("b2b.catalog.err.form", "Check the form: {first}"), { first }) : t("b2b.catalog.err.formGeneric", "Check the form and try again.");
   }
-  if (err.code === "RATE_LIMITED") return "Too many requests. Wait a moment and try again.";
-  return err.status >= 500 ? "The server had a problem. Try again in a moment." : err.message || "Something went wrong. Try again.";
+  if (err.code === "RATE_LIMITED") return t("b2b.catalog.err.rate", "Too many requests. Wait a moment and try again.");
+  return err.status >= 500 ? t("b2b.catalog.err.server", "The server had a problem. Try again in a moment.") : err.message || t("b2b.catalog.err.generic", "Something went wrong. Try again.");
 }
 
 /** True when a members list failed because the viewer lacks member.view (hide the section instead of erroring). */

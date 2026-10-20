@@ -114,12 +114,15 @@ const KNOWN_ROOTS = new Set<string>([
 export const NOT_FOUND_PAGE = "/not-found-page";
 /** Same idea for the logged-in B2B app (its own root layout): /ops/{org}/zzz and /tech/{org}/zzz. */
 export const B2B_NOT_FOUND_PAGE = "/b2b/not-found-page";
-const OPS_SECTIONS = new Set(["dashboard", "jobs", "dispatch", "review", "teams", "customers", "notifications", "settings", "setup"]);
+const OPS_SECTIONS = new Set(["dashboard", "jobs", "dispatch", "review", "teams", "customers", "notifications", "settings", "setup", "finance"]);
 const TECH_SECTIONS = new Set(["today", "sync", "jobs"]);
 
-/** True for /ops/{org}/{unknown} and /tech/{org}/{unknown}: the segment after the workspace id is not a screen that exists. */
+/** True for /ops/{org}/{unknown}, /tech/{org}/{unknown} and any /b2b path other than an invitation: a screen that does not exist. */
 export function isUnknownB2bSection(pathname: string): boolean {
-  const [, root, org, section] = pathname.split("/");
+  const parts = pathname.split("/");
+  const [, root, org, section] = parts;
+  // /b2b only has the invitation page (/b2b/invite/{token}) and the not-found page itself.
+  if (root === "b2b") return !((org === "invite" && !!section && parts.length === 4) || (org === "not-found-page" && parts.length === 3));
   if (!org || !section) return false;
   if (root === "ops") return !OPS_SECTIONS.has(section);
   if (root === "tech") return !TECH_SECTIONS.has(section);

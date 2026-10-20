@@ -1,5 +1,6 @@
 "use client";
 
+import { usePersonName } from "@/b2b/lib/usePersonName";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Star } from "lucide-react";
@@ -12,11 +13,13 @@ import { TEAM_STATUS_LABEL } from "@/b2b/lib/status";
 import { summarizeHours } from "@/b2b/lib/working-hours";
 import { ErrorAlert, btnSecondary, inputCls } from "@/b2b/components/catalog/ui";
 import { TeamStatusChip } from "./TeamStatusChip";
+import { teamStatusLabel } from "@/b2b/lib/status-label";
 
 const STATUSES = Object.keys(TEAM_STATUS_LABEL) as TeamStatus[];
 
 export function TeamCard({ orgId, team, skills, actions, onEdit }: { orgId: string; team: Team; skills: Skill[]; actions: CatalogActions; onEdit: (t: Team) => void }) {
   const { t } = useTranslation();
+  const nameOf = usePersonName();
   const qc = useQueryClient();
   const [status, setStatus] = useState<TeamStatus | null>(null);
   const byMember = skillsByMember(skills);
@@ -34,11 +37,11 @@ export function TeamCard({ orgId, team, skills, actions, onEdit }: { orgId: stri
         <div className="min-w-0">
           <h2 id={`team-${team.id}`} className="truncate text-lg font-bold text-ops-ink">{team.name}</h2>
           <p className="text-sm text-ops-ink-muted">
-            {lead ? <>{t("b2b.teams.leadLabel", "Lead")}: <span className="font-bold text-ops-ink">{lead.displayName}</span></> : t("b2b.teams.noLead", "No lead")}
+            {lead ? <>{t("b2b.teams.leadLabel", "Lead")}: <span className="font-bold text-ops-ink">{nameOf(lead.displayName)}</span></> : t("b2b.teams.noLead", "No lead")}
             {" · "}{team.members.length} {t("b2b.teams.membersLower", "members")}
           </p>
           <p className="text-sm text-ops-ink-muted">
-            {t("b2b.teams.hours", "Working hours")}: <span className="font-bold text-ops-ink">{summarizeHours(team.workingHours) ?? t("b2b.teams.hoursDefault", "Default")}</span>
+            {t("b2b.teams.hours", "Working hours")}: <span className="font-bold text-ops-ink">{summarizeHours(team.workingHours, t) ?? t("b2b.teams.hoursDefault", "Default")}</span>
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -56,11 +59,11 @@ export function TeamCard({ orgId, team, skills, actions, onEdit }: { orgId: stri
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <label htmlFor={`st-${team.id}`} className="text-sm font-bold text-ops-ink">{t("b2b.teams.setStatus", "Set status")}</label>
           <select id={`st-${team.id}`} value={shown} disabled={change.isPending} onChange={(e) => change.mutate(e.target.value as TeamStatus)} className={`${inputCls} w-auto`}>
-            {STATUSES.map((s) => <option key={s} value={s}>{TEAM_STATUS_LABEL[s]}</option>)}
+            {STATUSES.map((s) => <option key={s} value={s}>{teamStatusLabel(t, s)}</option>)}
           </select>
         </div>
       )}
-      {change.isError && <div className="mt-3"><ErrorAlert message={catalogErrorMessage(change.error, "team")} /></div>}
+      {change.isError && <div className="mt-3"><ErrorAlert message={catalogErrorMessage(change.error, "team", t)} /></div>}
 
       {team.members.length === 0 ? (
         <p className="mt-3 text-sm text-ops-ink-muted">{actions.editTeam ? t("b2b.teams.noMembersManager", "No members yet. Use Edit to add technicians.") : t("b2b.teams.noMembersViewer", "No members yet. Ask a manager to add technicians.")}</p>
@@ -70,7 +73,7 @@ export function TeamCard({ orgId, team, skills, actions, onEdit }: { orgId: stri
             <li key={m.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
               <span className="flex min-w-[10rem] items-center gap-1 font-bold text-ops-ink">
                 {m.id === team.leadMemberId && <Star className="h-4 w-4 text-sig-orange-ink" aria-label={t("b2b.teams.leadLabel", "Lead")} />}
-                {m.displayName}
+                {nameOf(m.displayName)}
               </span>
               <span className="flex flex-wrap gap-1">
                 {(byMember.get(m.id) ?? []).map((s) => <span key={s.id} className="rounded bg-ops-canvas px-1.5 py-0.5 text-xs text-ops-ink">{s.name}</span>)}

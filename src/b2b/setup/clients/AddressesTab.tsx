@@ -58,7 +58,7 @@ export function AddressesTab({ orgId, clientId, locations, canManage, offline }:
       {dlg?.kind === "delete" && (
         <Modal open title={tr("b2b.clients.location.deleteTitle", "Delete {name}?", { name: dlg.location.label })} onClose={() => setDlg(null)}>
           <p className="mb-4 text-sm text-ops-ink">{tr("b2b.locations.deleteBody", "This removes the location. Locations with jobs can't be deleted.")}</p>
-          {del.isError && <div className="mb-4"><ErrorAlert message={catalogErrorMessage(del.error, "location")} /></div>}
+          {del.isError && <div className="mb-4"><ErrorAlert message={catalogErrorMessage(del.error, "location", tr)} /></div>}
           <div className="flex flex-wrap justify-end gap-2">
             <button type="button" onClick={() => setDlg(null)} className={btnSecondary}>{tr("b2b.common.cancel", "Cancel")}</button>
             <button type="button" disabled={del.isPending || offline} onClick={() => del.mutate(dlg.location.id)} className={btnDanger}>{tr("b2b.common.delete", "Delete")}</button>

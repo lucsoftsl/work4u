@@ -4,7 +4,8 @@ import { UsersRound } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { Team, TeamStatus } from "@/b2b/api/types";
-import { FAMILY_CLASSES, TEAM_STATUS_LABEL, type Family } from "@/b2b/lib/status";
+import { FAMILY_CLASSES, type Family } from "@/b2b/lib/status";
+import { teamStatusLabel } from "@/b2b/lib/status-label";
 
 const TEAM_FAMILY: Record<TeamStatus, Family> = {
   AVAILABLE: "green", ASSIGNED: "blue", TRAVELLING: "sky", ON_SITE: "sky", BREAK: "orange", OFFLINE: "slate",
@@ -21,7 +22,7 @@ export function TeamStrip({ teams, loading, failed, onRetry }: { teams?: Team[];
       <div className="min-h-[88px] p-3">
         {loading ? (
           <ul role="status" aria-busy="true" className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-            <li className="sr-only">Loading</li>
+            <li className="sr-only">{t("b2b.common.loading", "Loading")}</li>
             {Array.from({ length: 4 }).map((_, i) => <li key={i} className="h-[52px] animate-pulse rounded bg-ops-border motion-reduce:animate-none" />)}
           </ul>
         ) : failed ? (
@@ -40,7 +41,7 @@ export function TeamStrip({ teams, loading, failed, onRetry }: { teams?: Team[];
                   <span className="truncate text-sm font-bold text-ops-ink">{team.name}</span>
                 </span>
                 <span className={cn("inline-flex h-7 shrink-0 items-center rounded px-2 text-xs font-bold", FAMILY_CLASSES[TEAM_FAMILY[team.status]].tint)}>
-                  {TEAM_STATUS_LABEL[team.status]}
+                  {teamStatusLabel(t, team.status)}
                 </span>
               </li>
             ))}

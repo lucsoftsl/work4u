@@ -15,12 +15,13 @@ import { TOTAL_BUCKET_KEYS } from "@/b2b/lib/dashboard";
 import { useDashboardData, MAX_PAGES, PAGE_LIMIT } from "./useDashboardData";
 import { useNow } from "./useNow";
 import { SetupChecklist } from "@/b2b/setup/SetupChecklist";
+import { plural } from "@/b2b/lib/plural";
 
 const EMPTY: ReadonlySet<BucketKey> = new Set();
 const ALL_KEYS: BucketKey[] = ["live", "scheduledToday", "upcoming", "delayed", "waitingParts", "review", "blocked", "completedToday", "cancelled"];
 
 export function DashboardView() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const org = useOrg();
   const tz = org.me?.org.timezone ?? "UTC";
   const nowMs = useNow();
@@ -80,7 +81,7 @@ export function DashboardView() {
           <BucketCards orgId={org.orgId} counts={counts} cappedKeys={cappedKeys} now={now} tz={tz} canReview={org.can("job.close")} />
           {capped && (
             <p className="text-xs text-ops-ink-muted">
-              {t("b2b.dashboard.capped", "Counts are based on the first {n} jobs; there are more, so totals may be higher.").replace("{n}", String(MAX_PAGES * PAGE_LIMIT))}
+              {plural(t, locale, "b2b.dashboard.capped", { one: "Counts are based on the first {n} job; there are more, so totals may be higher.", other: "Counts are based on the first {n} jobs; there are more, so totals may be higher." }, MAX_PAGES * PAGE_LIMIT)}
             </p>
           )}
         </>

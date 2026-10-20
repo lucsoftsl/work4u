@@ -3,7 +3,7 @@ import type { DuplicateGroup } from "@/b2b/setup/api";
 import { canMergeGroup, findGroup, groupId, isMergeRefusal, mergeIds, mergeTotals, sourceIdsFor } from "./merge";
 
 const c = (id: string) => ({ id, name: id, email: null, phone: null });
-const group: DuplicateGroup = { reason: "EMAIL", key: "a@b.c", customers: [c("1"), c("2"), c("3")] };
+const group: DuplicateGroup = { id: "g_0123456789abcdef", reason: "EMAIL", key: "a•••@b.c", customers: [c("1"), c("2"), c("3")] };
 const moved = (jobs: number) => ({ jobs, locations: 1, contacts: 2, notes: 3, tags: 0 });
 
 describe("merge helpers", () => {
@@ -21,9 +21,21 @@ describe("merge helpers", () => {
     const big = { customers: Array.from({ length: 12 }, (_, i) => c(String(i))) };
     expect(canMergeGroup(big, "0")).toBe(false);
   });
-  it("finds a group by its URL id", () => {
+  it("finds a group by its URL id (the API's opaque id)", () => {
+    expect(groupId(group)).toBe("g_0123456789abcdef");
     expect(findGroup([group], groupId(group))).toBe(group);
     expect(findGroup([group], "nope")).toBeUndefined();
+  });
+  it("keeps two groups apart when their masked keys are equal (marina@ and mario@ both mask to m•••@domain)", () => {
+    const a: DuplicateGroup = { id: "g_aaaaaaaaaaaaaaaa", reason: "EMAIL", key: "m•••@hotel-marina.es", customers: [c("1"), c("2")] };
+    const b: DuplicateGroup = { id: "g_bbbbbbbbbbbbbbbb", reason: "EMAIL", key: "m•••@hotel-marina.es", customers: [c("3"), c("4")] };
+    expect(groupId(a)).not.toBe(groupId(b));
+    expect(findGroup([a, b], groupId(b))).toBe(b);
+  });
+  it("falls back to reason:key for an older API without ids", () => {
+    const old = { reason: "PHONE", key: "…5678", customers: [c("1"), c("2")] } as DuplicateGroup;
+    expect(groupId(old)).toBe("PHONE:…5678");
+    expect(findGroup([old], "PHONE:…5678")).toBe(old);
   });
   it("classifies refusal codes", () => {
     expect(isMergeRefusal("MERGE_INVALID")).toBe(true);
@@ -40,5 +52,14 @@ describe("maskPhone", () => {
     expect(maskPhone("1234")).toBe("•••");
     expect(maskPhone(null)).toBeNull();
     expect(maskPhone("")).toBeNull();
+  });
+});
+
+import { maskEmail } from "./merge";
+describe("maskEmail", () => {
+  it("keeps the first letter and the domain", () => {
+    expect(maskEmail("ana.pop@hotel-marina.es")).toBe("a•••@hotel-marina.es");
+    expect(maskEmail("x")).toBe("•••");
+    expect(maskEmail(null)).toBeNull();
   });
 });

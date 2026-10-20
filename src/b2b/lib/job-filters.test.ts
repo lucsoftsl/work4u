@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  DEFAULT_FILTERS, PRESETS, ariaSort, defaultDir, nextSort, activeFilterCount, activePreset, clearFilters, parseJobFilters, serializeJobFilters, toApiFilters, withFilterChange,
+  CHIP_STATUSES, DEFAULT_FILTERS, PRESETS, isDraftsView, ariaSort, defaultDir, nextSort, activeFilterCount, activePreset, clearFilters, parseJobFilters, serializeJobFilters, toApiFilters, withFilterChange,
 } from "./job-filters";
 
 describe("job-filters", () => {
@@ -83,5 +83,32 @@ describe("priority filter", () => {
     expect(withFilterChange(f, { priority: ["LOW"] }).page).toBe(1);
     expect(filterByPriority([{ priority: "LOW" }, {}, { priority: "HIGH" }], ["NORMAL", "HIGH"])).toEqual([{}, { priority: "HIGH" }]);
     expect(filterByPriority([{ priority: "LOW" }], [])).toHaveLength(1);
+  });
+});
+
+describe("Drafts view (4718e5f9)", () => {
+  it("is a preset that opens on 'created by me' and is recognised from the URL", () => {
+    const drafts = PRESETS.find((p) => p.key === "drafts")!;
+    expect(drafts.patch).toEqual({ status: ["DRAFT"], unassigned: false, mine: true });
+    const f = parseJobFilters("status=DRAFT&mine=true");
+    expect(f).toMatchObject({ status: ["DRAFT"], mine: true });
+    expect(activePreset(f)).toBe("drafts");
+    expect(isDraftsView(f)).toBe(true);
+    expect(isDraftsView(parseJobFilters("status=NEW"))).toBe(false);
+  });
+  it("sends status=DRAFT and mine=true to the API, and round-trips through the URL", () => {
+    const f = parseJobFilters("status=DRAFT&mine=true&sort=updatedAt");
+    expect(toApiFilters(f)).toMatchObject({ status: ["DRAFT"], mine: true });
+    expect(parseJobFilters(serializeJobFilters(f))).toEqual(f);
+    expect(toApiFilters({ ...f, mine: false })).not.toHaveProperty("mine");
+  });
+  it("switching to 'anyone' resets paging like any filter", () => {
+    const f = { ...parseJobFilters("status=DRAFT&mine=true"), page: 3 };
+    expect(withFilterChange(f, { mine: false })).toMatchObject({ mine: false, page: 1 });
+  });
+  it("the other presets clear 'mine', and the status chips never offer Draft", () => {
+    for (const p of PRESETS.filter((x) => x.key !== "drafts")) expect(p.patch.mine).toBe(false);
+    expect(CHIP_STATUSES).not.toContain("DRAFT");
+    expect(CHIP_STATUSES).toContain("NEW");
   });
 });

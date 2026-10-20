@@ -1,3 +1,4 @@
+import { personName } from "@/b2b/lib/person";
 import type { ClientNote, TimelineItem } from "@/b2b/setup/api";
 
 export const NOTE_MAX = 4000;
@@ -36,4 +37,13 @@ export function buildFeed(notes: readonly ClientNote[], timeline: readonly Timel
     ...timeline.filter((t) => t.type !== "NOTE" && typeof t.at === "string").map((item): FeedItem => ({ kind: "system", at: item.at, item })),
   ].sort((a, b) => time(b.at) - time(a.at));
   return [...pinned, ...rest];
+}
+
+/**
+ * Note author label: a deleted author (no author object) is "Former team member"; an author without a real name (null, or an email
+ * from an older API) is "Team member"; never an email.
+ */
+export function noteAuthorLabel(author: { name: string | null } | null | undefined, unnamed: string, former: string): string {
+  if (!author) return former;
+  return personName(author.name, unnamed);
 }

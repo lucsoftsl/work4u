@@ -1,5 +1,6 @@
 "use client";
 
+import { noteAuthorLabel } from "./noteRules";
 import { useTr } from "@/b2b/setup/i18n";
 import type { ClientPage } from "@/b2b/setup/api";
 import { ContactsCard } from "./ContactsCard";
@@ -31,7 +32,7 @@ export function OverviewTab({ client, orgId, canManage, offline }: { client: Cli
             {client.pinnedNotes.length === 0 ? <p className="mt-2 text-sm text-ops-ink-muted">{tr("b2b.clients.pinned.empty", "No pinned notes.")}</p> : (
               <ul className="mt-2 space-y-3">
                 {client.pinnedNotes.map((n) => (
-                  <li key={n.id}><p className="whitespace-pre-line break-words text-ops-ink">{n.body}</p><p className="text-xs text-ops-ink-muted">{[n.author?.name, shortDate(n.createdAt)].filter(Boolean).join(" · ")}</p></li>
+                  <li key={n.id}><p className="whitespace-pre-line break-words text-ops-ink">{n.body}</p><p className="text-xs text-ops-ink-muted">{[noteAuthorLabel(n.author, tr("b2b.member.unnamed", "Team member"), tr("b2b.clients.note.formerAuthor", "Former team member")), shortDate(n.createdAt)].join(" · ")}</p></li>
                 ))}
               </ul>
             )}

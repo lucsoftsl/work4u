@@ -83,7 +83,7 @@ describe("queue + flush", () => {
     const stale = runners({ runAction: vi.fn().mockRejectedValue(new B2bError(409, "VERSION_CONFLICT", "x", { currentStatus: "CANCELLED", currentVersion: 9 })) });
     await flushQueue(ORG, stale);
     expect((await listQueue(ORG))[0]).toMatchObject({ status: "conflict" });
-    expect((await listQueue(ORG))[0].error).toMatch(/now cancelled/);
+    expect((await listQueue(ORG))[0].error).toMatch(/now Cancelled/);
 
     await discardJob(ORG, "j1");
     const item = await act("complete");

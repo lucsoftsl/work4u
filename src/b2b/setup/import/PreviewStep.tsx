@@ -80,7 +80,7 @@ export function PreviewStep({ kind, preview, online, busy, commitError, onBack, 
           {c.error > 0 && <label className="flex min-h-[44px] items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={errorsOnly} onChange={(e) => setErrorsOnly(e.target.checked)} />{tr("b2b.import.errorsOnly", "Errors only")}</label>}
         </div>
         {extra.isError && <ErrorAlert message={setupErrorMessage(extra.error, tr)} />}
-        <div role="region" tabIndex={0} aria-labelledby="rows-h" className="hidden max-h-[28rem] overflow-auto rounded-lg border border-ops-border bg-ops-surface min-[700px]:block">
+        <div role="region" tabIndex={0} aria-labelledby="rows-h" className="relative hidden max-h-[28rem] overflow-auto rounded-lg border border-ops-border bg-ops-surface min-[700px]:block">
           <table className="w-full border-collapse text-sm">
             <thead className="sticky top-0 bg-ops-surface"><tr className="border-b border-ops-border">
               <th scope="col" className={th}>{tr("b2b.import.col.row", "Row")}</th>

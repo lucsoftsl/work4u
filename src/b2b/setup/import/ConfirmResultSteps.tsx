@@ -46,7 +46,7 @@ export function ConfirmStep({ kind, preview, skip, online, busy, error, onBack, 
 }
 
 export function ResultStep({ kind, result, doneHref, onRestart }: { kind: Kind; result: ImportPreview; doneHref: string; onRestart: () => void }) {
-  const { tr } = useTr();
+  const { tr, trn } = useTr();
   const { orgId } = useOrg();
   const live = useImportPoll(orgId, result) ?? result;
   const [reportError, setReportError] = useState<string | null>(null);
@@ -57,7 +57,7 @@ export function ResultStep({ kind, result, doneHref, onRestart }: { kind: Kind; 
       <section aria-labelledby="res-h" className="space-y-3 rounded-lg border border-ops-border bg-ops-surface p-4">
         <h2 id="res-h" className="text-lg font-bold">{tr("b2b.import.step.result", "Result")}</h2>
         <div role="status">
-          <p className="text-sm">{tr("b2b.import.progress", "Importing {done} of {total} rows. You can leave this page. We'll finish in the background.", { done: live.processedRows, total: live.totalRows })}</p>
+          <p className="text-sm">{trn("b2b.import.progress", { one: "Importing {done} of {n} row. You can leave this page. We'll finish in the background.", other: "Importing {done} of {n} rows. You can leave this page. We'll finish in the background." }, live.totalRows, { done: live.processedRows })}</p>
           <progress className="mt-2 h-3 w-full" max={100} value={pct} aria-label={tr("b2b.import.progressLabel", "Import progress")} />
         </div>
       </section>

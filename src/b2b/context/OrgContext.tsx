@@ -162,3 +162,8 @@ export function useOrg(): OrgState {
   if (!ctx) throw new Error("useOrg must be used inside <OrgProvider>");
   return ctx;
 }
+
+/** Like useOrg, but null outside a company (the sign-up wizard has no company yet). */
+export function useOrgOptional(): OrgState | null {
+  return useContext(OrgContext);
+}

@@ -20,10 +20,11 @@ import { useTranslation } from "@/lib/i18n";
 import { SPLIT_QUERY } from "@/b2b/lib/split";
 import { useMediaQuery } from "@/b2b/lib/useMediaQuery";
 import { CalendarCheck } from "lucide-react";
+import { plural } from "@/b2b/lib/plural";
 
 
 function JobBlock({ job, tz, emphasised, orgId }: { job: Job; tz: string; emphasised?: boolean; orgId: string }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { submitAction } = useOffline();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +50,7 @@ function JobBlock({ job, tz, emphasised, orgId }: { job: Job; tz: string; emphas
       <div className="flex items-start justify-between gap-3">
         <JobRef reference={job.reference} />
         <span className="inline-flex items-center gap-1 font-mono text-sm font-bold text-ops-accent">
-          <Clock className="h-4 w-4" aria-hidden="true" /> {formatWindow(job.scheduledStart, job.scheduledEnd, tz)}
+          <Clock className="h-4 w-4" aria-hidden="true" /> {formatWindow(job.scheduledStart, job.scheduledEnd, tz, { t, locale })}
         </span>
       </div>
       <h2 className={emphasised ? "mt-2 text-2xl font-bold" : "mt-2 text-lg font-bold"}>
@@ -81,7 +82,7 @@ function JobBlock({ job, tz, emphasised, orgId }: { job: Job; tz: string; emphas
 }
 
 function TodayContent() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { orgId, me } = useOrg();
   const { items, online } = useOffline();
   const tz = me?.org.timezone ?? "UTC";
@@ -136,15 +137,15 @@ function TodayContent() {
 
   return (
     <>
-      <h1 className="text-xl font-bold">{formatDayLong(jobs.data.serverTime, tz)} · {(total === 1 ? t("b2b.tech.today.jobCount.one", "{n} job") : t("b2b.tech.today.jobCount.other", "{n} jobs")).replace("{n}", String(total))}</h1>
+      <h1 className="text-xl font-bold">{formatDayLong(jobs.data.serverTime, tz, { t, locale })} · {plural(t, locale, "b2b.tech.today.jobCount", { one: "{n} job", other: "{n} jobs" }, total)}</h1>
       {staleSince ? (
         <p role="status" className="mt-2 rounded border border-sig-orange-ink/40 bg-sig-orange-tint p-2 text-sm font-bold text-sig-orange-ink">
-          {(online ? t("b2b.tech.today.staleList", "Job list last updated {time}. Something may have changed.") : t("b2b.tech.today.offlineSaved", "Offline: showing saved data from {time}. Something may have changed.")).replace("{time}", formatClock(staleSince, tz))}
+          {(online ? t("b2b.tech.today.staleList", "Job list last updated {time}. Something may have changed.") : t("b2b.tech.today.offlineSaved", "Offline: showing saved data from {time}. Something may have changed.")).replace("{time}", formatClock(staleSince, tz, locale))}
           {online ? <button type="button" onClick={() => void jobs.refetch()} className="ml-2 min-h-[44px] rounded border border-sig-orange-ink px-3">{t("b2b.tech.today.refresh", "Refresh")}</button> : null}
         </p>
       ) : null}
       {total === 0 ? (
-        <p className="mt-6 rounded border border-dashed border-ops-border-strong bg-ops-surface p-6 text-center text-ops-ink-muted">{t("b2b.tech.today.empty", "No jobs assigned to you today. List updated {time}.").replace("{time}", formatClock(staleSince ?? new Date(jobs.dataUpdatedAt).toISOString(), tz))}</p>
+        <p className="mt-6 rounded border border-dashed border-ops-border-strong bg-ops-surface p-6 text-center text-ops-ink-muted">{t("b2b.tech.today.empty", "No jobs assigned to you today. List updated {time}.").replace("{time}", formatClock(staleSince ?? new Date(jobs.dataUpdatedAt).toISOString(), tz, locale))}</p>
       ) : null}
 
       {split.next ? <div className="mt-4"><JobBlock job={split.next} tz={tz} orgId={orgId} emphasised /></div> : null}
@@ -164,7 +165,7 @@ function TodayContent() {
           {showDone ? <div className="mt-3 space-y-3">{split.done.map((job) => <JobBlock key={job.id} job={job} tz={tz} orgId={orgId} />)}</div> : null}
         </section>
       ) : null}
-      {!staleSince ? <p className="mt-6 text-center text-xs text-ops-ink-subtle">{t("b2b.tech.today.lastUpdated", "Last updated {time}").replace("{time}", formatClock(new Date(jobs.dataUpdatedAt).toISOString(), tz))}</p> : null}
+      {!staleSince ? <p className="mt-6 text-center text-xs text-ops-ink-subtle">{t("b2b.tech.today.lastUpdated", "Last updated {time}").replace("{time}", formatClock(new Date(jobs.dataUpdatedAt).toISOString(), tz, locale))}</p> : null}
     </>
   );
 }

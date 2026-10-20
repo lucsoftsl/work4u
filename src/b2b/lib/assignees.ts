@@ -1,5 +1,7 @@
-export interface AssignableMember { id: string; displayName: string; loginStatus?: "NONE" | "INVITED" | "ACTIVE" }
-export interface TeamWithMembers { id: string; name: string; active?: boolean; members: ReadonlyArray<{ id: string; displayName: string }> }
+import { personSortKey } from "./person";
+
+export interface AssignableMember { id: string; displayName: string | null; loginStatus?: "NONE" | "INVITED" | "ACTIVE" }
+export interface TeamWithMembers { id: string; name: string; active?: boolean; members: ReadonlyArray<{ id: string; displayName: string | null }> }
 export interface AssigneeGroup { key: string; label: string | null; members: AssignableMember[] }
 
 /**
@@ -26,4 +28,4 @@ export function assigneeGroups(teams: readonly TeamWithMembers[], assignable: re
   return groups;
 }
 
-const byName = (a: AssignableMember, b: AssignableMember) => a.displayName.localeCompare(b.displayName);
+const byName = (a: AssignableMember, b: AssignableMember) => personSortKey(a.displayName).localeCompare(personSortKey(b.displayName));

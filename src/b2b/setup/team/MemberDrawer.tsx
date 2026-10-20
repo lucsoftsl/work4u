@@ -1,13 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { usePersonName } from "@/b2b/lib/usePersonName";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Drawer } from "../Drawer";
 import { ErrorAlert, Field, btnPrimary, btnSecondary, inputCls } from "@/b2b/components/catalog/ui";
 import { createMember, revokeInvitation, sk, updateMember, type Invitation, type Member, type Role } from "../api";
-import { duplicateField, setupErrorMessage } from "../errors";
+import { duplicateField, setupErrorMessage, unknownFieldsText } from "../errors";
+import { isB2bError } from "@/b2b/api/client";
+import { splitApiFieldErrors } from "@/b2b/lib/apiFieldErrors";
 import { useTr } from "../i18n";
-import { buildCreateBody, buildMemberPatch, formFromMember, selectableRoles, type MemberForm } from "./memberLogic";
+import { useFocusFirstInvalid } from "../useFocusFirstInvalid";
+import {
+  MEMBER_FIELDS, MEMBER_FIELD_ALIASES, buildCreateBody, buildMemberPatch, formFromMember, memberFormProblems, selectableRoles, type MemberField, type MemberForm,
+} from "./memberLogic";
 
 export type DrawerTarget = { mode: "add" } | { mode: "edit"; member: Member };
 
@@ -26,8 +32,9 @@ interface Props {
 
 export function MemberDrawer(props: Props) {
   const { tr } = useTr();
+  const nameOf = usePersonName();
   const { target, onClose } = props;
-  const title = target?.mode === "edit" ? tr("b2b.team.drawer.editTitle", "Edit {name}", { name: target.member.displayName }) : tr("b2b.team.add", "Add employee");
+  const title = target?.mode === "edit" ? tr("b2b.team.drawer.editTitle", "Edit {name}", { name: nameOf(target.member.displayName) }) : tr("b2b.team.add", "Add employee");
   return (
     <Drawer open={!!target} title={title} onClose={onClose} closeLabel={tr("b2b.common.close", "Close")}>
       {target && <DrawerForm key={target.mode === "edit" ? target.member.id : "add"} {...props} target={target} />}
@@ -41,8 +48,13 @@ function DrawerForm({ orgId, target, roles, viewerTemplate, invitation, online, 
   const member = target.mode === "edit" ? target.member : undefined;
   const [form, setForm] = useState<MemberForm>(() => formFromMember(member));
   const [nameTouched, setNameTouched] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const { ref: formRef, focusFirstInvalid } = useFocusFirstInvalid<HTMLFormElement>();
   const [created, setCreated] = useState<Member | null>(null);
-  const set = <K extends keyof MemberForm>(k: K, v: MemberForm[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const set = <K extends keyof MemberForm>(k: K, v: MemberForm[K]) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    if (k in serverErrors) save.reset(); // editing the field the API refused clears that refusal
+  };
   const roleOptions = selectableRoles(roles, viewerTemplate, member?.role as Role | undefined);
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: sk.membersAll(orgId) });
@@ -56,12 +68,39 @@ function DrawerForm({ orgId, target, roles, viewerTemplate, invitation, online, 
     },
     onSuccess: (m) => { refresh(); if (member) onClose(); else setCreated(m); },
   });
+  // Once a failed save has rendered its field error (name, duplicate phone/email/ID), focus that field. A banner-only error leaves focus.
+  useEffect(() => { if (save.error) focusFirstInvalid(); }, [save.error, focusFirstInvalid]);
+  const FIELD_TEXT: Record<MemberField, string> = {
+    displayName: form.displayName.trim() ? tr("b2b.team.err.nameNotEmail", "Enter the person's name, not an email address.") : tr("b2b.team.err.nameRequired", "Enter a name."),
+    workEmail: tr("b2b.team.err.email", "Enter a valid email address, for example ana@company.com."),
+    phone: tr("b2b.team.err.phone", "Enter the number in international format, e.g. +34 600 555 021."),
+    externalId: tr("b2b.team.err.externalId", "Use up to 100 characters."),
+    roleId: tr("b2b.team.err.role", "Pick a role from the list."),
+    memberType: tr("b2b.team.err.type", "Pick Employee or Contractor."),
+  };
+  // Every field problem of a failed save lands on its field (c769b0c5): VALIDATION_ERROR `fields`, duplicates (`body.field`) and an unknown role.
+  const api = save.isError ? splitApiFieldErrors(save.error, MEMBER_FIELDS, MEMBER_FIELD_ALIASES) : { fields: {}, unknown: [] };
+  const dupe = save.isError ? duplicateField(save.error) : null;
+  const serverErrors: Partial<Record<MemberField, string>> = {};
+  for (const k of Object.keys(api.fields) as MemberField[]) serverErrors[k] = FIELD_TEXT[k];
+  if (dupe) serverErrors[dupe] = setupErrorMessage(save.error, tr);
+  if (save.isError && isB2bError(save.error) && save.error.code === "INVALID_REFERENCE" && !api.fields.roleId && Object.keys(api.fields).length === 0) serverErrors.roleId = tr("b2b.team.err.roleGone", "This role no longer exists. Pick another one.");
+  const unknownText = unknownFieldsText(api.unknown, { teamIds: tr("b2b.team.field.teams", "Teams"), notifyChannel: tr("b2b.team.field.notify", "Notifications") }, tr);
+  const summary = save.isError && Object.keys(serverErrors).length === 0 ? (unknownText ?? setupErrorMessage(save.error, tr)) : unknownText;
   const revoke = useMutation({ mutationFn: () => revokeInvitation(orgId, invitation?.id ?? ""), onSuccess: () => { refresh(); onClose(); } });
 
-  const dupe = save.isError ? duplicateField(save.error) : null;
-  const dupeMsg = save.isError && dupe ? setupErrorMessage(save.error, tr) : undefined;
-  const summary = save.isError && !dupe ? setupErrorMessage(save.error, tr) : undefined;
-  const nameError = nameTouched && form.displayName.trim() === "" ? tr("b2b.team.err.nameRequired", "Enter a name.") : undefined;
+  const local = memberFormProblems(form);
+  const shownLocal = { ...(submitted ? local : {}), ...(nameTouched && local.displayName ? { displayName: local.displayName } : {}) };
+  const errorText = (k: MemberField): string | undefined => {
+    if (k in serverErrors) return serverErrors[k];
+    switch (k in shownLocal ? k : null) {
+      case "displayName": return shownLocal.displayName === "required" ? tr("b2b.team.err.nameRequired", "Enter a name.") : tr("b2b.team.err.nameNotEmail", "Enter the person's name, not an email address.");
+      case "workEmail": return FIELD_TEXT.workEmail;
+      case "phone": return FIELD_TEXT.phone;
+      case "externalId": return FIELD_TEXT.externalId;
+      default: return undefined;
+    }
+  };
   const readOnly = !canManage;
 
   if (created) {
@@ -77,34 +116,34 @@ function DrawerForm({ orgId, target, roles, viewerTemplate, invitation, online, 
   }
 
   return (
-    <form noValidate onSubmit={(e) => { e.preventDefault(); setNameTouched(true); if (form.displayName.trim() && online && canManage) save.mutate(); }} className="space-y-4">
+    <form ref={formRef} noValidate onSubmit={(e) => { e.preventDefault(); setNameTouched(true); setSubmitted(true); if (Object.keys(memberFormProblems(form)).length > 0) { focusFirstInvalid(); return; } if (online && canManage) save.mutate(); }} className="space-y-4">
       <fieldset disabled={readOnly || save.isPending} className="space-y-4">
-        <Field label={tr("b2b.team.field.name", "Full name")} error={nameError}>
+        <Field label={tr("b2b.team.field.name", "Full name")} error={errorText("displayName")}>
           {(p) => <input id={p.id} required autoComplete="off" value={form.displayName} onChange={(e) => set("displayName", e.target.value)} onBlur={() => setNameTouched(true)} aria-invalid={p.invalid} aria-describedby={p.describedBy} className={inputCls} />}
         </Field>
-        <Field label={tr("b2b.team.field.phone", "Phone")} hint={dupe === "phone" ? undefined : tr("b2b.team.phoneHint", "International format, e.g. +34 600 555 021.")} error={dupe === "phone" ? dupeMsg : undefined}>
+        <Field label={tr("b2b.team.field.phone", "Phone")} hint={tr("b2b.team.phoneHint", "International format, e.g. +34 600 555 021.")} error={errorText("phone")}>
           {(p) => <input id={p.id} type="tel" inputMode="tel" autoComplete="off" value={form.phone} onChange={(e) => set("phone", e.target.value)} aria-invalid={p.invalid} aria-describedby={p.describedBy} className={inputCls} />}
         </Field>
-        <Field label={tr("b2b.team.field.emailOptional", "Email (optional)")} error={dupe === "workEmail" ? dupeMsg : undefined}>
+        <Field label={tr("b2b.team.field.emailOptional", "Email (optional)")} error={errorText("workEmail")}>
           {(p) => <input id={p.id} type="email" inputMode="email" autoComplete="off" value={form.workEmail} onChange={(e) => set("workEmail", e.target.value)} aria-invalid={p.invalid} aria-describedby={p.describedBy} className={inputCls} />}
         </Field>
-        <Field label={tr("b2b.team.col.role", "Role")}>
+        <Field label={tr("b2b.team.col.role", "Role")} error={serverErrors.roleId}>
           {(p) => (
-            <select id={p.id} value={form.roleId} onChange={(e) => set("roleId", e.target.value)} className={inputCls}>
+            <select id={p.id} aria-invalid={p.invalid} aria-describedby={p.describedBy} value={form.roleId} onChange={(e) => set("roleId", e.target.value)} className={inputCls}>
               {!member && <option value="">{tr("b2b.team.role.default", "Default role")}</option>}
               {roleOptions.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           )}
         </Field>
-        <Field label={tr("b2b.team.field.type", "Type")}>
+        <Field label={tr("b2b.team.field.type", "Type")} error={serverErrors.memberType}>
           {(p) => (
-            <select id={p.id} value={form.memberType} onChange={(e) => set("memberType", e.target.value as MemberForm["memberType"])} className={inputCls}>
+            <select id={p.id} aria-invalid={p.invalid} aria-describedby={p.describedBy} value={form.memberType} onChange={(e) => set("memberType", e.target.value as MemberForm["memberType"])} className={inputCls}>
               <option value="EMPLOYEE">{tr("b2b.team.type.employee", "Employee")}</option>
               <option value="CONTRACTOR">{tr("b2b.team.type.contractor", "Contractor")}</option>
             </select>
           )}
         </Field>
-        <Field label={tr("b2b.team.field.externalId", "Employee ID (optional)")} error={dupe === "externalId" ? dupeMsg : undefined}>
+        <Field label={tr("b2b.team.field.externalId", "Employee ID (optional)")} error={errorText("externalId")}>
           {(p) => <input id={p.id} autoComplete="off" value={form.externalId} onChange={(e) => set("externalId", e.target.value)} aria-invalid={p.invalid} aria-describedby={p.describedBy} className={inputCls} />}
         </Field>
       </fieldset>

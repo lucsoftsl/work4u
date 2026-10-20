@@ -1,5 +1,6 @@
 "use client";
 
+import { usePersonName } from "@/b2b/lib/usePersonName";
 import { Mail, Phone } from "lucide-react";
 import { useTr } from "../i18n";
 import type { Invitation, Member } from "../api";
@@ -32,11 +33,12 @@ function Contact({ m }: { m: Member }) {
 
 function NameCell({ m, onOpen }: { m: Member; onOpen: (m: Member) => void }) {
   const { tr } = useTr();
+  const nameOf = usePersonName();
   const type = m.memberType === "CONTRACTOR" ? tr("b2b.team.type.contractor", "Contractor") : tr("b2b.team.type.employee", "Employee");
   return (
     <div className="min-w-0">
       <button type="button" onClick={() => onOpen(m)} className="min-h-[44px] max-w-full text-left font-bold text-ops-ink underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2">
-        <span className="break-words">{m.displayName}</span>
+        <span className="break-words">{nameOf(m.displayName)}</span>
       </button>
       <p className="-mt-2 text-xs text-ops-ink-muted">{type}{m.externalId ? ` · ${m.externalId}` : ""}</p>
     </div>
@@ -45,9 +47,10 @@ function NameCell({ m, onOpen }: { m: Member; onOpen: (m: Member) => void }) {
 
 function Check({ m, selected, onToggle }: { m: Member; selected: boolean; onToggle: (id: string) => void }) {
   const { tr } = useTr();
+  const nameOf = usePersonName();
   return (
     <label className="inline-flex h-11 w-11 cursor-pointer items-center justify-center">
-      <input type="checkbox" checked={selected} onChange={() => onToggle(m.id)} aria-label={tr("b2b.team.select", "Select {name}", { name: m.displayName })} className="h-5 w-5" />
+      <input type="checkbox" checked={selected} onChange={() => onToggle(m.id)} aria-label={tr("b2b.team.select", "Select {name}", { name: nameOf(m.displayName) })} className="h-5 w-5" />
     </label>
   );
 }
@@ -58,7 +61,7 @@ export function MemberList({ members, invites, canManage, selected, onToggle, on
   const th = "px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-ops-ink-muted";
   return (
     <>
-      <div className="hidden min-[1280px]:block overflow-x-auto rounded-lg border border-ops-border bg-ops-surface">
+      <div className="relative hidden min-[1280px]:block overflow-x-auto rounded-lg border border-ops-border bg-ops-surface">
         <table className="w-full border-collapse text-sm">
           <caption className="sr-only">{tr("b2b.team.title", "Team & employees")}</caption>
           <thead className="border-b border-ops-border"><tr>

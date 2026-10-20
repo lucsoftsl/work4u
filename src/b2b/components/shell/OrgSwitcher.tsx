@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslation } from "@/lib/i18n";
+
 import { LogoImage } from "@/b2b/setup/LogoImage";
 import { useOrgSettings } from "@/b2b/setup/useOrgSettings";
 import { useEffect, useId, useRef, useState } from "react";
@@ -19,6 +21,7 @@ export function switchOrgPath(pathname: string, fromOrgId: string, toOrgId: stri
 }
 
 export function OrgSwitcher() {
+  const { t } = useTranslation();
   const { orgId, me } = useOrg();
   const router = useRouter();
   const pathname = usePathname();
@@ -57,7 +60,7 @@ export function OrgSwitcher() {
         onClick={() => setOpen((v) => !v)}
         className="flex min-h-[44px] w-full min-w-0 max-w-[16rem] items-center gap-2 rounded border border-white/20 px-2 text-sm text-white hover:bg-white/10 sm:px-3"
       >
-        {me?.org.hasLogo ? <LogoImage url={logo.data?.logoUrl} name={me.org.name} className="h-7 w-7" /> : <span className="hidden text-ops-chrome-muted sm:inline">Org:</span>}
+        {me?.org.hasLogo ? <LogoImage url={logo.data?.logoUrl} name={me.org.name} className="h-7 w-7" /> : <span className="hidden text-ops-chrome-muted sm:inline">{t("b2b.org.prefix", "Org:")}</span>}
         <span className="truncate font-bold">{me?.org.name ?? "…"}</span>
         <ChevronsUpDown className="h-4 w-4 shrink-0 text-ops-chrome-muted" aria-hidden="true" />
       </button>
@@ -69,13 +72,13 @@ export function OrgSwitcher() {
                 <span className="block truncate font-bold">{org.name}</span>
                 <span className="block truncate text-xs text-ops-ink-muted">{org.role.name}</span>
               </span>
-              {org.id === orgId ? <Check className="h-4 w-4" aria-label="Current workspace" /> : null}
+              {org.id === orgId ? <Check className="h-4 w-4" aria-label={t("b2b.org.current", "Current workspace")} /> : null}
             </button>
           ))}
-          {orgs.isPending ? <p className="px-3 py-2 text-sm text-ops-ink-muted">Loading…</p> : null}
+          {orgs.isPending ? <p className="px-3 py-2 text-sm text-ops-ink-muted">{t("b2b.common.loadingDots", "Loading…")}</p> : null}
           <div className="my-1 border-t border-ops-border" />
           <button role="menuitem" type="button" onClick={() => router.push("/ops")} className="flex min-h-[44px] w-full items-center gap-2 rounded px-3 text-left text-sm hover:bg-ops-canvas">
-            <Plus className="h-4 w-4" aria-hidden="true" /> All workspaces
+            <Plus className="h-4 w-4" aria-hidden="true" /> {t("b2b.org.all", "All workspaces")}
           </button>
         </div>
       ) : null}
